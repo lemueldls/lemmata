@@ -10,6 +10,7 @@ workspace = true
 
 [dependencies]
 kurbo.workspace = true
+linesweeper.workspace = true
 
 [dev-dependencies]
 serde_json = "1"
