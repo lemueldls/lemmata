@@ -40,12 +40,12 @@ const USAGE: &str = "\
 Usage: lemmata build [--glyphs <capture>] [--out <font.ttf>] [--family <name>]
 
   --glyphs  glyph capture to read (default target/glyphs.bin)
-  --out     font to write (default Lemmata-Regular.ttf)
+  --out     font to write (default target/Lemmata-Regular.ttf)
   --family  family name for the output font (default Lemmata)";
 
 fn build(args: &[String]) -> Result<(), String> {
     let mut glyphs_path = PathBuf::from("target/glyphs.bin");
-    let mut out_path = PathBuf::from("Lemmata-Regular.ttf");
+    let mut out_path = PathBuf::from("target/Lemmata-Regular.ttf");
     let mut names = Names::default();
 
     let mut index = 0;

@@ -161,9 +161,9 @@ fn pen_expansion_matches_upstream() {
         }
         let union_area: f64 = union_paths.iter().map(BezPath::area).sum();
         let strip_area: f64 = strips.iter().map(|strip| strip.area().abs()).sum();
-        assert!(union_area > 0.0, "{name}: empty union");
+        assert!(union_area.abs() > 0.0, "{name}: empty union");
         assert!(
-            union_area <= strip_area.abs() + 1.0,
+            union_area.abs() <= strip_area + 1.0,
             "{name}: union area {union_area} exceeds its strips {strip_area}"
         );
 

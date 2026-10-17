@@ -53,7 +53,7 @@ One subtlety: typo-geom's `convertShapeToBez3` handles a combined arc by recursi
 
 `crates/lemmata-geom/src/tree.rs` carries the classes from `index.mjs` as one enum: `Spiro`, `DiSpiro`, `SpiroPen`, `Stroke`, `RemoveHoles`, `Simplify`, `Combine`, `Boolean`, `Transformed`, `Contours`, `Tagged`, `Radical` and `Invalid`. Each has `to_bez_arcs`, `to_contours` and `measure_complexity`. Stroke expansion and quadification take any `CurveArc`, so fairized arcs flow into them directly, as upstream.
 
-`tests/tree.rs` builds twelve trees in `corpus/tree.json` and compares against the matching upstream classes. Pure compositions match at 1e-6. Cases that pass through boolean operations allow 0.2 font units, and the quadratified contours of a simplified stroke allow 2. The worst case uses 0.36 of its budget.
+`tests/tree.rs` builds trees from `corpus/tree.json` and compares against the matching upstream classes. Pure compositions match at 1e-6. Cases that pass through boolean operations allow 0.2 font units, and the quadratified contours of a simplified stroke allow 2. The corpus covers every operator (union, intersection, difference, xor), overlapping and touching operands, nested operators and three-operand folds, so a wrong fold or a flipped contour shows up here. The worst case uses 0.36 of its budget.
 
 Two things are deliberately not modeled: `ReferenceGeometry`, which needs the glyph objects the geometry package does not own, and the `hash` methods, which exist for upstream's geometry cache.
 
@@ -74,6 +74,8 @@ One upstream quirk is reproduced on purpose: when a cubic's extrema quadratic is
 ## Overlap removal
 
 `crates/lemmata-geom/src/boolean.rs` wraps linesweeper for union, intersection and self-overlap removal on kurbo paths. Iosevka uses typo-geom on an integer grid for the same job, so the two agree within that grid's resolution rather than exactly.
+
+One thing beyond resolution has to match: contour orientation. typo-geom's clipper leaves outer contours clockwise; linesweeper leaves them counter-clockwise. Downstream, `SimplifyGeometry` and `RemoveHolesGeometry` union contours from different constructors under the non-zero rule, where two contours of opposite orientation cancel over their overlap instead of merging. Getting that wrong leaves wedges missing at stroke joints. `boolean.rs` therefore reverses every contour it returns, and `SpiroPenGeometry` unions its strips the way upstream does rather than concatenating them.
 
 ## Not ported yet
 

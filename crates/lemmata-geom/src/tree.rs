@@ -114,7 +114,12 @@ impl Geometry {
                 pen_profile,
                 closed,
                 knots,
-            } => paths_to_shape(&pen_spiro_paths(*gizmo, pen_profile.len(), *closed, knots)),
+            } => union_all_contours(paths_to_shape(&pen_spiro_paths(
+                *gizmo,
+                pen_profile.len(),
+                *closed,
+                knots,
+            ))),
             Self::Stroke {
                 gizmo,
                 radius,

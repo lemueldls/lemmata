@@ -29,7 +29,11 @@ pub fn boolean(a: &BezPath, b: &BezPath, op: BinaryOp) -> Result<Vec<BezPath>, E
     let contours = binary_op(a, b, FillRule::NonZero, op)?;
     Ok(contours
         .into_contours()
-        .map(|contour| contour.path)
+        // typo-geom's clipper leaves outer contours clockwise; linesweeper
+        // leaves them counter-clockwise. Downstream unions mix these contours
+        // with ones from other constructors under the non-zero rule, so the
+        // orientation has to match or overlapping regions cancel.
+        .map(|contour| contour.path.reverse_subpaths())
         .collect())
 }
 
@@ -76,7 +80,8 @@ mod tests {
         .expect("union");
         assert_eq!(contours.len(), 1);
         let area: f64 = contours.iter().map(BezPath::area).sum();
-        assert!((area - 15_000.0).abs() < 1.0, "area {area}");
+        assert!((area.abs() - 15_000.0).abs() < 1.0, "area {area}");
+        assert!(area < 0.0, "outer contours come out clockwise");
     }
 
     #[test]
@@ -88,7 +93,7 @@ mod tests {
         .expect("intersection");
         assert_eq!(contours.len(), 1);
         let area: f64 = contours.iter().map(BezPath::area).sum();
-        assert!((area - 5_000.0).abs() < 1.0, "area {area}");
+        assert!((area.abs() - 5_000.0).abs() < 1.0, "area {area}");
     }
 
     #[test]
@@ -96,7 +101,7 @@ mod tests {
         let contours = remove_overlap(&rect(0.0, 0.0, 100.0, 100.0)).expect("remove overlap");
         assert_eq!(contours.len(), 1);
         let area: f64 = contours.iter().map(BezPath::area).sum();
-        assert!((area - 10_000.0).abs() < 1.0, "area {area}");
+        assert!((area.abs() - 10_000.0).abs() < 1.0, "area {area}");
     }
 
     #[test]
@@ -106,6 +111,6 @@ mod tests {
         let contours = remove_overlap(&shape).expect("remove overlap");
         assert_eq!(contours.len(), 1);
         let area: f64 = contours.iter().map(BezPath::area).sum();
-        assert!((area - 15_000.0).abs() < 1.0, "area {area}");
+        assert!((area.abs() - 15_000.0).abs() < 1.0, "area {area}");
     }
 }

@@ -8,7 +8,7 @@
 //! the other is a seam or a coincident boundary, which different boolean engines
 //! split differently while describing the same region.
 
-#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,13 +17,9 @@ use kurbo::{BezPath, ParamCurve, ParamCurveNearest, Point, Shape};
 use lemmata_geom::{QuadifyKind, QuadifyPoint};
 use serde_json::Value;
 
-/// Regression bound, in font units. This is not the drift target. The
-/// gap between our outline and Iosevka's comes from two places: overlap
-/// resolution, where typo-geom works on an integer grid and linesweeper on
-/// exact curves, and complex contrast-expanded skeletons, where a single
-/// glyph still shows a few units. The test reports the distribution so the
-/// gap stays visible; closing it is tracked in PLAN.md.
-const TOLERANCE: f64 = 100.0;
+/// Regression bound, in font units. This is not the drift target; the test
+/// reports the distribution so the gap stays visible.
+const TOLERANCE: f64 = 20.0;
 /// Samples per segment for the comparison.
 const SAMPLES_PER_SEGMENT: usize = 16;
 
@@ -174,31 +170,6 @@ fn captured_glyphs_reproduce_their_contours() {
         if deviation > 1.0 {
             over_budget.push(format!("{name} {deviation:.2}"));
         }
-        if name == "c" {
-            let ours_pts: Vec<(f64, f64)> = ours
-                .iter()
-                .flat_map(|c| c.iter().map(|p| (p.x, p.y)))
-                .collect();
-            let theirs_pts: Vec<(f64, f64)> = theirs
-                .iter()
-                .flat_map(|c| {
-                    c.as_array()
-                        .unwrap()
-                        .iter()
-                        .map(|p| (p["x"].as_f64().unwrap(), p["y"].as_f64().unwrap()))
-                })
-                .collect();
-            let mut report = String::new();
-            report.push_str(&format!("ours {} points\n", ours_pts.len()));
-            for p in &ours_pts {
-                report.push_str(&format!("{:.1} {:.1}\n", p.0, p.1));
-            }
-            report.push_str(&format!("theirs {} points\n", theirs_pts.len()));
-            for p in &theirs_pts {
-                report.push_str(&format!("{:.1} {:.1}\n", p.0, p.1));
-            }
-            std::fs::write("/tmp/opencode/c-points.txt", report).unwrap();
-        }
     }
 
     eprintln!(
@@ -218,5 +189,72 @@ fn captured_glyphs_reproduce_their_contours() {
     assert!(
         worst <= TOLERANCE,
         "worst deviation {worst} over the regression bound {TOLERANCE} on {worst_name}"
+    );
+}
+
+/// Fraction of a grid over the outline where the two shapes disagree.
+fn coverage_mismatch(ours: &BezPath, theirs: &BezPath, bounds: kurbo::Rect) -> f64 {
+    const GRID: usize = 128;
+    let mut mismatches = 0usize;
+    let mut total = 0usize;
+    for row in 0..GRID {
+        let y = bounds.y1 - (row as f64 + 0.5) / GRID as f64 * bounds.height();
+        for col in 0..GRID {
+            let x = bounds.x0 + (col as f64 + 0.5) / GRID as f64 * bounds.width();
+            let point = Point::new(x, y);
+            total += 1;
+            if ours.contains(point) != theirs.contains(point) {
+                mismatches += 1;
+            }
+        }
+    }
+    mismatches as f64 / total as f64
+}
+
+/// The outlines should cover the same region, not merely have nearby
+/// boundaries. A missing wedge at a stroke joint shows up here and nowhere
+/// else.
+#[test]
+fn captured_glyphs_cover_the_same_region() {
+    /// Allowed disagreement, as a fraction of the outline's area.
+    const BUDGET: f64 = 0.05;
+    let path = dump_path();
+    let Ok(data) = fs::read(&path) else {
+        eprintln!("skipping: no capture at {}", path.display());
+        return;
+    };
+    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
+    let reference: Value = serde_json::from_str(
+        &fs::read_to_string(format!("{}.json", path.display())).expect("reference contours"),
+    )
+    .expect("parse reference contours");
+    let reference = reference.as_array().expect("array");
+
+    let mut worst = (0.0_f64, String::new());
+    for (glyph, expected) in glyphs.iter().zip(reference) {
+        let mut ours = BezPath::new();
+        for contour in lemmata_glyphs::contours(glyph) {
+            ours.extend(contour_path(&contour).iter());
+        }
+        let mut theirs = BezPath::new();
+        for contour in expected["contours"].as_array().unwrap() {
+            theirs.extend(reference_contour_path(contour).iter());
+        }
+        let fraction = coverage_mismatch(&ours, &theirs, ours.bounding_box());
+        if fraction > worst.0 {
+            worst = (fraction, glyph.name.clone());
+        }
+    }
+    eprintln!(
+        "coverage: worst mismatch {:.2}% on {}",
+        100.0 * worst.0,
+        worst.1
+    );
+    assert!(
+        worst.0 <= BUDGET,
+        "{} disagrees over {:.2}% of its area, over the {:.0}% budget",
+        worst.1,
+        100.0 * worst.0,
+        100.0 * BUDGET
     );
 }
