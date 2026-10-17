@@ -37,6 +37,10 @@ The capture carries each stage's output, so `crates/lemmata-glyphs/tests/arcs.rs
 
 The first two are exact, so a regression in the constructors fails loudly instead of hiding inside a tolerance. The rest are measurements: the comparison is coverage-aware, so a seam that two engines split differently does not count as drift, but a region that differs does.
 
+## Seeing the difference
+
+`cargo test -p lemmata-glyphs --test outline_svg` writes `target/lemmata-outlines.svg`: every captured glyph, with Iosevka's outline filled gray, ours stroked blue, and the region where the two disagree filled red. The four widest are repeated magnified below the grid. The red is a boolean difference of the two outlines, so it shows exactly the area the drift is made of rather than a number.
+
 ## The open gap
 
 The geometry tree and overlap resolution match upstream exactly: `tree_arcs_match` and `resolved_arcs_are_close` report 59 of 59 glyphs within 0.25 units, worst 0.000. Quadification matches too: run on *upstream's* fairized shape it reproduces upstream's contours exactly, with no point-count difference on any glyph.
