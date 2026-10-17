@@ -1,0 +1,43 @@
+//! When each requirement becomes enforced.
+//!
+//! CI requires implementation and verification markers for a requirement as
+//! soon as its stage starts, and ignores later stages.
+
+/// Requirement ID and the first stage that needs coverage for it.
+pub const ENFORCED_FROM: &[(&str, u8)] = &[
+    ("build.formats", 2),
+    ("build.license", 2),
+    ("build.name", 2),
+    ("build.subset", 2),
+    ("build.valid", 2),
+    ("drift.advance", 1),
+    ("drift.outline", 1),
+    ("drift.pin", 1),
+    ("drift.shaping", 5),
+    ("drift.upstream", 1),
+    ("drift.vmetrics", 1),
+    ("math.alphabets", 6),
+    ("math.corrections", 6),
+    ("math.mathml", 6),
+    ("math.script-style", 6),
+    ("math.stretch", 6),
+    ("math.table", 6),
+    ("math.typst", 6),
+    ("perf.incremental", 2),
+    ("perf.parallel", 4),
+    ("pin.exact", 2),
+    ("plan.cache", 2),
+    ("plan.combinations", 3),
+    ("plan.deterministic", 2),
+    ("plan.iosevka-keys", 3),
+    ("plan.schema", 3),
+    ("port.changes", 2),
+    ("port.provenance", 2),
+    ("port.strategy", 2),
+    ("port.upstream-tag", 2),
+    ("test.corpus", 2),
+    ("wasm.offline", 4),
+    ("wasm.parity", 4),
+    ("wasm.parity-bytes", 4),
+    ("wasm.responsive", 4),
+];

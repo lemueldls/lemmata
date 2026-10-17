@@ -1,0 +1,19 @@
+specs (
+  {
+    name lemmata
+    include (PLAN.md)
+    impls (
+      {
+        name native
+        include (crates/**/*.rs)
+        exclude (crates/lemmata-web/** vendor/**)
+        test_include (crates/**/tests/**/*.rs)
+      }
+      {
+        name wasm
+        include (crates/lemmata-web/**/*.rs)
+        test_include (crates/lemmata-web/tests/**/*.rs)
+      }
+    )
+  }
+)

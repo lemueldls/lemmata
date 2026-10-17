@@ -1,0 +1,4 @@
+[submodule "vendor/Iosevka"]
+	path = vendor/Iosevka
+	url = https://github.com/be5invis/Iosevka
+	shallow = true
