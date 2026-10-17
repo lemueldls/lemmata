@@ -17,7 +17,8 @@ use crate::control::Item;
 use crate::letter_model::DivFrame;
 use crate::metrics::Metrics;
 use crate::shapes::{
-    ArchArgs, ArchParams, Design, HookArgs, HookParams, arch, arch_depth_b_clamped, ysmooth_mid_l,
+    ArchArgs, ArchParams, Design, HookArgs, HookParams, arch, arch_depth_b_clamped, downward,
+    leftward, rightward, upward, ysmooth_mid_l,
 };
 use crate::spiro_kit::{Dispiro, Kit};
 use kurbo::Vec2;
@@ -187,7 +188,7 @@ impl DoubleStorey<'_> {
             KnotType::Right,
             bar_right_x,
             y0,
-            self.kit.heading(Vec2::new(0.0, -1.0)),
+            self.kit.heading(downward(metrics.hv_contrast)),
         ));
         self.kit.dispiro(items)
     }
@@ -228,7 +229,7 @@ impl DoubleStorey<'_> {
             KnotType::Left,
             self.right_sb() + metrics.o,
             bar_top,
-            self.kit.heading(Vec2::new(-1.0, 0.0)),
+            self.kit.heading(leftward()),
         ));
         items.push(self.kit.knot(
             KnotType::Right,
@@ -296,7 +297,7 @@ impl DoubleStorey<'_> {
                     KnotType::Right,
                     flat_x,
                     bar_top,
-                    self.kit.heading(Vec2::new(0.0, 1.0)),
+                    self.kit.heading(upward(metrics.hv_contrast)),
                 ));
             }
             other => panic!("arc kind {other} is not ported"),
@@ -313,5 +314,60 @@ impl DoubleStorey<'_> {
             self.hook_and_bar(hook_style, 0.0, stroke, None),
             self.arc(0, 0.0, stroke, None, None),
         ]
+    }
+
+    /// `DoubleStorey.Serifed`: the serifless union plus the bottom-right serif.
+    #[must_use]
+    pub fn serifed(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
+        let mut operands = self.serifless(hook_style, stroke);
+        operands.push(self.bottom_right_serif());
+        operands
+    }
+
+    /// `SerifFrame.fromDf ... .rb.outer`, which is `HSerif.rb`.
+    ///
+    /// Only the bottom-right outer serif is ported: it is the one the serifed
+    /// double-storey variants use, and it needs the frame's `jut` and nothing
+    /// else from the serif frame.
+    #[must_use]
+    pub fn bottom_right_serif(&self) -> Dispiro {
+        let metrics = self.metrics;
+        let sw_ref = self.sw();
+        let sw_serif = self.df.mvs;
+        let left = self.left_sb();
+        let right = self.right_sb();
+
+        // `CSerifFrame`'s constructor, reduced to `jut` and `sideJut`.
+        let ink = self.hsw_to_v(sw_ref);
+        let co_ink = self.hsw_to_v(metrics.stroke - sw_ref);
+        let h_split = 2.0_f64.max(self.df.h_pack);
+        let jut = (metrics.jut - 0.5 * co_ink).min(crate::util::mix(
+            0.5 * ink,
+            metrics.jut,
+            (self.df.adws() * 2.25 / h_split).min(1.0),
+        ));
+        let side_jut = jut - 0.5 * ink;
+        let _ = (left, right, h_split);
+
+        // `HSerif.rb right bot sideJut swSerif`.
+        let x = right;
+        let y = 0.0;
+        let sw = sw_serif;
+        let items = vec![
+            Item::Af(self.kit.widths_lhs(Some(sw))),
+            self.kit.knot(
+                KnotType::Left,
+                x - self.hsw_to_v(0.5 * sw),
+                y,
+                self.kit.heading(rightward()),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                x + side_jut + sw * metrics.serif_shift_x,
+                y,
+                Vec::new(),
+            ),
+        ];
+        self.kit.dispiro(items)
     }
 }

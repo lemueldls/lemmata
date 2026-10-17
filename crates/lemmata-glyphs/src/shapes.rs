@@ -47,6 +47,33 @@ impl Default for Design {
     }
 }
 
+// The geometry package's four heading constants, from `meta/aesthetics.ptl`.
+// They point along the stroke, so `Upward` and `Downward` are horizontal.
+
+/// `Upward`.
+#[must_use]
+pub const fn upward(hv_contrast: f64) -> Vec2 {
+    Vec2::new(-hv_contrast, 0.0)
+}
+
+/// `Downward`.
+#[must_use]
+pub const fn downward(hv_contrast: f64) -> Vec2 {
+    Vec2::new(hv_contrast, 0.0)
+}
+
+/// `Rightward`.
+#[must_use]
+pub const fn rightward() -> Vec2 {
+    Vec2::new(0.0, 1.0)
+}
+
+/// `Leftward`.
+#[must_use]
+pub const fn leftward() -> Vec2 {
+    Vec2::new(0.0, -1.0)
+}
+
 /// `archv.yFromX`.
 #[must_use]
 pub fn archv_y_from_x(px: f64, superness: f64) -> f64 {
@@ -402,21 +429,25 @@ fn hook_shape(
     let mx = mix(to_straight.x, finish.x, mix_ratio)
         + (if at_bottom { 1.0 } else { -1.0 }) * 0.75 * params.correction_o_mid_x * args.sw;
 
+    // The pair's direction offsets the two knots. The heading is one of the
+    // geometry package's four constants, which point along the stroke rather
+    // than along the axes.
     let key_dir = if ltr {
         Direction::Right
     } else {
         Direction::Left
     };
+    let key_heading = rightward();
     let extra_slope = (if ltr { 1.0 } else { -1.0 }) * 0.5 * (args.sw - args.sw_terminal) / args.sw;
     let final_turn_slope =
-        key_dir.vector().x + extra_slope - (if ltr { 1.0 } else { -1.0 }) * 0.5 * params.tan_slope;
+        key_heading.x + extra_slope - (if ltr { 1.0 } else { -1.0 }) * 0.5 * params.tan_slope;
     let key_knot = kit.pair(
         Family::G4,
         key_dir,
         Position::Mid,
         mx,
         y,
-        kit.heading(Vec2::new(final_turn_slope, key_dir.vector().y)),
+        kit.heading(Vec2::new(final_turn_slope, key_heading.y)),
     );
 
     let rad = w.min(mix_ratio * u);

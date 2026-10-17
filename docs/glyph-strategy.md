@@ -98,7 +98,11 @@ Two things the layer did not have and the port needed:
 
 The capture is the oracle for this layer. PTL functions cannot be imported into JavaScript the way the geometry and kit modules can, so the only way to run upstream's own code is a full build, and the capture already is one.
 
-What remains of this file: the single-storey bodies (`OBarRight` and its variants, and the bar shapes), the other hook styles, and the glyphs derived from `a` (turned, script, retroflex, accented).
+`a.doubleStoreySerifed` is ported too, which needed only the serif frame's `jut` and `HSerif.rb` rather than the whole serif system. It matches as well, so the test covers 2 variants and 100 knots.
+
+Getting there turned up one trap worth recording: the four heading constants in `meta/aesthetics.ptl` point along the stroke, not along the axes. `Upward` is `(-HVContrast, 0)` and `Leftward` is `(0, -1)`. Reading them as the axis directions produces outlines that are right in position and wrong in every normal, which the bi-knot positions alone do not catch.
+
+What remains of this file: the single-storey bodies (`OBarLeft`/`OBarRight` and their variants, and the bar shapes), the other hook styles, and the glyphs derived from `a` (turned, script, retroflex, accented).
 
 What remains: the dependency manager's block half and `relation.mjs`, which order glyphs and drive subsetted rebuilds rather than outlines. After that the definitions themselves, which pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), part of the 60,020 and amortized across glyphs.
 

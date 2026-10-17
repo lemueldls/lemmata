@@ -14,6 +14,8 @@ A patched Iosevka build writes, for each selected glyph:
 - the arcs the tree resolves to, before quadification,
 - and the quadratic contours Iosevka's own conversion produced.
 
+The set the tests run against covers the lower-case letters, the lining digits, and the punctuation the font needs, plus the `a` variants the definition port works through: the double-storey and single-storey families, the hooked, tailed and serifed forms, `a.crossing` and `aCap`. `reference/glyph-capture/README.md` has the command.
+
 Selection is by codepoint (`LEMMATA_GLYPH_CODEPOINTS`) or by name (`LEMMATA_GLYPH_SET`), the output path is `LEMMATA_GLYPH_DUMP`, and `LEMMATA_GLYPH_WIDTH` pins the width so a build that emits more than one font dumps only the one asked for. Without that pin the dump lands on whichever font the build writes last, which is how an earlier capture ended up holding the extended width while the reference font was the regular one. The side data lands beside the binary as `<path>.json` (contours), `<path>.arcs.json`, `<path>.tree-arcs.json`, `<path>.expansions.json` and `<path>.fairized.json`. The patched tree is disposable and lives outside the repository, like the other oracles.
 
 `crates/lemmata-glyphs` decodes the capture into `lemmata_geom::Geometry` values. `tests/capture.rs` renders each glyph with `Geometry::Simplify { gizmo, geom }.to_contours()`, which is what the build does, and compares the result with the captured contours; it skips when no capture is present. The comparison is coverage-aware: a boundary point of one outline that lies outside the other counts as drift, while a point inside the other is a seam that two boolean engines can split differently while describing the same region.
