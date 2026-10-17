@@ -22,13 +22,22 @@ One case carries a translated skeleton. Deeper transforms are supported but not 
 
 Worth knowing before tightening these numbers: Iosevka's exported Bezier drawing sits 0.6 to 1.3 font units from the spiro curve it approximates, so a comparison against that output measures Iosevka's fitter rather than this port. The fixture therefore compares against npm `spiro` directly.
 
+## Pen expansion
+
+`crates/lemmata-geom/src/pen.rs` ports `spiro-pen-expand.mjs`: each profile edge traces the skeleton, unimportant knots are interpolated per edge, and adjacent traces are joined into strips. `SpiroPenGeometry.toBezArcs` unions the strips with typo-geom; `pen_spiro_paths` unions them with linesweeper instead.
+
+`tests/pen_expand.rs` covers five synthetic profiles in `corpus/pen-expand.json`:
+
+- raw strips match Iosevka to 1e-6, which is the port,
+- our union's boundary stays within 2.12 font units of those strips,
+- against Iosevka's union the gap reaches 33 font units on one three-edge closed profile. That is two boolean engines disagreeing about near-tangential overlaps, not a difference in the strips, which match exactly. Overlap removal has its own tests in `boolean.rs`.
+
 ## Overlap removal
 
 `crates/lemmata-geom/src/boolean.rs` wraps linesweeper for union, intersection and self-overlap removal on kurbo paths. Iosevka uses typo-geom on an integer grid for the same job, so the two agree within that grid's resolution rather than exactly.
 
 ## Not ported yet
 
-- Pen expansion, `spiro-pen-expand.mjs`, which the counts in `docs/glyph-strategy.md` show at 480 calls.
 - The stroke expander, `stroke.mjs` with `OffsetCurve` and `RoundCapCurve`, at 972 calls.
 - Quadratic conversion, `quadify.mjs`, for TrueType output.
 

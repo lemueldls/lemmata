@@ -2,7 +2,9 @@
 
 pub mod boolean;
 pub mod expand;
+pub mod pen;
 pub mod spiro;
 
 pub use expand::{BiKnot, ExpandResult, MonoKnot, SpiroExpander, di_spiro_expand, di_spiro_paths};
+pub use pen::{PenExpander, PenKnot, pen_spiro_paths};
 pub use spiro::{Knot, KnotType, SpiroArc, spiro_arcs, spiro_path};

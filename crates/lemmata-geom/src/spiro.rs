@@ -171,7 +171,10 @@ impl SpiroArc {
         )
     }
 
-    fn subdivide(&self, at: f64) -> (Self, Self) {
+    /// Splits this arc at parameter `at`, in the same parameterization the
+    /// JavaScript source uses.
+    #[must_use]
+    pub fn subdivide(&self, at: f64) -> (Self, Self) {
         let t = at - 0.5;
         let k_sub = divide_ks(-0.5, t, &self.ks);
         let k_sub_rear = divide_ks(t, 0.5, &self.ks);

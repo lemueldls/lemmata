@@ -94,7 +94,7 @@ impl MonoKnot {
         }
     }
 
-    const fn to_knot(&self) -> Knot {
+    pub(crate) const fn to_knot(&self) -> Knot {
         Knot::new(self.x, self.y, self.ty)
     }
 
@@ -486,6 +486,6 @@ fn mix(a: f64, b: f64, t: f64) -> f64 {
     a + (b - a) * t
 }
 
-fn linreg(x0: f64, y0: f64, x1: f64, y1: f64, x: f64) -> f64 {
+pub(crate) fn linreg(x0: f64, y0: f64, x1: f64, y1: f64, x: f64) -> f64 {
     y0 + (y1 - y0) * (x - x0) / (x1 - x0)
 }
