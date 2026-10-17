@@ -26,7 +26,7 @@ npm run build -- ttf-unhinted::RefA
 
 `LEMMATA_GLYPH_DUMP` is the binary output path, `LEMMATA_GLYPH_SET` selects by glyph name and `LEMMATA_GLYPH_CODEPOINTS` by codepoint. `LEMMATA_GLYPH_WIDTH` pins the advance width, because a plan can emit more than one font and the dump otherwise lands on whichever is written last.
 
-The capture writes `<path>` (the trees), `<path>.json` (the contours Iosevka converted them to), `<path>.tree-arcs.json` (the tree's arcs, before overlap resolution), `<path>.arcs.json` (after it) and `<path>.expansions.json` (each di-spiro node's expanded sides and the raw arcs the solver produced from them). Copy them to `target/` for `cargo test -p lemmata-glyphs` and `cargo test -p lemmata-cli`.
+The capture writes `<path>` (the trees), `<path>.json` (the contours Iosevka converted them to), `<path>.tree-arcs.json` (the tree's arcs, before overlap resolution), `<path>.arcs.json` (after it), `<path>.expansions.json` (each di-spiro node's expanded sides and the raw arcs the solver produced from them) and `<path>.fairized.json` (the fairized shape the quadifier consumes). Copy them to `target/` for `cargo test -p lemmata-glyphs` and `cargo test -p lemmata-cli`.
 
 ## Binary layout
 

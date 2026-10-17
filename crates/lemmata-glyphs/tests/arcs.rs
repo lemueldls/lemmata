@@ -9,7 +9,11 @@
 //! through overlap resolution, is not: the two boolean engines differ on
 //! near-tangential crossings, and that residual is what the glyph tests bound.
 
-#![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
+#![allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_wrap,
+    clippy::suboptimal_flops
+)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -38,9 +42,13 @@ fn dump_path() -> PathBuf {
 
 fn read_reference(suffix: &str) -> Value {
     let path = dump_path();
+    let name = if suffix.is_empty() {
+        format!("{}.json", path.display())
+    } else {
+        format!("{}.{suffix}.json", path.display())
+    };
     serde_json::from_str(
-        &fs::read_to_string(format!("{}.{suffix}.json", path.display()))
-            .unwrap_or_else(|error| panic!("reading {suffix}: {error}")),
+        &fs::read_to_string(&name).unwrap_or_else(|error| panic!("reading {name}: {error}")),
     )
     .expect("parse reference")
 }
@@ -514,4 +522,200 @@ fn kind_tree(geometry: &Geometry) -> String {
         Geometry::Radical(geom) => format!("radical({})", kind_tree(geom)),
         Geometry::Invalid => "invalid".into(),
     }
+}
+
+fn point_of(value: &Value) -> Point {
+    Point::new(value["x"].as_f64().unwrap(), value["y"].as_f64().unwrap())
+}
+
+fn bez3_of(value: &Value) -> Bez3 {
+    Bez3::new(
+        point_of(&value["a"]),
+        point_of(&value["b"]),
+        point_of(&value["c"]),
+        point_of(&value["d"]),
+    )
+}
+
+/// Rebuilds a fairized contour from the capture.
+fn fair_arcs(contours: &Value) -> Vec<Vec<lemmata_geom::FairArc>> {
+    contours
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|contour| {
+            contour
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|arc| {
+                    if arc["kind"] == "straight" {
+                        lemmata_geom::FairArc::Straight {
+                            a: point_of(&arc["a"]),
+                            b: point_of(&arc["b"]),
+                        }
+                    } else {
+                        lemmata_geom::FairArc::Combined(lemmata_geom::CombinedArc::new(
+                            arc["segments"]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .map(bez3_of)
+                                .collect(),
+                        ))
+                    }
+                })
+                .collect()
+        })
+        .collect()
+}
+
+/// Fairization, compared as a shape.
+///
+/// The arc bookkeeping is not the point: upstream may split a run into two
+/// arcs where we keep one and still produce the same curve. This measures the
+/// fairized geometry itself, order-insensitively, so a structural difference
+/// that changes nothing does not count.
+#[test]
+fn fairize_stage_matches() {
+    let Ok(data) = fs::read(dump_path()) else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
+    let reference = read_reference("fairized");
+    let reference = reference.as_array().expect("array");
+
+    let mut worst = (0.0_f64, String::new());
+    let mut over = 0usize;
+    for (glyph, expected) in glyphs.iter().zip(reference) {
+        let arcs = Geometry::Simplify {
+            gizmo: glyph.gizmo,
+            geom: Box::new(glyph.geometry.clone()),
+        }
+        .to_bez_arcs();
+        let ours = lemmata_geom::fairize(&arcs);
+        let ours = path_from_fair(&ours);
+        let theirs = path_from_fair_json(&expected["contours"]);
+        let deviation = shape_drift(&ours, &theirs);
+        if deviation > worst.0 {
+            worst = (deviation, glyph.name.clone());
+        }
+        if deviation > 1.0 {
+            over += 1;
+        }
+    }
+    eprintln!(
+        "fairize: {over} of {} over 1 unit, worst {:.3} on {}",
+        glyphs.len(),
+        worst.0,
+        worst.1
+    );
+    assert!(
+        over < glyphs.len() / 4,
+        "{over} glyphs differ after fairization"
+    );
+}
+
+/// Samples a fairized contour as a path.
+fn path_from_fair(contours: &[Vec<lemmata_geom::FairArc>]) -> BezPath {
+    let mut path = BezPath::new();
+    for contour in contours {
+        let Some(first) = contour.first() else {
+            continue;
+        };
+        path.move_to(first.eval(0.0));
+        for arc in contour {
+            for step in 1..=SAMPLES_PER_SEGMENT {
+                path.line_to(arc.eval(step as f64 / SAMPLES_PER_SEGMENT as f64));
+            }
+        }
+        path.close_path();
+    }
+    path
+}
+
+fn path_from_fair_json(contours: &Value) -> BezPath {
+    let mut path = BezPath::new();
+    for contour in contours.as_array().unwrap() {
+        let arcs = contour.as_array().unwrap();
+        let Some(first) = arcs.first() else {
+            continue;
+        };
+        let start = if first["kind"] == "straight" {
+            point_of(&first["a"])
+        } else {
+            point_of(&first["segments"][0]["a"])
+        };
+        path.move_to(start);
+        for arc in arcs {
+            if arc["kind"] == "straight" {
+                path.line_to(point_of(&arc["b"]));
+            } else {
+                for segment in arc["segments"].as_array().unwrap() {
+                    let segment = bez3_of(segment);
+                    for step in 1..=SAMPLES_PER_SEGMENT {
+                        path.line_to(segment.eval(step as f64 / SAMPLES_PER_SEGMENT as f64));
+                    }
+                }
+            }
+        }
+        path.close_path();
+    }
+    path
+}
+
+/// Quadification, on the fairized shape the capture recorded. This isolates it
+/// from fairization: if fairize matches and this fails, the fault is here.
+#[test]
+fn quadify_on_captured_fairize_matches() {
+    let Ok(data) = fs::read(dump_path()) else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
+    let fairized = read_reference("fairized");
+    let fairized = fairized.as_array().expect("array");
+    let reference = read_reference("");
+    let reference = reference.as_array().expect("array");
+
+    let mut worst = (0.0_f64, String::new());
+    let mut over = 0usize;
+    let mut point_delta = 0i64;
+    for ((glyph, expected_fair), expected) in glyphs.iter().zip(fairized).zip(reference) {
+        let ours = lemmata_geom::tree::quadify_fair(&fair_arcs(&expected_fair["contours"]));
+        let theirs = expected["contours"].as_array().unwrap();
+        assert_eq!(ours.len(), theirs.len(), "{}: contour count", glyph.name);
+        let mut glyph_worst = 0.0_f64;
+        let mut delta = 0i64;
+        for (contour, expected_contour) in ours.iter().zip(theirs) {
+            let expected_points = expected_contour.as_array().unwrap();
+            delta += contour.len() as i64 - expected_points.len() as i64;
+            if contour.len() != expected_points.len() {
+                glyph_worst = glyph_worst.max(1.0);
+                continue;
+            }
+            for (point, expected_point) in contour.iter().zip(expected_points) {
+                glyph_worst = glyph_worst.max(
+                    (point.x - expected_point["x"].as_f64().unwrap())
+                        .abs()
+                        .max((point.y - expected_point["y"].as_f64().unwrap()).abs()),
+                );
+            }
+        }
+        point_delta += delta;
+        if glyph_worst > worst.0 {
+            worst = (glyph_worst, glyph.name.clone());
+        }
+        if glyph_worst > 1.0 {
+            over += 1;
+            eprintln!("{}: quadify {glyph_worst:.2}, {delta:+} points", glyph.name);
+        }
+    }
+    eprintln!(
+        "quadify on captured fairize: {over} of {} over 1 unit, worst {:.3} on {}, {point_delta:+} points overall",
+        glyphs.len(),
+        worst.0,
+        worst.1
+    );
 }

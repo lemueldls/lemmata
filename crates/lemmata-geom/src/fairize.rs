@@ -93,7 +93,9 @@ pub struct CombinedArc {
 }
 
 impl CombinedArc {
-    fn new(arcs: Vec<Bez3>) -> Self {
+    /// A run of cubics treated as one arc, parameterized by length.
+    #[must_use]
+    pub fn new(arcs: Vec<Bez3>) -> Self {
         let mut segments = Vec::with_capacity(arcs.len());
         for arc in arcs {
             if bez3_length(&arc) > 0.0 {

@@ -14,7 +14,7 @@ A patched Iosevka build writes, for each selected glyph:
 - the arcs the tree resolves to, before quadification,
 - and the quadratic contours Iosevka's own conversion produced.
 
-Selection is by codepoint (`LEMMATA_GLYPH_CODEPOINTS`) or by name (`LEMMATA_GLYPH_SET`), the output path is `LEMMATA_GLYPH_DUMP`, and `LEMMATA_GLYPH_WIDTH` pins the width so a build that emits more than one font dumps only the one asked for. Without that pin the dump lands on whichever font the build writes last, which is how an earlier capture ended up holding the extended width while the reference font was the regular one. The side data lands beside the binary as `<path>.json` (contours), `<path>.arcs.json`, `<path>.tree-arcs.json` and `<path>.expansions.json`. The patched tree is disposable and lives outside the repository, like the other oracles.
+Selection is by codepoint (`LEMMATA_GLYPH_CODEPOINTS`) or by name (`LEMMATA_GLYPH_SET`), the output path is `LEMMATA_GLYPH_DUMP`, and `LEMMATA_GLYPH_WIDTH` pins the width so a build that emits more than one font dumps only the one asked for. Without that pin the dump lands on whichever font the build writes last, which is how an earlier capture ended up holding the extended width while the reference font was the regular one. The side data lands beside the binary as `<path>.json` (contours), `<path>.arcs.json`, `<path>.tree-arcs.json`, `<path>.expansions.json` and `<path>.fairized.json`. The patched tree is disposable and lives outside the repository, like the other oracles.
 
 `crates/lemmata-glyphs` decodes the capture into `lemmata_geom::Geometry` values. `tests/capture.rs` renders each glyph with `Geometry::Simplify { gizmo, geom }.to_contours()`, which is what the build does, and compares the result with the captured contours; it skips when no capture is present. The comparison is coverage-aware: a boundary point of one outline that lies outside the other counts as drift, while a point inside the other is a seam that two boolean engines can split differently while describing the same region.
 
@@ -31,14 +31,16 @@ The capture carries each stage's output, so `crates/lemmata-glyphs/tests/arcs.rs
 - `expansions_match` compares the expanded sides, knot positions, types and importance. Exact.
 - `raw_solve_arcs_match` compares the spiro solve on those knots: sampled points, arc length and bend. Exact.
 - `tree_arcs_match` compares the tree's arcs, before overlap resolution.
-- `resolved_arcs_are_close` compares the arcs after overlap resolution, which is where the two boolean engines part.
+- `resolved_arcs_are_close` compares the arcs after overlap resolution.
+- `fairize_stage_matches` compares the fairized shape, order-insensitively.
+- `quadify_on_captured_fairize_matches` runs our quadification on *upstream's* fairized shape and compares the contours, which isolates it from fairization.
 
-The first two are exact, so a regression in the constructors fails loudly instead of hiding inside a tolerance. The last two are measurements: the comparison is coverage-aware, so a seam that two engines split differently does not count as drift, but a region that differs does.
+The first two are exact, so a regression in the constructors fails loudly instead of hiding inside a tolerance. The rest are measurements: the comparison is coverage-aware, so a seam that two engines split differently does not count as drift, but a region that differs does.
 
 ## The open gap
 
-The geometry tree and overlap resolution now match upstream exactly: `tree_arcs_match` and `resolved_arcs_are_close` report 59 of 59 glyphs within 0.25 units, worst 0.000.
+The geometry tree and overlap resolution match upstream exactly: `tree_arcs_match` and `resolved_arcs_are_close` report 59 of 59 glyphs within 0.25 units, worst 0.000. Quadification matches too: run on *upstream's* fairized shape it reproduces upstream's contours exactly, with no point-count difference on any glyph.
 
-What is left is the last step, fairization into quadratic contours. Our quadification emits fewer points than Iosevka's on five glyphs, `a`, `e`, `g`, `s` and `three.lnum` (76 against 79 points on `three.lnum`), which puts the contour comparison at a worst of 4.7 units. The coverage comparison, which samples a grid and compares inside against outside, stays at 0.54% of a glyph's area, so the regions agree and this is a placement and segmentation difference.
+Fairization is what is left, on 7 of 59 glyphs, worst 7.5 units on `less`. It is a run-grouping difference: upstream breaks a run where a corner is not smooth, and we merge across some of those breaks. Most of the time the merge changes nothing downstream, because the quadratic fitter produces the same points either way, which is why the contour comparison only flags five glyphs.
 
-The reason it survived every earlier test is coverage. `tests/fairize.rs` and `tests/quadify.rs` each check one half of the step on their own small corpora, and both are exact; nothing checked the composition `quadify_fair(fairize(..))` on real glyph arcs. The fix is the same as before: capture the fairized shape as a stage, compare it on its own, then compare the quadified contours against it.
+It survived every earlier test because of coverage. `tests/fairize.rs` and `tests/quadify.rs` each check one half of the step on their own small corpora and both are exact; nothing checked the composition on real glyph arcs, and a boundary comparison that tolerates seams hid the run-grouping difference. Closing it means adding the divergent arcs to `corpus/fairize.json` as a minimal reproduction, the way the tree corpus now carries the glyph trees.

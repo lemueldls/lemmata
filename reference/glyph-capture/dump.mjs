@@ -1,15 +1,14 @@
 // Appended by lemmata: dump per-glyph geometry specs and reference contours.
 //
-// Enabled by LEMMATA_GLYPH_DUMP (binary output path). Selection is by
-// LEMMATA_GLYPH_SET (glyph names) or LEMMATA_GLYPH_CODEPOINTS, and
-// LEMMATA_GLYPH_WIDTH pins the advance width. The reference contours and arcs
-// land next to the binary as `<path>.json` and `<path>.arcs.json`.
-//
-// This is appended to packages/font/src/otd-conv/geometry.mjs, so `Geom` and
-// `Point` come from that file's imports.
+// Enabled by LEMMATA_GLYPH_DUMP (binary output path) and LEMMATA_GLYPH_SET
+// (comma-separated glyph names). The reference contours land next to the binary
+// as `<path>.json`.
 
 import { writeFileSync } from "node:fs";
 import * as LemmaCurveUtil from "@iosevka/geometry/curve-util";
+import { SpiroExpander as LemmaSpiroExpander } from "@iosevka/geometry/spiro-expand";
+import * as LemmaSpiroJs from "spiro";
+import * as LemmaTypoGeom from "typo-geom";
 
 class LemmaWriter {
   constructor() {
@@ -197,6 +196,113 @@ function lemmaWriteNode(w, geom, depth) {
   w.u8(0);
 }
 
+
+
+
+// The fairized stage of the glyph-level conversion.
+function lemmaFairized(geom, gizmo) {
+  const arcs = new Geom.SimplifyGeometry(geom, gizmo).toBezArcs();
+  const fairized = LemmaTypoGeom.Fairize.fairizeBezierShape(arcs);
+  const p = (z) => ({ x: z.x, y: z.y });
+  return fairized.map((contour) =>
+    contour.map((arc) =>
+      arc instanceof LemmaTypoGeom.Arcs.StraightSegment
+        ? { kind: "straight", a: p(arc.a), b: p(arc.b) }
+        : {
+            kind: "combined",
+            segments: arc.segments.map((s) => ({ a: p(s.a), b: p(s.b), c: p(s.c), d: p(s.d) })),
+          },
+    ),
+  );
+}
+
+// The raw solver output for one side, sampled.
+function lemmaRawArcs(knots, closed) {
+  const arcs = [];
+  const sink = {
+    beginShape() {},
+    endShape() {},
+    moveTo() {},
+    arcTo(arc) {
+      const sample = (t) => {
+        const z = arc.eval(t);
+        return [z.x, z.y];
+      };
+      arcs.push([
+        sample(0), sample(0.25), sample(0.5), sample(0.75), sample(1),
+        [arc.deriveX0, arc.deriveY0, arc.deriveX1, arc.deriveY1, arc.arcLength, arc.bend],
+      ]);
+    },
+  };
+  LemmaSpiroJs.spiroToArcsOnContext(knots, closed, sink);
+  return arcs;
+}
+
+// Pre-order walk collecting each di-spiro node's expanded sides.
+function lemmaCollectDiSpiro(geom, out) {
+  if (!geom) return;
+  if (geom instanceof Geom.DiSpiroGeometry) {
+    const expander = new LemmaSpiroExpander(
+      geom.m_gizmo,
+      geom.m_contrast,
+      geom.m_closed,
+      geom.m_biKnots,
+    );
+    expander.initializeNormals();
+    for (let r = 0; r < 8; r++) {
+      if (expander.iterateNormals() < 1e-8) break;
+    }
+    const expanded = expander.expand();
+    const side = (knots) =>
+      knots.map((k) => [k.x, k.y, String(k.type), k.unimportant ? 1 : 0]);
+    const lhsU = expanded.lhsUntransformed;
+    const rhsU = expanded.rhsUntransformed;
+    let raw = null;
+    try {
+      const lhs = lhsU.map((k) => k.clone());
+      const rhs = rhsU.map((k) => k.clone());
+      for (const k of rhs) k.reverseType();
+      rhs.reverse();
+      if (geom.m_closed) {
+        raw = { lhs: lemmaRawArcs(lhs, true), rhs: lemmaRawArcs(rhs, true) };
+      } else {
+        if (lhs.length) {
+          lhs[0].type = "corner";
+          lhs[lhs.length - 1].type = "corner";
+        }
+        if (rhs.length) {
+          rhs[0].type = "corner";
+          rhs[rhs.length - 1].type = "corner";
+        }
+        raw = { open: lemmaRawArcs(lhs.concat(rhs), true) };
+      }
+    } catch (_e) {
+      raw = null;
+    }
+    out.push({
+      lhs: side(lhsU),
+      rhs: side(rhsU),
+      raw,
+    });
+    return;
+  }
+  if (geom instanceof Geom.CombineGeometry) {
+    for (const part of geom.m_parts) lemmaCollectDiSpiro(part, out);
+  } else if (geom instanceof Geom.BooleanGeometry) {
+    for (const operand of geom.m_operands) lemmaCollectDiSpiro(operand, out);
+  } else if (geom instanceof Geom.TransformedGeometry) {
+    lemmaCollectDiSpiro(geom.m_geom, out);
+  } else if (geom instanceof Geom.RemoveHolesGeometry || geom instanceof Geom.SimplifyGeometry) {
+    lemmaCollectDiSpiro(geom.m_geom, out);
+  } else if (geom instanceof Geom.StrokeGeometry) {
+    lemmaCollectDiSpiro(geom.m_geom, out);
+  } else if (geom instanceof Geom.TaggedGeometry || geom instanceof Geom.RadicalGeometry) {
+    lemmaCollectDiSpiro(geom.m_geom, out);
+  } else if (geom instanceof Geom.ReferenceGeometry) {
+    lemmaCollectDiSpiro(geom.unwrap(), out);
+  }
+}
+
 function lemmataDumpGlyphs(glyphStore, para) {
   const wantedWidth = process.env.LEMMATA_GLYPH_WIDTH
     ? Number(process.env.LEMMATA_GLYPH_WIDTH)
@@ -222,6 +328,12 @@ function lemmataDumpGlyphs(glyphStore, para) {
       .map((contour) =>
         contour.map((z) => ({ quadratic: z.type === Point.Type.Quadratic, x: z.x, y: z.y })),
       );
+    let treeArcs = [];
+    try {
+      treeArcs = glyph.geometry.toBezArcs();
+    } catch (_e) {
+      treeArcs = [];
+    }
     let arcs = [];
     try {
       arcs = new Geom.SimplifyGeometry(glyph.geometry, glyph.gizmo).toBezArcs();
@@ -237,6 +349,21 @@ function lemmataDumpGlyphs(glyphStore, para) {
       geometry: glyph.geometry,
       contours,
       arcs,
+      treeArcs,
+      fairized: (() => {
+        try {
+          return lemmaFairized(glyph.geometry, glyph.gizmo);
+        } catch (_e) {
+          return [];
+        }
+      })(),
+      expansions: (() => {
+        const out = [];
+        try {
+          lemmaCollectDiSpiro(glyph.geometry, out);
+        } catch (_e) {}
+        return out;
+      })(),
     });
   }
 
@@ -251,6 +378,27 @@ function lemmataDumpGlyphs(glyphStore, para) {
     lemmaWriteNode(writer, glyph.geometry, 0);
   }
   writeFileSync(output, writer.bytes());
+  writeFileSync(
+    `${output}.fairized.json`,
+    JSON.stringify(glyphs.map((glyph) => ({ name: glyph.name, contours: glyph.fairized }))),
+  );
+  writeFileSync(
+    `${output}.expansions.json`,
+    JSON.stringify(
+      glyphs.map((glyph) => ({ name: glyph.name, expansions: glyph.expansions })),
+    ),
+  );
+  writeFileSync(
+    `${output}.tree-arcs.json`,
+    JSON.stringify(
+      glyphs.map((glyph) => ({
+        name: glyph.name,
+        arcs: glyph.treeArcs.map((contour) =>
+          contour.map((arc) => [arc.a, arc.b, arc.c, arc.d].map((p) => [p.x, p.y])),
+        ),
+      })),
+    ),
+  );
   writeFileSync(
     `${output}.arcs.json`,
     JSON.stringify(
