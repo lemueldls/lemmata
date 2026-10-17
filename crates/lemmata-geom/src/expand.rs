@@ -165,7 +165,13 @@ impl SpiroExpander {
     /// Offsets every important knot along its normal.
     pub fn expand(&mut self) -> ExpandResult {
         let n = self.knots_t.len();
-        let mut lhs_t = vec![MonoKnot::new(KnotType::Corner, 0.0, 0.0, false); n];
+        // Every knot keeps its type and importance, important or not: the
+        // solver reads them, and the outline simplifier groups runs by them.
+        let mut lhs_t: Vec<MonoKnot> = self
+            .knots_t
+            .iter()
+            .map(|knot| MonoKnot::new(knot.ty, 0.0, 0.0, knot.unimportant))
+            .collect();
         let mut rhs_t = lhs_t.clone();
         let mut lhs_u = lhs_t.clone();
         let mut rhs_u = lhs_t.clone();
@@ -183,18 +189,10 @@ impl SpiroExpander {
                 (normal_x(tangent, self.contrast), normal_y(tangent))
             };
 
-            lhs_t[j] = MonoKnot::new(
-                knot.ty,
-                knot.x + knot.d1 * dx,
-                knot.y + knot.d1 * dy,
-                knot.unimportant,
-            );
-            rhs_t[j] = MonoKnot::new(
-                knot.ty,
-                knot.x - knot.d2 * dx,
-                knot.y - knot.d2 * dy,
-                knot.unimportant,
-            );
+            lhs_t[j].x = knot.x + knot.d1 * dx;
+            lhs_t[j].y = knot.y + knot.d1 * dy;
+            rhs_t[j].x = knot.x - knot.d2 * dx;
+            rhs_t[j].y = knot.y - knot.d2 * dy;
 
             lhs_u[j] = untransform(&inverse, &lhs_t[j]);
             rhs_u[j] = untransform(&inverse, &rhs_t[j]);

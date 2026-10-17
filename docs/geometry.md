@@ -13,6 +13,8 @@
 
 `crates/lemmata-geom/src/expand.rs` ports `spiro-expand.mjs` and the `DiSpiroGeometry` driver from `index.mjs`: the two normal passes, the linear interpolation of unimportant knots, and the draw step that reverses the right-hand side and sets corner ends on open skeletons. Transforms go through `kurbo::Affine`.
 
+Every expanded knot keeps the skeleton knot's type and importance, important or not. That is not cosmetic: the solver reads the types, so a `g2` knot demoted to a corner turns its span straight, and the run grouping reads the importance. `tests/arcs.rs` in `lemmata-glyphs` asserts both against a capture of the expanded sides.
+
 `tests/spiro_expand.rs` covers nine synthetic skeletons in `corpus/spiro-expand.json`:
 
 - expanded knots match to 1e-9,
