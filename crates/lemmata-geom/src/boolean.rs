@@ -4,6 +4,8 @@
 //! the same job on an integer grid, so results from the two agree to within that
 //! grid's resolution rather than exactly.
 
+#![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
+
 use kurbo::BezPath;
 use linesweeper::{BinaryOp, Error as SweepError, FillRule, binary_op};
 
@@ -54,6 +56,15 @@ const DEGENERATE_AREA: f64 = 1e-6;
 
 /// Two points within this distance count as the same point.
 const POINT_EPSILON: f64 = 1e-9;
+/// Arcs whose control points all sit within this distance of the start are
+/// numerical debris from the sweep, not geometry. Upstream's rebuild never
+/// emits them.
+const DEGENERATE_EXTENT: f64 = 1e-7;
+/// An arc whose ends are this close is a spike candidate. The threshold is
+/// looser than `POINT_EPSILON` because a detour out and back can return a hair
+/// away from where it left, and the chord is then too short to give a stable
+/// direction.
+const SPIKE_ENDPOINT_EPSILON: f64 = 1e-6;
 
 /// Removes the degenerate arcs a sweep can leave behind.
 ///
@@ -69,7 +80,14 @@ pub fn clean_shape(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
         .map(|contour| {
             let mut cleaned: Vec<Bez3> = Vec::with_capacity(contour.len());
             for arc in contour {
-                if close(arc.a, arc.b) && close(arc.a, arc.c) && close(arc.a, arc.d) {
+                if extent(arc) <= DEGENERATE_EXTENT {
+                    continue;
+                }
+                // An arc that comes back to where it started without enclosing
+                // anything is a spike: a detour the sweep left behind.
+                if (arc.a - arc.d).hypot() <= SPIKE_ENDPOINT_EPSILON
+                    && closed_area(arc).abs() <= DEGENERATE_AREA
+                {
                     continue;
                 }
                 let arc = if is_collinear_excursion(arc) {
@@ -93,6 +111,29 @@ pub fn clean_shape(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
         .collect()
 }
 
+/// How far the arc's control points reach from its start.
+fn extent(arc: &Bez3) -> f64 {
+    (arc.b - arc.a)
+        .hypot()
+        .max((arc.c - arc.a).hypot())
+        .max((arc.d - arc.a).hypot())
+}
+
+/// Signed area enclosed by the arc and the chord back to its start.
+fn closed_area(arc: &Bez3) -> f64 {
+    const STEPS: usize = 16;
+    let mut area = 0.0;
+    let mut previous = arc.eval(0.0);
+    let first = previous;
+    for step in 1..=STEPS {
+        let point = arc.eval(step as f64 / STEPS as f64);
+        area += previous.x * point.y - point.x * previous.y;
+        previous = point;
+    }
+    area += previous.x * first.y - first.x * previous.y;
+    area / 2.0
+}
+
 fn close(a: kurbo::Point, b: kurbo::Point) -> bool {
     (a - b).hypot() <= POINT_EPSILON
 }
@@ -102,7 +143,7 @@ fn close(a: kurbo::Point, b: kurbo::Point) -> bool {
 fn is_collinear_excursion(arc: &Bez3) -> bool {
     let along = arc.d - arc.a;
     let length = along.hypot();
-    if length <= POINT_EPSILON {
+    if length <= SPIKE_ENDPOINT_EPSILON {
         return false;
     }
     let direction = along / length;

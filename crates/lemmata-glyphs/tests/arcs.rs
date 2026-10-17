@@ -391,13 +391,26 @@ fn resolved_arcs_are_close() {
 
     let mut worst = (0.0_f64, String::new());
     let mut over = 0usize;
+    let mut structural = Vec::new();
     for (glyph, expected) in glyphs.iter().zip(reference) {
-        let ours = Geometry::Simplify {
+        let ours_arcs = Geometry::Simplify {
             gizmo: glyph.gizmo,
             geom: Box::new(glyph.geometry.clone()),
         }
         .to_bez_arcs();
-        let ours = path_from_ours(&ours);
+        let their_contours = expected["arcs"].as_array().unwrap();
+        let our_counts: Vec<usize> = ours_arcs.iter().map(Vec::len).collect();
+        let their_counts: Vec<usize> = their_contours
+            .iter()
+            .map(|contour| contour.as_array().unwrap().len())
+            .collect();
+        if our_counts != their_counts {
+            structural.push(format!(
+                "{} {:?} vs {:?}",
+                glyph.name, our_counts, their_counts
+            ));
+        }
+        let ours = path_from_ours(&ours_arcs);
         let theirs = path_from_json(&expected["arcs"]);
         let deviation = shape_drift(&ours, &theirs);
         if deviation > worst.0 {
@@ -409,119 +422,20 @@ fn resolved_arcs_are_close() {
         }
     }
     eprintln!(
+        "resolved arcs: {} of {} differ in arc structure",
+        structural.len(),
+        glyphs.len()
+    );
+    for entry in structural.iter().take(10) {
+        eprintln!("  {entry}");
+    }
+    eprintln!(
         "resolved arcs: {over} of {} over 1 unit, worst {:.3} on {worst_name}",
         glyphs.len(),
         worst.0,
         worst_name = worst.1
     );
     assert!(over < glyphs.len() / 4, "{over} glyphs over 1 unit");
-}
-
-/// Temporary: locate the divergence on one glyph.
-#[test]
-fn diagnose() {
-    let Ok(data) = fs::read(dump_path()) else {
-        return;
-    };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode");
-    for want in ["four.lnum", "numberSign", "w"] {
-        let Some(index) = glyphs.iter().position(|g| g.name == want) else {
-            continue;
-        };
-        let glyph = &glyphs[index];
-        for (label, ours_arcs, theirs) in [
-            (
-                "tree",
-                glyph.geometry.to_bez_arcs(),
-                read_reference("tree-arcs"),
-            ),
-            (
-                "resolved",
-                Geometry::Simplify {
-                    gizmo: glyph.gizmo,
-                    geom: Box::new(glyph.geometry.clone()),
-                }
-                .to_bez_arcs(),
-                read_reference("arcs"),
-            ),
-        ] {
-            let theirs = theirs.as_array().unwrap();
-            let expected = theirs.iter().find(|e| e["name"] == want).unwrap();
-            let ours = path_from_ours(&ours_arcs);
-            let other = path_from_json(&expected["arcs"]);
-            let deviation = shape_drift(&ours, &other);
-            if label == "tree" {
-                eprintln!("  tree: {}", kind_tree(&glyph.geometry));
-            }
-            eprintln!(
-                "{want} {label}: ours {} arcs in {} contours, theirs {} contours, drift {deviation:.2}",
-                ours_arcs.iter().map(Vec::len).sum::<usize>(),
-                ours_arcs.len(),
-                expected["arcs"].as_array().unwrap().len()
-            );
-            if deviation > 1.0 {
-                use kurbo::Shape;
-                for (i, contour) in ours_arcs.iter().enumerate() {
-                    let path = path_from_ours(std::slice::from_ref(contour));
-                    eprintln!(
-                        "    ours[{i}] area {:+.0} bbox {:?}",
-                        path.area(),
-                        path.bounding_box()
-                    );
-                }
-                for (i, contour) in expected["arcs"].as_array().unwrap().iter().enumerate() {
-                    let path = path_from_json(contour);
-                    eprintln!(
-                        "    theirs[{i}] area {:+.0} bbox {:?}",
-                        path.area(),
-                        path.bounding_box()
-                    );
-                }
-                let segments: Vec<_> = other.segments().collect();
-                let mut worst = (Point::new(0.0, 0.0), Point::new(0.0, 0.0), 0.0f64);
-                for p in sample(&ours) {
-                    let mut nearest = f64::INFINITY;
-                    let mut nearest_point = Point::new(0.0, 0.0);
-                    for segment in &segments {
-                        let candidate = segment.nearest(p, 1e-3);
-                        let d = candidate.distance_sq.sqrt();
-                        if d < nearest {
-                            nearest = d;
-                            nearest_point = segment.eval(candidate.t);
-                        }
-                    }
-                    if nearest > worst.2 {
-                        worst = (p, nearest_point, nearest);
-                    }
-                }
-                eprintln!(
-                    "  worst ours ({:.1},{:.1}) nearest theirs ({:.1},{:.1}) d {:.2}",
-                    worst.0.x, worst.0.y, worst.1.x, worst.1.y, worst.2
-                );
-            }
-        }
-    }
-}
-
-fn kind_tree(geometry: &Geometry) -> String {
-    let children = |items: &[Geometry]| items.iter().map(kind_tree).collect::<Vec<_>>().join(",");
-    match geometry {
-        Geometry::Contours(_) => "contours".into(),
-        Geometry::Spiro { .. } => "spiro".into(),
-        Geometry::DiSpiro { .. } => "diSpiro".into(),
-        Geometry::SpiroPen { .. } => "spiroPen".into(),
-        Geometry::Stroke { geom, .. } => format!("stroke({})", kind_tree(geom)),
-        Geometry::RemoveHoles { geom, .. } => {
-            format!("removeHoles({})", kind_tree(geom))
-        }
-        Geometry::Simplify { geom, .. } => format!("simplify({})", kind_tree(geom)),
-        Geometry::Combine(parts) => format!("combine[{}]", children(parts)),
-        Geometry::Boolean { op, operands } => format!("boolean({op:?})[{}]", children(operands)),
-        Geometry::Transformed { geom, .. } => format!("transform({})", kind_tree(geom)),
-        Geometry::Tagged(geom) => format!("tagged({})", kind_tree(geom)),
-        Geometry::Radical(geom) => format!("radical({})", kind_tree(geom)),
-        Geometry::Invalid => "invalid".into(),
-    }
 }
 
 fn point_of(value: &Value) -> Point {
@@ -603,6 +517,7 @@ fn fairize_stage_matches() {
         }
         if deviation > 1.0 {
             over += 1;
+            eprintln!("  {}: fairize {deviation:.2}", glyph.name);
         }
     }
     eprintln!(
