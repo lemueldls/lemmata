@@ -1,0 +1,1073 @@
+{
+  "oracle": "util",
+  "cases": [
+    {
+      "name": "mix",
+      "args": [
+        0,
+        100,
+        0
+      ],
+      "result": 0
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        100,
+        0.25
+      ],
+      "result": 25
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        100,
+        0.5
+      ],
+      "result": 50
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        100,
+        1
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        100,
+        1.5
+      ],
+      "result": 150
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        100,
+        -0.5
+      ],
+      "result": -50
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        300,
+        0
+      ],
+      "result": 0
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        300,
+        0.25
+      ],
+      "result": 75
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        300,
+        0.5
+      ],
+      "result": 150
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        300,
+        1
+      ],
+      "result": 300
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        300,
+        1.5
+      ],
+      "result": 450
+    },
+    {
+      "name": "mix",
+      "args": [
+        0,
+        300,
+        -0.5
+      ],
+      "result": -150
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        100,
+        0
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        100,
+        0.25
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        100,
+        0.5
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        100,
+        1
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        100,
+        1.5
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        100,
+        -0.5
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        300,
+        0
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        300,
+        0.25
+      ],
+      "result": 150
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        300,
+        0.5
+      ],
+      "result": 200
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        300,
+        1
+      ],
+      "result": 300
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        300,
+        1.5
+      ],
+      "result": 400
+    },
+    {
+      "name": "mix",
+      "args": [
+        100,
+        300,
+        -0.5
+      ],
+      "result": 0
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        100,
+        0
+      ],
+      "result": -50
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        100,
+        0.25
+      ],
+      "result": -12.5
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        100,
+        0.5
+      ],
+      "result": 25
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        100,
+        1
+      ],
+      "result": 100
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        100,
+        1.5
+      ],
+      "result": 175
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        100,
+        -0.5
+      ],
+      "result": -125
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        300,
+        0
+      ],
+      "result": -50
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        300,
+        0.25
+      ],
+      "result": 37.5
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        300,
+        0.5
+      ],
+      "result": 125
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        300,
+        1
+      ],
+      "result": 300
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        300,
+        1.5
+      ],
+      "result": 475
+    },
+    {
+      "name": "mix",
+      "args": [
+        -50,
+        300,
+        -0.5
+      ],
+      "result": -225
+    },
+    {
+      "name": "barMixL",
+      "args": [
+        0,
+        100,
+        20,
+        0.5
+      ],
+      "result": 40
+    },
+    {
+      "name": "barMixL",
+      "args": [
+        100,
+        0,
+        20,
+        0.5
+      ],
+      "result": 40
+    },
+    {
+      "name": "barMixL",
+      "args": [
+        -50,
+        50,
+        10,
+        0.25
+      ],
+      "result": -22.5
+    },
+    {
+      "name": "barMixL",
+      "args": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "result": 0
+    },
+    {
+      "name": "barMixL",
+      "args": [
+        10,
+        10,
+        4,
+        0.75
+      ],
+      "result": 5
+    },
+    {
+      "name": "linreg",
+      "args": [
+        0,
+        0,
+        100,
+        50,
+        25
+      ],
+      "result": 12.5
+    },
+    {
+      "name": "linreg",
+      "args": [
+        0,
+        0,
+        100,
+        50,
+        150
+      ],
+      "result": 75
+    },
+    {
+      "name": "linreg",
+      "args": [
+        -20,
+        5,
+        80,
+        -30,
+        0
+      ],
+      "result": -2
+    },
+    {
+      "name": "linreg",
+      "args": [
+        0,
+        0,
+        1,
+        1,
+        0.5
+      ],
+      "result": 0.5
+    },
+    {
+      "name": "clamp",
+      "args": [
+        0,
+        1,
+        0.5
+      ],
+      "result": 0.5
+    },
+    {
+      "name": "clamp",
+      "args": [
+        0,
+        1,
+        -1
+      ],
+      "result": 0
+    },
+    {
+      "name": "clamp",
+      "args": [
+        0,
+        1,
+        2
+      ],
+      "result": 1
+    },
+    {
+      "name": "clamp",
+      "args": [
+        -5,
+        5,
+        0
+      ],
+      "result": 0
+    },
+    {
+      "name": "quantize",
+      "args": [
+        0.5,
+        1
+      ],
+      "result": 1
+    },
+    {
+      "name": "quantize",
+      "args": [
+        1.5,
+        1
+      ],
+      "result": 2
+    },
+    {
+      "name": "quantize",
+      "args": [
+        -0.5,
+        1
+      ],
+      "result": 0
+    },
+    {
+      "name": "quantize",
+      "args": [
+        2.5,
+        1
+      ],
+      "result": 3
+    },
+    {
+      "name": "quantize",
+      "args": [
+        -1.5,
+        1
+      ],
+      "result": -1
+    },
+    {
+      "name": "quantize",
+      "args": [
+        7,
+        3
+      ],
+      "result": 6
+    },
+    {
+      "name": "quantize",
+      "args": [
+        0.24,
+        0.1
+      ],
+      "result": 0.2
+    },
+    {
+      "name": "quantize",
+      "args": [
+        0.25,
+        0.1
+      ],
+      "result": 0.30000000000000004
+    },
+    {
+      "name": "quantize",
+      "args": [
+        -0.25,
+        0.1
+      ],
+      "result": -0.2
+    },
+    {
+      "name": "fallback",
+      "args": [
+        "undefined",
+        5
+      ],
+      "result": 5
+    },
+    {
+      "name": "fallback",
+      "args": [
+        7,
+        5
+      ],
+      "result": 7
+    },
+    {
+      "name": "fallback",
+      "args": [
+        "undefined",
+        "undefined",
+        3
+      ],
+      "result": 3
+    },
+    {
+      "name": "fallback",
+      "args": [
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "name": "bez2",
+      "args": [
+        0,
+        50,
+        100,
+        0
+      ],
+      "result": 0
+    },
+    {
+      "name": "bez2",
+      "args": [
+        0,
+        50,
+        100,
+        0.25
+      ],
+      "result": 25
+    },
+    {
+      "name": "bez2",
+      "args": [
+        0,
+        50,
+        100,
+        1
+      ],
+      "result": 100
+    },
+    {
+      "name": "bez2",
+      "args": [
+        0,
+        50,
+        100,
+        1.5
+      ],
+      "result": 150
+    },
+    {
+      "name": "bez3",
+      "args": [
+        0,
+        30,
+        70,
+        100,
+        0
+      ],
+      "result": 0
+    },
+    {
+      "name": "bez3",
+      "args": [
+        0,
+        30,
+        70,
+        100,
+        0.25
+      ],
+      "result": 24.0625
+    },
+    {
+      "name": "bez3",
+      "args": [
+        0,
+        30,
+        70,
+        100,
+        0.5
+      ],
+      "result": 50
+    },
+    {
+      "name": "bez3",
+      "args": [
+        0,
+        30,
+        70,
+        100,
+        1
+      ],
+      "result": 100
+    },
+    {
+      "name": "boole",
+      "args": [
+        true
+      ],
+      "result": 1
+    },
+    {
+      "name": "boolePn",
+      "args": [
+        true
+      ],
+      "result": 1
+    },
+    {
+      "name": "boole",
+      "args": [
+        false
+      ],
+      "result": 0
+    },
+    {
+      "name": "boolePn",
+      "args": [
+        false
+      ],
+      "result": -1
+    },
+    {
+      "name": "strokeOffset",
+      "args": [
+        0,
+        0,
+        100,
+        0,
+        20,
+        1
+      ],
+      "result": [
+        0,
+        -20
+      ]
+    },
+    {
+      "name": "strokeOffset",
+      "args": [
+        0,
+        0,
+        0,
+        100,
+        20,
+        1
+      ],
+      "result": [
+        20,
+        0
+      ]
+    },
+    {
+      "name": "strokeOffset",
+      "args": [
+        10,
+        20,
+        30,
+        40,
+        15,
+        1.2
+      ],
+      "result": [
+        24.4,
+        11
+      ]
+    },
+    {
+      "name": "slY",
+      "args": [
+        0,
+        0,
+        100,
+        0.5
+      ],
+      "result": 50
+    },
+    {
+      "name": "slX",
+      "args": [
+        0,
+        0,
+        100,
+        0.5
+      ],
+      "result": 200
+    },
+    {
+      "name": "slY",
+      "args": [
+        0,
+        10,
+        -50,
+        -0.25
+      ],
+      "result": 22.5
+    },
+    {
+      "name": "slX",
+      "args": [
+        0,
+        10,
+        -50,
+        -0.25
+      ],
+      "result": 240
+    },
+    {
+      "name": "distP",
+      "args": [
+        0,
+        0,
+        100,
+        0,
+        25
+      ],
+      "result": 0.25
+    },
+    {
+      "name": "distP",
+      "args": [
+        0,
+        0,
+        0,
+        100,
+        25
+      ],
+      "result": 0.25
+    },
+    {
+      "name": "distP",
+      "args": [
+        10,
+        10,
+        40,
+        50,
+        10
+      ],
+      "result": 0.2
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        -2
+      ],
+      "result": -1.2246467991473532e-16
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        -1
+      ],
+      "result": -1
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        -0.5
+      ],
+      "result": -0.7071067811865475
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        0
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        0.5
+      ],
+      "result": 0.7071067811865475
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        1
+      ],
+      "result": 1
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        2
+      ],
+      "result": 1.2246467991473532e-16
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        3
+      ],
+      "result": -1
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        4
+      ],
+      "result": -2.4492935982947064e-16
+    },
+    {
+      "name": "waveform.sine",
+      "args": [
+        5
+      ],
+      "result": 1
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        -2
+      ],
+      "result": -1
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        -1
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        -0.5
+      ],
+      "result": 1
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        0
+      ],
+      "result": 1
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        0.5
+      ],
+      "result": 1
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        1
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        2
+      ],
+      "result": -1
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        3
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        4
+      ],
+      "result": 1
+    },
+    {
+      "name": "waveform.square",
+      "args": [
+        5
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        -2
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        -1
+      ],
+      "result": -1
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        -0.5
+      ],
+      "result": -0.5
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        0
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        0.5
+      ],
+      "result": 0.5
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        1
+      ],
+      "result": 1
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        2
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        3
+      ],
+      "result": -1
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        4
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.triangle",
+      "args": [
+        5
+      ],
+      "result": 1
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        -2
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        -1
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        -0.5
+      ],
+      "result": -0.5
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        0
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        0.5
+      ],
+      "result": 0.5
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        1
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        2
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        3
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        4
+      ],
+      "result": 0
+    },
+    {
+      "name": "waveform.sawtooth",
+      "args": [
+        5
+      ],
+      "result": 0
+    }
+  ]
+}

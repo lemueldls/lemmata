@@ -8,4 +8,6 @@ Build outputs do not belong in the repository. Copy the TTFs to `target/referenc
 
 `glyph-oracle/` builds glyph compositions with upstream's `Glyph`, `GlyphProc` and `boole-kit` over `corpus/glyph-compose.json`, so the Rust port of the composition layer can be compared against it.
 
+`util-oracle/` runs upstream's numeric helpers over a grid of inputs for `tests/numeric.rs`.
+
 `glyph-capture/` patches the scratch tree instead of importing from it, because per-glyph geometry is not reachable any other way. It writes a glyph set's geometry trees and converted contours for `lemmata-glyphs` and `lemmata-cli` to read.

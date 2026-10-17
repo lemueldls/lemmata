@@ -7,12 +7,15 @@
 //! geometry code, which is how the seam is meant to work: upstream's glyph
 //! definitions, our primitives.
 //!
-//! [`control`], [`spiro_kit`] and [`metrics`] are the first slices of the layer
-//! the definitions themselves are written in: control knots, knot pairs, the
-//! flattener that resolves interpolators, the collector that turns controls
-//! into bi-knots, the knot builders, and the metrics every definition reads.
-//! `tests/spiro_kit.rs` compares the control layer against upstream's own, and
-//! `tests/metrics.rs` compares all 105 metrics against the ones the build
+//! The modules below are the layer the definitions themselves are written in.
+//! [`control`], [`spiro_kit`] and [`metrics`] are the shape side: control knots,
+//! knot pairs, the flattener that resolves interpolators, the collector that
+//! turns controls into bi-knots, the knot builders, and the metrics every
+//! definition reads. [`glyph`] is the composition side: a [`glyph::Glyph`]
+//! accumulates shapes into the same geometry tree upstream builds. [`util`] is
+//! the numeric vocabulary the definitions are written with. `tests/spiro_kit.rs`
+//! and `tests/glyph_compose.rs` compare those layers against upstream's own,
+//! and `tests/metrics.rs` compares all 105 metrics against the ones the build
 //! derived.
 
 pub mod control;
@@ -20,6 +23,8 @@ pub mod glyph;
 pub mod letter_model;
 pub mod metrics;
 pub mod spiro_kit;
+pub mod store;
+pub mod util;
 
 use kurbo::{Affine, Vec2};
 use lemmata_geom::{Bez3, BiKnot, Geometry, KnotType, MonoKnot, PenKnot};
