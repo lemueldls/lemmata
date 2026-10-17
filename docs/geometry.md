@@ -41,15 +41,22 @@ Worth knowing before tightening these numbers: Iosevka's exported Bezier drawing
 - the fitted offsets match Iosevka to 1e-6,
 - the unioned and clipped shape matches to 4.2e-5 font units, measured as point-to-curve distance.
 
+## Quadratic conversion
+
+`crates/lemmata-geom/src/quadify.rs` ports `quadify.mjs` and the `Quadify.auto` fitter from typo-geom: cubic contours become quadratics, then the cleanup pipeline aligns coordinates, drops occurrent points, removes colinear segments, rounds to integers, and rotates the start point. JavaScript's `Math.round` rounds half toward positive infinity, so the port uses `floor(x + 0.5)`.
+
+`tests/quadify.rs` covers five shapes in `corpus/quadify.json` (rectangle, rectangle with colinear points, circle, wave, two contours). Every contour matches upstream at 1e-9.
+
 ## Overlap removal
 
 `crates/lemmata-geom/src/boolean.rs` wraps linesweeper for union, intersection and self-overlap removal on kurbo paths. Iosevka uses typo-geom on an integer grid for the same job, so the two agree within that grid's resolution rather than exactly.
 
 ## Not ported yet
 
-- Quadratic conversion, `quadify.mjs`, for TrueType output.
+- `fairizeBezierShape` from typo-geom: corner classification, splitting at extrema, and straight-run reduction. `StrokeGeometry` and `SimplifyGeometry` apply it before stroke expansion and quadratic conversion.
+- The geometry tree classes in `packages/geometry/src/index.mjs` that wire spiro, expansion and transforms together.
 
-It is the last primitive before the geometry seam is complete.
+Everything ported above is verified against upstream on its own inputs.
 
 ## Captured fixtures
 

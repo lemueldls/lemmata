@@ -1,0 +1,327 @@
+{
+  "oracle": "iosevka v34.9.0 geometry",
+  "cases": [
+    {
+      "name": "rect",
+      "contours": [
+        [
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "quadratic": false,
+            "x": 400,
+            "y": 0
+          },
+          {
+            "quadratic": false,
+            "x": 400,
+            "y": 300
+          },
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 300
+          }
+        ]
+      ]
+    },
+    {
+      "name": "rect-colinear-points",
+      "contours": [
+        [
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "quadratic": false,
+            "x": 400,
+            "y": 0
+          },
+          {
+            "quadratic": false,
+            "x": 400,
+            "y": 300
+          },
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 300
+          }
+        ]
+      ]
+    },
+    {
+      "name": "circle",
+      "contours": [
+        [
+          {
+            "quadratic": false,
+            "x": 200,
+            "y": 0
+          },
+          {
+            "quadratic": true,
+            "x": 241,
+            "y": 0
+          },
+          {
+            "quadratic": true,
+            "x": 314,
+            "y": 31
+          },
+          {
+            "quadratic": true,
+            "x": 369,
+            "y": 86
+          },
+          {
+            "quadratic": true,
+            "x": 400,
+            "y": 159
+          },
+          {
+            "quadratic": false,
+            "x": 400,
+            "y": 200
+          },
+          {
+            "quadratic": true,
+            "x": 400,
+            "y": 241
+          },
+          {
+            "quadratic": true,
+            "x": 369,
+            "y": 314
+          },
+          {
+            "quadratic": true,
+            "x": 314,
+            "y": 369
+          },
+          {
+            "quadratic": true,
+            "x": 241,
+            "y": 400
+          },
+          {
+            "quadratic": false,
+            "x": 200,
+            "y": 400
+          },
+          {
+            "quadratic": true,
+            "x": 159,
+            "y": 400
+          },
+          {
+            "quadratic": true,
+            "x": 86,
+            "y": 369
+          },
+          {
+            "quadratic": true,
+            "x": 31,
+            "y": 314
+          },
+          {
+            "quadratic": true,
+            "x": 0,
+            "y": 241
+          },
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 200
+          },
+          {
+            "quadratic": true,
+            "x": 0,
+            "y": 159
+          },
+          {
+            "quadratic": true,
+            "x": 31,
+            "y": 86
+          },
+          {
+            "quadratic": true,
+            "x": 86,
+            "y": 31
+          },
+          {
+            "quadratic": true,
+            "x": 159,
+            "y": 0
+          }
+        ]
+      ]
+    },
+    {
+      "name": "wave",
+      "contours": [
+        [
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "quadratic": true,
+            "x": 19,
+            "y": 23
+          },
+          {
+            "quadratic": true,
+            "x": 56,
+            "y": 37
+          },
+          {
+            "quadratic": true,
+            "x": 94,
+            "y": 31
+          },
+          {
+            "quadratic": true,
+            "x": 131,
+            "y": 11
+          },
+          {
+            "quadratic": true,
+            "x": 169,
+            "y": -11
+          },
+          {
+            "quadratic": true,
+            "x": 206,
+            "y": -31
+          },
+          {
+            "quadratic": true,
+            "x": 244,
+            "y": -37
+          },
+          {
+            "quadratic": true,
+            "x": 281,
+            "y": -22
+          },
+          {
+            "quadratic": false,
+            "x": 300,
+            "y": 0
+          },
+          {
+            "quadratic": true,
+            "x": 319,
+            "y": 23
+          },
+          {
+            "quadratic": true,
+            "x": 356,
+            "y": 37
+          },
+          {
+            "quadratic": true,
+            "x": 394,
+            "y": 31
+          },
+          {
+            "quadratic": true,
+            "x": 431,
+            "y": 11
+          },
+          {
+            "quadratic": true,
+            "x": 469,
+            "y": -11
+          },
+          {
+            "quadratic": true,
+            "x": 506,
+            "y": -31
+          },
+          {
+            "quadratic": true,
+            "x": 544,
+            "y": -37
+          },
+          {
+            "quadratic": true,
+            "x": 581,
+            "y": -22
+          },
+          {
+            "quadratic": false,
+            "x": 600,
+            "y": 0
+          },
+          {
+            "quadratic": false,
+            "x": 600,
+            "y": 300
+          },
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 300
+          }
+        ]
+      ]
+    },
+    {
+      "name": "two-contours",
+      "contours": [
+        [
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "quadratic": false,
+            "x": 400,
+            "y": 0
+          },
+          {
+            "quadratic": false,
+            "x": 400,
+            "y": 300
+          },
+          {
+            "quadratic": false,
+            "x": 0,
+            "y": 300
+          }
+        ],
+        [
+          {
+            "quadratic": false,
+            "x": 250,
+            "y": 200
+          },
+          {
+            "quadratic": false,
+            "x": 150,
+            "y": 200
+          },
+          {
+            "quadratic": false,
+            "x": 150,
+            "y": 100
+          },
+          {
+            "quadratic": false,
+            "x": 250,
+            "y": 100
+          }
+        ]
+      ]
+    }
+  ]
+}
