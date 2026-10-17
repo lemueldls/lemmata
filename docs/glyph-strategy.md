@@ -73,7 +73,9 @@ The control layer is ported. `lemmata-glyphs::control` carries the controls, the
 
 `reference/spiro-kit-oracle` runs upstream's own layer over `corpus/spiro-kit.json` and writes `golden/spiro-kit.json`; `crates/lemmata-glyphs/tests/spiro_kit.rs` builds the same sequences and compares. Sixteen cases and 69 knots, with every type, width, importance and normal exact and coordinates within 1e-9. The tolerance is for the arc interpolators, which go through `cos`, `sin` and `pow`: V8's implementations differ from Rust's by around 3e-14, so bit-exactness is not available there without matching V8's libm.
 
-What remains of the layer: `letter-model.mjs` (`DivFrame`, `Sw`, `adviceStroke2`), the `glyph` package (`GlyphProc`, `union`, `difference`, `include`, the block executor), `util`, and `aesthetics`. Roughly 2,500 lines.
+The metrics layer is ported too. `lemmata-glyphs::metrics` carries `calculateMetrics` from `meta/aesthetics.ptl` and the stroke-width advice from `weight-control.mjs`: the frame, the stroke width, the arch depths, the overshoots, the balance offsets, the ess ratios, and the weight-control sigmoid. The capture writes the plan parameters the build used and the metrics it derived from them, and `tests/metrics.rs` compares all 105 fields. The worst deviation is 1.4e-14, from `tan`, `atanh` and `tanh` differing between V8 and Rust in the last bits.
+
+What remains of the layer: `letter-model.mjs`'s `DivFrame`, the `glyph` package (`GlyphProc`, `union`, `difference`, `include`, the block executor), and `util`. Roughly 1,900 lines. The definitions also pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), which are part of the 60,020 and amortize across glyphs.
 
 ## How the measurement was taken
 
