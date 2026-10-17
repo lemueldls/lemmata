@@ -5,15 +5,13 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-mod util;
-
 use std::fs;
 
-use lemmata_glyphs::letter_model::DivFrame;
-use lemmata_glyphs::metrics::Metrics;
+use lemmata_ptl::letter_model::DivFrame;
+use lemmata_ptl::metrics::Metrics;
 use serde_json::Value;
 
-use util::{dump_path, metrics_from_capture};
+use lemmata_capture::{dump_path, metrics_from_capture};
 
 /// `atanh` and `tanh` differ between V8 and Rust in the last bits.
 const TOLERANCE: f64 = 1e-9;

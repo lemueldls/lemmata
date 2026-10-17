@@ -9,18 +9,16 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-mod util;
-
 use std::fs;
 
 use lemmata_geom::{BiKnot, Geometry};
-use lemmata_glyphs::letter_model::DivFrame;
-use lemmata_glyphs::lower_a::{DoubleStorey, HOOK_SLAB_NONE};
-use lemmata_glyphs::shapes::Design;
-use lemmata_glyphs::spiro_kit::{Dispiro, Kit};
+use lemmata_glyphs::letter::latin::lower_a::{DoubleStorey, HOOK_SLAB_NONE};
+use lemmata_ptl::letter_model::DivFrame;
+use lemmata_ptl::shapes::Design;
+use lemmata_ptl::spiro_kit::{Dispiro, Kit};
 use serde_json::Value;
 
-use util::{dump_path, metrics_from_capture};
+use lemmata_capture::{dump_path, metrics_from_capture};
 
 /// Knot positions and normals are exact between the two implementations.
 const TOLERANCE: f64 = 1e-6;
@@ -98,7 +96,7 @@ fn lower_a_matches_capture() {
     let contours = read("");
     let contours = contours.as_array().expect("array");
 
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
     let design = Design::default();
     let df = DivFrame::new(metrics.clone(), Some(1.0), None, None);
     let kit = Kit::new(
@@ -146,9 +144,9 @@ fn lower_a_matches_capture() {
             .find(|glyph| glyph.name == *name)
             .unwrap_or_else(|| panic!("{name} is not in the capture"));
         let mut captured = Vec::new();
-        lemmata_glyphs::collect_di_spiro(&glyph.geometry, &mut captured);
+        lemmata_capture::collect_di_spiro(&glyph.geometry, &mut captured);
         let mut our_nodes = Vec::new();
-        lemmata_glyphs::collect_di_spiro(ours, &mut our_nodes);
+        lemmata_capture::collect_di_spiro(ours, &mut our_nodes);
         assert_eq!(captured.len(), our_nodes.len(), "{name}: dispiro count");
 
         // The bi-knots.

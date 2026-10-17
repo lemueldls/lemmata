@@ -16,9 +16,9 @@
 )]
 
 use std::fs;
-use std::path::{Path, PathBuf};
 
 use kurbo::{BezPath, ParamCurve, ParamCurveNearest, Point};
+use lemmata_capture::{dump_path, read_side_data};
 use lemmata_geom::{Bez3, Geometry, MonoKnot};
 use serde_json::Value;
 
@@ -28,30 +28,6 @@ const SAMPLES_PER_SEGMENT: usize = 16;
 const KNOT_TOLERANCE: f64 = 1e-6;
 /// Raw arc samples are exact too.
 const ARC_TOLERANCE: f64 = 1e-6;
-
-fn workspace_path(relative: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join(relative)
-}
-
-fn dump_path() -> PathBuf {
-    std::env::var_os("LEMMATA_GLYPH_DUMP")
-        .map_or_else(|| workspace_path("target/glyphs.bin"), PathBuf::from)
-}
-
-fn read_reference(suffix: &str) -> Value {
-    let path = dump_path();
-    let name = if suffix.is_empty() {
-        format!("{}.json", path.display())
-    } else {
-        format!("{}.{suffix}.json", path.display())
-    };
-    serde_json::from_str(
-        &fs::read_to_string(&name).unwrap_or_else(|error| panic!("reading {name}: {error}")),
-    )
-    .expect("parse reference")
-}
 
 fn path_from_ours(contours: &[Vec<Bez3>]) -> BezPath {
     let mut path = BezPath::new();
@@ -133,15 +109,15 @@ fn expansions_match() {
         eprintln!("skipping: no capture");
         return;
     };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
-    let reference = read_reference("expansions");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
+    let reference = read_side_data("expansions");
     let reference = reference.as_array().expect("array");
 
     let mut worst = 0.0_f64;
     let mut nodes = 0usize;
     for (glyph, expected) in glyphs.iter().zip(reference) {
         let mut found = Vec::new();
-        lemmata_glyphs::collect_di_spiro(&glyph.geometry, &mut found);
+        lemmata_capture::collect_di_spiro(&glyph.geometry, &mut found);
         let expansions = expected["expansions"].as_array().unwrap();
         assert_eq!(found.len(), expansions.len(), "{}: node count", glyph.name);
         for (node, expected_node) in found.iter().zip(expansions) {
@@ -213,15 +189,15 @@ fn raw_solve_arcs_match() {
         eprintln!("skipping: no capture");
         return;
     };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
-    let reference = read_reference("expansions");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
+    let reference = read_side_data("expansions");
     let reference = reference.as_array().expect("array");
 
     let mut worst = 0.0_f64;
     let mut nodes = 0usize;
     for (glyph, expected) in glyphs.iter().zip(reference) {
         let mut found = Vec::new();
-        lemmata_glyphs::collect_di_spiro(&glyph.geometry, &mut found);
+        lemmata_capture::collect_di_spiro(&glyph.geometry, &mut found);
         let expansions = expected["expansions"].as_array().unwrap();
         for (node, expected_node) in found.iter().zip(expansions) {
             if expected_node["raw"].is_null() {
@@ -321,8 +297,8 @@ fn tree_arcs_match() {
         eprintln!("skipping: no capture");
         return;
     };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
-    let reference = read_reference("tree-arcs");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
+    let reference = read_side_data("tree-arcs");
     let reference = reference.as_array().expect("array");
 
     let mut worst = (0.0_f64, String::new());
@@ -361,8 +337,8 @@ fn resolved_arcs_are_close() {
         eprintln!("skipping: no capture");
         return;
     };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
-    let reference = read_reference("arcs");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
+    let reference = read_side_data("arcs");
     let reference = reference.as_array().expect("array");
 
     let mut worst = (0.0_f64, String::new());
@@ -476,8 +452,8 @@ fn fairize_stage_matches() {
         eprintln!("skipping: no capture");
         return;
     };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
-    let reference = read_reference("fairized");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
+    let reference = read_side_data("fairized");
     let reference = reference.as_array().expect("array");
 
     let mut worst = (0.0_f64, String::new());
@@ -568,10 +544,10 @@ fn quadify_on_captured_fairize_matches() {
         eprintln!("skipping: no capture");
         return;
     };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
-    let fairized = read_reference("fairized");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
+    let fairized = read_side_data("fairized");
     let fairized = fairized.as_array().expect("array");
-    let reference = read_reference("");
+    let reference = read_side_data("");
     let reference = reference.as_array().expect("array");
 
     let mut worst = (0.0_f64, String::new());

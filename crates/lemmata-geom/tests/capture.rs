@@ -11,9 +11,10 @@
 #![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use kurbo::{BezPath, ParamCurve, ParamCurveNearest, Point, Shape};
+use lemmata_capture::dump_path;
 use lemmata_geom::{QuadifyKind, QuadifyPoint};
 use serde_json::Value;
 
@@ -23,17 +24,6 @@ use serde_json::Value;
 const TOLERANCE: f64 = 5.0;
 /// Samples per segment for the comparison.
 const SAMPLES_PER_SEGMENT: usize = 16;
-
-fn dump_path() -> PathBuf {
-    std::env::var_os("LEMMATA_GLYPH_DUMP").map_or_else(
-        || {
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../..")
-                .join("target/glyphs.bin")
-        },
-        PathBuf::from,
-    )
-}
 
 /// A quadratic contour as a path. A quadratic point is a control point whose
 /// partner is the next corner; two corners make a line.
@@ -129,7 +119,7 @@ fn captured_glyphs_reproduce_their_contours() {
         eprintln!("skipping: no capture at {}", path.display());
         return;
     };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
 
     let reference_path = PathBuf::from(format!("{}.json", path.display()));
     let reference: Value =
@@ -146,7 +136,7 @@ fn captured_glyphs_reproduce_their_contours() {
         let name = glyph.name.as_str();
         assert_eq!(name, expected["name"].as_str().unwrap(), "glyph order");
 
-        let ours = lemmata_glyphs::contours(glyph);
+        let ours = lemmata_capture::contours(glyph);
         let theirs = expected["contours"].as_array().unwrap();
 
         let mut ours_path = BezPath::new();
@@ -229,7 +219,7 @@ fn captured_glyphs_cover_the_same_region() {
         eprintln!("skipping: no capture at {}", path.display());
         return;
     };
-    let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
+    let glyphs = lemmata_capture::load(&data).expect("decode capture");
     let reference: Value = serde_json::from_str(
         &fs::read_to_string(format!("{}.json", path.display())).expect("reference contours"),
     )
@@ -239,7 +229,7 @@ fn captured_glyphs_cover_the_same_region() {
     let mut worst = (0.0_f64, String::new());
     for (glyph, expected) in glyphs.iter().zip(reference) {
         let mut ours = BezPath::new();
-        for contour in lemmata_glyphs::contours(glyph) {
+        for contour in lemmata_capture::contours(glyph) {
             ours.extend(contour_path(&contour).iter());
         }
         let mut theirs = BezPath::new();

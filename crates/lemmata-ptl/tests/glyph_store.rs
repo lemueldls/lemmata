@@ -14,8 +14,8 @@ use std::path::{Path, PathBuf};
 
 use kurbo::{Affine, BezPath, ParamCurve, ParamCurveNearest, Point, Shape};
 use lemmata_geom::{Geometry, KnotType, MonoKnot};
-use lemmata_glyphs::glyph::{GlyphProc, Operation};
-use lemmata_glyphs::store::{GlyphSaveSink, GlyphTarget};
+use lemmata_ptl::glyph::{GlyphProc, Operation};
+use lemmata_ptl::store::{GlyphSaveSink, GlyphTarget};
 use serde_json::Value;
 
 /// Samples per segment.

@@ -10,8 +10,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use kurbo::Vec2;
-use lemmata_glyphs::control::{Af, Item};
-use lemmata_glyphs::spiro_kit::{Direction, Family, Kit, Position};
+use lemmata_ptl::control::{Af, Item};
+use lemmata_ptl::spiro_kit::{Direction, Family, Kit, Position};
 use serde_json::Value;
 
 fn workspace_path(relative: &str) -> PathBuf {

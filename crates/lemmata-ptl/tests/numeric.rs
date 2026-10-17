@@ -12,7 +12,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use lemmata_glyphs::util::{
+use lemmata_ptl::util::{
     Waveform, bar_mix_l, bez2, bez3, boole, boole_pn, clamp, dist_p, fallback, linreg, mix,
     quantize, sl_x, sl_y, stroke_offset,
 };

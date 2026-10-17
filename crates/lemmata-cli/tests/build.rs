@@ -11,7 +11,7 @@ fn advance_to_u16(advance: f64) -> u16 {
 }
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
-use lemmata_glyphs::Glyph;
+use lemmata_capture::Glyph;
 use read_fonts::tables::glyf::Glyph as ReadGlyph;
 use read_fonts::types::NameId;
 use read_fonts::{FontRef, TableProvider};
@@ -37,14 +37,14 @@ fn glyph_data(captured: &[Glyph]) -> Vec<GlyphData> {
             name: glyph.name.clone(),
             unicodes: glyph.unicodes.clone(),
             advance: advance_to_u16(glyph.advance),
-            contours: lemmata_glyphs::contours(glyph),
+            contours: lemmata_capture::contours(glyph),
         })
         .collect()
 }
 
 fn build_font() -> Option<(Vec<u8>, Vec<Glyph>)> {
     let data = std::fs::read(dump_path()).ok()?;
-    let captured = lemmata_glyphs::load(&data).expect("decode capture");
+    let captured = lemmata_capture::load(&data).expect("decode capture");
     let glyphs = glyph_data(&captured);
     let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default())
         .expect("build the font");

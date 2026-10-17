@@ -112,11 +112,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "lemmata-capture"
+version = "0.1.0"
+dependencies = [
+ "kurbo",
+ "lemmata-geom",
+ "lemmata-ptl",
+ "linesweeper",
+ "serde_json",
+]
+
+[[package]]
 name = "lemmata-cli"
 version = "0.1.0"
 dependencies = [
  "lemmata-build",
- "lemmata-glyphs",
+ "lemmata-capture",
  "read-fonts",
 ]
 
@@ -125,6 +136,7 @@ name = "lemmata-geom"
 version = "0.1.0"
 dependencies = [
  "kurbo",
+ "lemmata-capture",
  "linesweeper",
  "serde_json",
 ]
@@ -134,8 +146,9 @@ name = "lemmata-glyphs"
 version = "0.1.0"
 dependencies = [
  "kurbo",
+ "lemmata-capture",
  "lemmata-geom",
- "linesweeper",
+ "lemmata-ptl",
  "serde_json",
 ]
 
@@ -146,6 +159,17 @@ dependencies = [
  "kurbo",
  "read-fonts",
  "skrifa",
+]
+
+[[package]]
+name = "lemmata-ptl"
+version = "0.1.0"
+dependencies = [
+ "kurbo",
+ "lemmata-capture",
+ "lemmata-geom",
+ "linesweeper",
+ "serde_json",
 ]
 
 [[package]]

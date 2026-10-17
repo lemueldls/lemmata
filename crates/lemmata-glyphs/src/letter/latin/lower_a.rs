@@ -13,16 +13,16 @@
 // upstream's, where `ada` and `adb` are the two arch depths.
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
-use crate::control::{Af, Item};
-use crate::letter_model::DivFrame;
-use crate::metrics::Metrics;
-use crate::shapes::{
+use kurbo::Vec2;
+use lemmata_geom::KnotType;
+use lemmata_ptl::control::{Af, Item};
+use lemmata_ptl::letter_model::DivFrame;
+use lemmata_ptl::metrics::Metrics;
+use lemmata_ptl::shapes::{
     ArchArgs, ArchParams, Design, HookArgs, HookParams, arch, arch_depth_b_clamped, downward,
     leftward, rightward, upward, ysmooth_mid_l,
 };
-use crate::spiro_kit::{Dispiro, Kit};
-use kurbo::Vec2;
-use lemmata_geom::KnotType;
+use lemmata_ptl::spiro_kit::{Dispiro, Kit};
 
 /// What an `OBar` shape takes: the ring it sits in and the stroke it is drawn
 /// with.
@@ -64,7 +64,7 @@ impl DoubleStorey<'_> {
     pub fn smooth_a(&self) -> f64 {
         let sw = self.sw();
         let ad = self.metrics.arch_depth * self.metrics.stroke_width_blend(0.9, 0.81, Some(sw));
-        crate::shapes::arch_depth_a_clamped(
+        lemmata_ptl::shapes::arch_depth_a_clamped(
             self.metrics.xh,
             0.0,
             Some(self.df.arch_depth_a_of(ad, Some(sw))),
@@ -155,19 +155,19 @@ impl DoubleStorey<'_> {
             HOOK_SLAB_NONE => {
                 // The g4 knot the hook's terminal replaces, and the flat knot
                 // the hook resolves against.
-                let terminal_knot = crate::control::UserControlKnot {
+                let terminal_knot = lemmata_ptl::control::UserControlKnot {
                     ty: KnotType::G4,
                     x: hook_left_x,
                     y: metrics.xh - metrics.a_hook,
                     af: Vec::new(),
                 };
-                let straight = crate::control::UserControlKnot {
+                let straight = lemmata_ptl::control::UserControlKnot {
                     ty: KnotType::Left,
                     x: bar_right_x,
                     y: bar_y,
                     af: Vec::new(),
                 };
-                let hook = crate::shapes::hook_start(
+                let hook = lemmata_ptl::shapes::hook_start(
                     self.kit,
                     &terminal_knot,
                     &straight,
@@ -181,7 +181,7 @@ impl DoubleStorey<'_> {
                     },
                     &self.hook_params(),
                 );
-                let crate::shapes::HookOut {
+                let lemmata_ptl::shapes::HookOut {
                     items: hook_items,
                     terminal,
                 } = hook;
@@ -224,7 +224,7 @@ impl DoubleStorey<'_> {
         let fine = fine.unwrap_or(self.df.shoulder_fine);
         let bbd = bbd.unwrap_or(0.0);
 
-        let bar_top = crate::util::mix(0.0, metrics.xh, self.design.a_bar_pos)
+        let bar_top = lemmata_ptl::util::mix(0.0, metrics.xh, self.design.a_bar_pos)
             + sw * (0.5 + self.design.a_bar_stroke_adj);
         let ada = self
             .df
@@ -247,7 +247,7 @@ impl DoubleStorey<'_> {
         ));
         items.push(self.kit.knot(
             KnotType::Right,
-            crate::util::mix(self.right_sb(), self.middle(), 0.9),
+            lemmata_ptl::util::mix(self.right_sb(), self.middle(), 0.9),
             bar_top,
             Vec::new(),
         ));
@@ -262,7 +262,7 @@ impl DoubleStorey<'_> {
             metrics.arch_depth_a,
             metrics.arch_depth_b,
         ) - self.hsw_to_v(left_slope_s) * metrics.smooth_adjust;
-        let arch_knot = crate::control::UserControlKnot {
+        let arch_knot = lemmata_ptl::control::UserControlKnot {
             ty: KnotType::G4,
             x: arch_x,
             y: arch_y,
@@ -279,7 +279,7 @@ impl DoubleStorey<'_> {
                 let flat_y =
                     (bar_top - metrics.tiny - self.hsw_to_v((fine * metrics.tan_slope).abs()))
                         .min(0.0 + ada);
-                let straight = crate::control::UserControlKnot {
+                let straight = lemmata_ptl::control::UserControlKnot {
                     ty: KnotType::Left,
                     x: flat_x,
                     y: flat_y,
@@ -338,7 +338,7 @@ impl DoubleStorey<'_> {
         } = *ring;
         let x = left + self.hsw_to_v(sw - fine);
 
-        let flat_side = |x: f64, ox: f64, af: Af| crate::shapes::FlatSide {
+        let flat_side = |x: f64, ox: f64, af: Af| lemmata_ptl::shapes::FlatSide {
             x,
             d: bot,
             u: top,
@@ -347,10 +347,10 @@ impl DoubleStorey<'_> {
             ox,
             af,
         };
-        let start = crate::shapes::flatside_ld(self.kit, &flat_side(x, 0.0, Vec::new()));
+        let start = lemmata_ptl::shapes::flatside_ld(self.kit, &flat_side(x, 0.0, Vec::new()));
         let middle =
-            crate::shapes::flatside_ru(self.kit, &flat_side(right, metrics.ox, Vec::new()));
-        let end = crate::shapes::flatside_ld(
+            lemmata_ptl::shapes::flatside_ru(self.kit, &flat_side(right, metrics.ox, Vec::new()));
+        let end = lemmata_ptl::shapes::flatside_ld(
             self.kit,
             &flat_side(x, 0.0, self.kit.widths_lhs(Some(fine))),
         );
@@ -379,16 +379,16 @@ impl DoubleStorey<'_> {
         items.extend(arch(
             self.kit,
             &arch_bottom,
-            &crate::shapes::knot_of(start.last().expect("flatside item")),
-            &crate::shapes::knot_of(&middle[0]),
+            &lemmata_ptl::shapes::knot_of(start.last().expect("flatside item")),
+            &lemmata_ptl::shapes::knot_of(&middle[0]),
             &params,
         ));
         items.extend(middle.iter().cloned());
         items.extend(arch(
             self.kit,
             &arch_top,
-            &crate::shapes::knot_of(middle.last().expect("flatside item")),
-            &crate::shapes::knot_of(&end[0]),
+            &lemmata_ptl::shapes::knot_of(middle.last().expect("flatside item")),
+            &lemmata_ptl::shapes::knot_of(&end[0]),
             &params,
         ));
         items.extend(end);
@@ -399,8 +399,8 @@ impl DoubleStorey<'_> {
     #[must_use]
     pub fn obar_right_shape(&self, ring: &OBarRing) -> lemmata_geom::Geometry {
         let shape = self.obar_left_shape(ring);
-        let mid_x = crate::util::mix(ring.left, ring.right, 0.5);
-        let mid_y = crate::util::mix(ring.bot, ring.top, 0.5);
+        let mid_x = lemmata_ptl::util::mix(ring.left, ring.right, 0.5);
+        let mid_y = lemmata_ptl::util::mix(ring.bot, ring.top, 0.5);
         let flip = kurbo::Affine::translate((mid_x, mid_y))
             * kurbo::Affine::scale_non_uniform(-1.0, -1.0)
             * kurbo::Affine::translate((-mid_x, -mid_y));
@@ -487,7 +487,7 @@ impl DoubleStorey<'_> {
         let ink = self.hsw_to_v(sw_ref);
         let co_ink = self.hsw_to_v(metrics.stroke - sw_ref);
         let h_split = 2.0_f64.max(self.df.h_pack);
-        let jut = (metrics.jut - 0.5 * co_ink).min(crate::util::mix(
+        let jut = (metrics.jut - 0.5 * co_ink).min(lemmata_ptl::util::mix(
             0.5 * ink,
             metrics.jut,
             (self.df.adws() * 2.25 / h_split).min(1.0),

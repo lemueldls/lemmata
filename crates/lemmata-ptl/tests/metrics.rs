@@ -8,12 +8,10 @@
 
 use std::fs;
 
-mod util;
-
-use lemmata_glyphs::metrics::Metrics;
+use lemmata_ptl::metrics::Metrics;
 use serde_json::Value;
 
-use util::dump_path;
+use lemmata_capture::dump_path;
 
 /// Metrics go through `tan`, `atanh` and `tanh`, whose implementations differ
 /// between V8 and Rust in the last bits.
@@ -139,7 +137,7 @@ fn metrics_match_upstream() {
         return;
     };
     let value: Value = serde_json::from_str(&text).expect("parse metrics");
-    let ours = util::metrics_from_capture().expect("metrics");
+    let ours = lemmata_capture::metrics_from_capture().expect("metrics");
     let expected = &value["metrics"];
 
     let mut worst = (0.0_f64, String::new());

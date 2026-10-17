@@ -9,24 +9,19 @@ use std::fmt::Write as _;
 use std::fs;
 
 use kurbo::{BezPath, ParamCurve, PathEl, Point, Shape};
-use lemmata_geom::{QuadifyKind, QuadifyPoint};
-use linesweeper::BinaryOp;
-use serde_json::Value;
+use lemmata_capture::dump_path;
 
-const SAMPLES_PER_SEGMENT: usize = 16;
-
+/// A path under the workspace root.
 fn workspace_path(relative: &str) -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
         .join(relative)
 }
+use lemmata_geom::{QuadifyKind, QuadifyPoint};
+use linesweeper::BinaryOp;
+use serde_json::Value;
 
-fn dump_path() -> std::path::PathBuf {
-    std::env::var_os("LEMMATA_GLYPH_DUMP").map_or_else(
-        || workspace_path("target/glyphs.bin"),
-        std::path::PathBuf::from,
-    )
-}
+const SAMPLES_PER_SEGMENT: usize = 16;
 
 fn contour_path(points: &[QuadifyPoint]) -> BezPath {
     let mut path = BezPath::new();
@@ -150,7 +145,7 @@ fn write_difference_svg() {
         eprintln!("skipping: no capture");
         return;
     };
-    let glyphs = lemmata_glyphs::load(&bytes).expect("decode capture");
+    let glyphs = lemmata_capture::load(&bytes).expect("decode capture");
     let reference: Value = serde_json::from_str(
         &fs::read_to_string(format!("{}.json", dump_path().display())).expect("reference"),
     )
@@ -160,7 +155,7 @@ fn write_difference_svg() {
     let mut compared = Vec::new();
     for (glyph, expected) in glyphs.iter().zip(reference) {
         let mut ours = BezPath::new();
-        for contour in lemmata_glyphs::contours(glyph) {
+        for contour in lemmata_capture::contours(glyph) {
             ours.extend(contour_path(&contour).iter());
         }
         let mut theirs = BezPath::new();

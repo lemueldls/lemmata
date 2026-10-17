@@ -2,18 +2,27 @@
 //!
 //! Run through `cargo xtask <command>`.
 
+mod port_status;
 mod requirements;
 
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
-    if std::env::args().nth(1).as_deref() == Some("requirements") {
-        for (id, stage) in requirements::ENFORCED_FROM {
-            println!("{id}\t{stage}");
+    match std::env::args().nth(1).as_deref() {
+        Some("requirements") => {
+            for (id, stage) in requirements::ENFORCED_FROM {
+                println!("{id}\t{stage}");
+            }
+            ExitCode::SUCCESS
         }
-        return ExitCode::SUCCESS;
+        Some("port-status") => {
+            // An incomplete port is the normal state, not a failure.
+            port_status::run();
+            ExitCode::SUCCESS
+        }
+        _ => {
+            eprintln!("usage: cargo xtask <requirements|port-status>");
+            ExitCode::FAILURE
+        }
     }
-
-    eprintln!("usage: cargo xtask requirements");
-    ExitCode::FAILURE
 }

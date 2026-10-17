@@ -65,7 +65,7 @@ fn build(args: &[String]) -> Result<(), String> {
 
     let data = std::fs::read(&glyphs_path)
         .map_err(|error| format!("reading {}: {error}", glyphs_path.display()))?;
-    let captured = lemmata_glyphs::load(&data)?;
+    let captured = lemmata_capture::load(&data)?;
 
     let glyphs: Vec<GlyphData> = captured
         .iter()
@@ -73,7 +73,7 @@ fn build(args: &[String]) -> Result<(), String> {
             name: glyph.name.clone(),
             unicodes: glyph.unicodes.clone(),
             advance: advance_to_u16(glyph.advance),
-            contours: lemmata_glyphs::contours(glyph),
+            contours: lemmata_capture::contours(glyph),
         })
         .collect();
 
