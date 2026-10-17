@@ -82,6 +82,20 @@ It did not close the gap. The deviation is **10.5745 font units**, on `g`, exact
 
 Identical to four decimals across all of them. Float math is therefore ruled out: noise from it would move, and this does not move. It is deterministic on each side and different between them, which is the signature of a discrete decision, not an accumulating error.
 
-The leading suspect is now `linesweeper`, which is the other dependency on the geometry path. It depends on `rustc-hash`, and `FxHasher` feeds the bytes of a `usize` to its hash, so hashes differ between a 32-bit target and a 64-bit one. Where the sweep-line breaks a tie by iteration order, the output differs, deterministically and per platform. That is a hypothesis, not a measurement, and it is testable: build for a 32-bit host target and see whether the native output moves towards the browser's.
+### Pointer width is not it either
 
-Vendoring kurbo is kept. It is what the plan's risk row asks for under "deterministic pure-Rust math paths", it is verified to build, and it is a `[patch.crates-io]` that deletes cleanly. But it is not the fix for the measured gap, and the upstream note in the previous section is still the way to retire it.
+The hypothesis was `linesweeper`'s `rustc-hash`, whose `FxHasher` feeds the bytes of a `usize` into its hash, so iteration order would differ between a 32-bit and a 64-bit target. It was tested by building the same CLI for `i686-unknown-linux-gnu`, which is 32-bit with a host libc, and comparing all three builds:
+
+| pair | worst deviation | glyph |
+| --- | --- | --- |
+| x86_64 vs wasm32 | 10.5745 | g |
+| i686 vs wasm32 | 10.5745 | g |
+| x86_64 vs i686 | 3.1770 | gid 64 |
+
+Refuted. A 32-bit native build is no closer to wasm32 than a 64-bit one: the number is identical to four decimals, on the same glyph. So the `g` divergence is not pointer width.
+
+What the numbers do say. The `g` gap is the same against either native, so the wasm build differs by a fixed discrete amount rather than by an amount that grows with the host's. That is a wasm-specific decision, not platform noise. The two natives also differ from each other, by 3.18 units on a different glyph, which is consistent with the same code meeting two architectures' libc float math.
+
+Where that leaves it. Float math is ruled out for the `g` gap, because routing every transcendental we call, plus all of kurbo's, through `libm` did not move it, and neither did the build profile. Pointer width is ruled out by the table above. What remains is a call or a `cfg(target_arch)` path that still resolves differently on wasm32 specifically, and the cheapest way to find it is the sweep that found the first set: hash a range of inputs for the float functions not yet checked, `asin`, `acos`, `atan`, `sinh`, `cosh`, `cbrt`, `exp2`, `log10`, on both targets and see which one differs. That is a small program and it localises the same way.
+
+The vendored kurbo is unrelated to the measured gap, and the honest reading is that it should be reverted unless it is wanted for the determinism property on its own merits.
