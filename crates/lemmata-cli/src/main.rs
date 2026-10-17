@@ -77,7 +77,28 @@ fn build(args: &[String]) -> Result<(), String> {
         })
         .collect();
 
-    let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &names)?;
+    // The capture records the slant in each glyph's gizmo, so the face's angle
+    // comes from the source rather than from a flag.
+    let coefficients = captured
+        .first()
+        .map_or([1.0, 0.0, 0.0, 1.0, 0.0, 0.0], |glyph| glyph.gizmo.as_coeffs());
+    let italic_angle = coefficients[2].atan2(coefficients[0]).to_degrees();
+    let metrics = Metrics {
+        italic_angle,
+        ..Metrics::default()
+    };
+    // The style is one thing, so the subfamily follows the angle rather than a
+    // flag that could disagree with it.
+    let names = Names {
+        subfamily: if italic_angle == 0.0 {
+            "Regular".to_string()
+        } else {
+            "Italic".to_string()
+        },
+        ..names
+    };
+
+    let bytes = lemmata_build::font::build(&glyphs, &metrics, &names)?;
     std::fs::write(&out_path, &bytes)
         .map_err(|error| format!("writing {}: {error}", out_path.display()))?;
     println!(
