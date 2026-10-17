@@ -22,10 +22,10 @@
 
 use write_fonts::tables::layout::CoverageTable;
 use write_fonts::tables::math::{
-    Math, MathConstants, MathGlyphInfo, MathItalicsCorrectionInfo, MathTopAccentAttachment,
-    MathValueRecord, MathVariants,
+    Math, MathConstants, MathGlyphConstruction, MathGlyphInfo, MathItalicsCorrectionInfo,
+    MathTopAccentAttachment, MathValueRecord, MathVariants,
 };
-use write_fonts::types::{FWord, GlyphId16};
+use write_fonts::types::{FWord, GlyphId16, UfWord};
 
 use crate::font::{GlyphData, Metrics};
 
@@ -92,6 +92,63 @@ pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
     }
 }
 
+/// The glyphs a renderer stretches vertically: delimiters, the radical, the
+/// large operators and the corners that bracket a matrix.
+const STRETCHY: &[u32] = &[
+    0x0028, 0x0029, // parentheses
+    0x005B, 0x005D, // brackets
+    0x007B, 0x007D, // braces
+    0x221A, // radical
+    0x222B, // integral
+    0x2211, // summation
+    0x220F, // product
+    0x2308, 0x2309, 0x230A, 0x230B, // ceiling and floor
+    0x27E8, 0x27E9, // angle brackets
+];
+
+/// The stretchy constructions, one per glyph.
+///
+/// Every one is empty for now: no size variants, and no assembly. The coverage
+/// is what makes the table meaningful before the parts exist, since it names
+/// the glyphs a renderer may ask to stretch.
+#[must_use]
+pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
+    let mut ids = Vec::new();
+    for (index, glyph) in glyphs.iter().enumerate() {
+        if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
+            continue;
+        }
+        let Ok(id) = u16::try_from(index + 1) else {
+            continue;
+        };
+        ids.push(GlyphId16::new(id));
+    }
+    if ids.is_empty() {
+        return MathVariants::default();
+    }
+
+    let constructions = ids
+        .iter()
+        .map(|_| {
+            MathGlyphConstruction {
+                glyph_assembly: None.into(),
+                math_glyph_variant_records: Vec::new(),
+            }
+            .into()
+        })
+        .collect();
+
+    MathVariants {
+        // The pieces of an assembly join along this overlap, so it is the width
+        // of a stroke: anything narrower leaves a seam and anything wider
+        // doubles the ink where they meet.
+        min_connector_overlap: UfWord::new(metrics.underline_thickness.unsigned_abs()),
+        vert_glyph_coverage: Some(ids.iter().copied().collect::<CoverageTable>()).into(),
+        vert_glyph_constructions: constructions,
+        ..MathVariants::default()
+    }
+}
+
 /// The MATH table.
 ///
 /// `glyphs` is the font's glyph order, which is what the per-glyph coverage
@@ -101,7 +158,7 @@ pub fn table(metrics: &Metrics, profile: &MathProfile, glyphs: &[GlyphData]) -> 
     Math::new(
         constants(metrics, profile),
         glyph_info(glyphs),
-        MathVariants::default(),
+        variants(metrics, glyphs),
     )
 }
 

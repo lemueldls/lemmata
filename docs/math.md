@@ -82,6 +82,14 @@ Two details make it work, and both cost time to find. The font needs `--font-pat
 
 It skips when Typst is not installed, like the tests that skip without a capture. It found the font wanting the first time it ran: the corpus needs the Greek letters and `times`, which the capture did not have.
 
+## Stretchy glyphs
+
+`MathVariants` names the glyphs a renderer may stretch, and sets the overlap an assembly joins along to the stroke width. The constructions are empty: no size variants and no assembly, because Iosevka ships no MATH table and so has no size variants to inherit. A font with no MATH table has no reason to draw three widths of a parenthesis.
+
+Sixteen codepoints can stretch. The font has twelve: the capture set carried the parentheses but not the brackets or the braces, so `[`, `]`, `{` and `}` are absent rather than uncovered. The test pins both the count and which four are missing, so the day they arrive the assertion flips.
+
+That is the same shape as the script letters in `r[math.alphabets]`: a gap in the glyph source, pinned rather than hidden.
+
 ## What is deferred
 
 `MathVariants` holds the size variants and the assembly recipes a stretchy delimiter is built from. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis. Those are new glyph designs rather than table code, and they are the last of the table's three parts.

@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
+use read_fonts::tables::math::StretchAxis;
 use read_fonts::types::GlyphId;
 use read_fonts::{FontRef, TableProvider};
 
@@ -194,5 +195,78 @@ fn math_letters_have_corrections_and_accents() {
     );
     eprintln!(
         "math: {covered} letters covered, italic mean {italic_mean}, upright mean {upright_mean}"
+    );
+}
+
+/// The glyphs a renderer stretches vertically, by codepoint.
+const STRETCHY: &[u32] = &[
+    0x0028, 0x0029, 0x005B, 0x005D, 0x007B, 0x007D, 0x221A, 0x222B, 0x2211, 0x220F, 0x2308, 0x2309,
+    0x230A, 0x230B, 0x27E8, 0x27E9,
+];
+
+/// `r[math.stretch]` as far as it goes: the stretchy glyphs are named in the
+/// table, and the overlap its assemblies will join along is the stroke width.
+///
+/// The size variants and the assemblies themselves are not written yet. Iosevka
+/// ships no MATH table, so it has no size variants to inherit, and a font with
+/// no MATH table has no reason to draw three widths of a parenthesis.
+#[test]
+fn stretchy_glyphs_are_covered() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let variants = font
+        .math()
+        .expect("MATH")
+        .math_variants()
+        .expect("MathVariants");
+
+    assert_eq!(
+        variants.min_connector_overlap(),
+        read_fonts::types::UfWord::new(Metrics::default().underline_thickness.unsigned_abs()),
+        "the overlap an assembly joins along is the stroke width"
+    );
+
+    let mut covered = 0usize;
+    let mut missing = Vec::new();
+    for (index, glyph) in captured.iter().enumerate() {
+        if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
+            continue;
+        }
+        let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
+        if variants
+            .glyph_construction(id, StretchAxis::Vertical)
+            .is_some()
+        {
+            covered += 1;
+        } else {
+            missing.push(glyph.name.clone());
+        }
+    }
+
+    assert!(
+        missing.is_empty(),
+        "the font has these but the table does not name them: {missing:?}"
+    );
+    // Sixteen codepoints can stretch. The font has twelve of them: the capture
+    // set carried the parentheses but not the brackets or the braces, so those
+    // four are absent rather than uncovered. Pinning the count is what makes
+    // the day they arrive visible.
+    assert_eq!(covered, 12, "the number of stretchy glyphs the font has");
+    let absent: Vec<u32> = STRETCHY
+        .iter()
+        .copied()
+        .filter(|code| !captured.iter().any(|glyph| glyph.unicodes.contains(code)))
+        .collect();
+    assert_eq!(
+        absent,
+        [0x005B, 0x005D, 0x007B, 0x007D],
+        "the only stretchy glyphs the font lacks should be the brackets and braces"
+    );
+    eprintln!(
+        "stretchy: {covered} of {} covered, absent {absent:?}",
+        STRETCHY.len()
     );
 }
