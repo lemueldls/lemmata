@@ -19,6 +19,7 @@
     clippy::unreadable_literal
 )]
 
+use crate::math;
 use kurbo::{BezPath, Point, Vec2};
 
 /// Largest number of pieces an arc is split into when cubic approximation
@@ -106,10 +107,10 @@ impl SpiroArc {
         let rot = seg_th - th;
         let theta_left = rot + ks_theta(-0.5, -0.5, &ks);
         let theta_right = rot + ks_theta(0.5, 0.5, &ks);
-        let derive_x0 = arc_length * theta_left.cos();
-        let derive_y0 = arc_length * theta_left.sin();
-        let derive_x1 = arc_length * theta_right.cos();
-        let derive_y1 = arc_length * theta_right.sin();
+        let derive_x0 = arc_length * math::cos(theta_left);
+        let derive_y0 = arc_length * math::sin(theta_left);
+        let derive_x1 = arc_length * math::cos(theta_right);
+        let derive_y1 = arc_length * math::sin(theta_right);
         let bend = ks_bend(&ks);
 
         Self {
@@ -160,13 +161,16 @@ impl SpiroArc {
         let t = at - 0.5;
         let theta = self.rot + ks_theta(t, t, &self.ks);
 
-        Vec2::new(self.arc_length * theta.cos(), self.arc_length * theta.sin())
+        Vec2::new(
+            self.arc_length * math::cos(theta),
+            self.arc_length * math::sin(theta),
+        )
     }
 
     fn eval_impl(&self, t: f64, k_sub: [f64; 4]) -> Point {
         let th_sub = self.rot + ks_theta(-0.5, t, &self.ks);
-        let cth = (t + 0.5) * self.arc_length * th_sub.cos();
-        let sth = (t + 0.5) * self.arc_length * th_sub.sin();
+        let cth = (t + 0.5) * self.arc_length * math::cos(th_sub);
+        let sth = (t + 0.5) * self.arc_length * math::sin(th_sub);
         let xy_sub = integrate_spiro(&k_sub);
 
         Point::new(
@@ -796,8 +800,8 @@ fn integrate_spiro(ks: &[f64; 4]) -> [f64; 2] {
         v += (1.0 / 4.08748e9) * t9_10;
         u -= (1.0 / 4.08748e10) * t10_10;
         let th = (((th4 * s + th3) * s + th2) * s + th1) * s;
-        let cth = th.cos();
-        let sth = th.sin();
+        let cth = math::cos(th);
+        let sth = math::sin(th);
         x += cth * u - sth * v;
         y += cth * v + sth * u;
         s += ds;

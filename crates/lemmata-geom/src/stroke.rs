@@ -23,6 +23,7 @@ use linesweeper::BinaryOp;
 
 use crate::boolean::boolean;
 use crate::fit::{CurveArc, fit_contour, straight_bez3};
+use crate::math;
 
 /// Fit tolerance for the cubic conversion, from `curve-util.mjs`.
 const GEOMETRY_PRECISION: f64 = 0.25;
@@ -159,8 +160,8 @@ impl CurveArc for RoundCapCurve {
         let theta = mix(self.theta0, self.theta1, t);
 
         Point::new(
-            center_x + r * theta.cos() * self.contrast,
-            center_y + r * theta.sin(),
+            center_x + r * math::cos(theta) * self.contrast,
+            center_y + r * math::sin(theta),
         )
     }
 
@@ -169,10 +170,11 @@ impl CurveArc for RoundCapCurve {
         let r = mix(self.r0, self.r1, t);
         let dx = self.center1.x - self.center0.x
             + self.contrast
-                * ((self.r1 - self.r0) * theta.cos()
-                    - (self.theta1 - self.theta0) * r * theta.sin());
+                * ((self.r1 - self.r0) * math::cos(theta)
+                    - (self.theta1 - self.theta0) * r * math::sin(theta));
         let dy = self.center1.y - self.center0.y
-            + ((self.r1 - self.r0) * theta.sin() + (self.theta1 - self.theta0) * r * theta.cos());
+            + ((self.r1 - self.r0) * math::sin(theta)
+                + (self.theta1 - self.theta0) * r * math::cos(theta));
 
         Vec2::new(dx, dy)
     }

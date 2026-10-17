@@ -12,6 +12,8 @@
 
 #![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
 
+use lemmata_geom::math;
+
 use kurbo::Vec2;
 use lemmata_geom::{BiKnot, KnotType};
 
@@ -242,8 +244,8 @@ impl Control {
             Interpolator::ArcHv { steps, superness } => (1..*steps)
                 .map(|j| {
                     let theta = ((j + 1) as f64 / (*steps + 2) as f64) * std::f64::consts::PI / 2.0;
-                    let c = theta.cos().powf(2.0 / superness);
-                    let s = theta.sin().powf(2.0 / superness);
+                    let c = math::pow(math::cos(theta), 2.0 / superness);
+                    let s = math::pow(math::sin(theta), 2.0 / superness);
 
                     knot(
                         KnotType::G2,
@@ -256,8 +258,8 @@ impl Control {
             Interpolator::ArcVh { steps, superness } => (1..*steps)
                 .map(|j| {
                     let theta = ((j + 1) as f64 / (*steps + 2) as f64) * std::f64::consts::PI / 2.0;
-                    let c = theta.cos().powf(2.0 / superness);
-                    let s = theta.sin().powf(2.0 / superness);
+                    let c = math::pow(math::cos(theta), 2.0 / superness);
+                    let s = math::pow(math::sin(theta), 2.0 / superness);
 
                     knot(
                         KnotType::G2,

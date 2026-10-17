@@ -19,6 +19,7 @@
     clippy::suboptimal_flops,
     clippy::cast_precision_loss
 )]
+use lemmata_geom::math;
 
 use kurbo::Vec2;
 use lemmata_geom::KnotType;
@@ -114,7 +115,7 @@ fn super_sin(angle: f64, superness: f64) -> f64 {
     if angle == 0.0 {
         return 0.0;
     }
-    let s = (angle * std::f64::consts::PI / 180.0).sin();
+    let s = math::sin(angle * std::f64::consts::PI / 180.0);
 
     crate::util::js_sign(s) * s.abs().powf(2.0 / superness)
 }
@@ -124,7 +125,7 @@ fn super_cos(angle: f64, superness: f64) -> f64 {
     if angle == 0.0 {
         return 1.0;
     }
-    let c = (angle * std::f64::consts::PI / 180.0).cos();
+    let c = math::cos(angle * std::f64::consts::PI / 180.0);
 
     crate::util::js_sign(c) * c.abs().powf(2.0 / superness)
 }

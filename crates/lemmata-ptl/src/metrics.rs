@@ -13,6 +13,7 @@
     clippy::suboptimal_flops,
     clippy::too_many_arguments
 )]
+use lemmata_geom::math;
 
 /// The plan parameters `calculateMetrics` reads.
 #[derive(Clone, Debug, Default)]
@@ -225,7 +226,13 @@ impl WeightControl {
     #[must_use]
     pub fn new(stroke: f64, width: f64, sb: f64, hv_contrast: f64) -> Self {
         let base_fill_rate = (0.95_f64).min((2.0 * stroke * hv_contrast) / (width - sb * 2.0));
-        let factor = base_fill_rate.atanh() / base_fill_rate;
+        // Through `libm` rather than the platform: the host and wasm32 have
+        // different `tanh` and `atanh` in the last bit, and a stroke width that
+        // moves by one unit in the last place moves the outline enough to
+        // change how many points the quadifier emits. Byte-identical output
+        // between the CLI and the browser needs one implementation, and this is
+        // it. `r[wasm.parity-bytes]`
+        let factor = math::atanh(base_fill_rate) / base_fill_rate;
 
         Self {
             stroke,
@@ -237,7 +244,7 @@ impl WeightControl {
     }
 
     fn sigmoid(&self, x: f64) -> f64 {
-        (x * self.factor).tanh()
+        math::tanh(x * self.factor)
     }
 
     #[must_use]
@@ -290,9 +297,9 @@ impl Metrics {
         let symbol_span = width - sb * 2.0;
 
         let contrast = para.contrast.unwrap_or(1.0);
-        let slope = (para.slope_angle / 180.0 * std::f64::consts::PI).tan();
-        let sin_slope = (para.slope_angle / 180.0 * std::f64::consts::PI).sin();
-        let cos_slope = (para.slope_angle / 180.0 * std::f64::consts::PI).cos();
+        let slope = math::tan(para.slope_angle / 180.0 * std::f64::consts::PI);
+        let sin_slope = math::sin(para.slope_angle / 180.0 * std::f64::consts::PI);
+        let cos_slope = math::cos(para.slope_angle / 180.0 * std::f64::consts::PI);
         let tan_slope = slope;
         let hv_contrast = contrast * cos_slope + sin_slope * tan_slope;
         let vh_contrast = 1.0 / hv_contrast;

@@ -4,6 +4,7 @@ pub mod boolean;
 pub mod expand;
 pub mod fairize;
 pub mod fit;
+pub mod math;
 pub mod outline;
 pub mod pen;
 pub mod quadify;

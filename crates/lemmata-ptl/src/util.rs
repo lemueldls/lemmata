@@ -14,6 +14,8 @@
 // control points of a Bezier.
 #![allow(clippy::many_single_char_names)]
 
+use lemmata_geom::math;
+
 /// `mix`.
 #[must_use]
 pub const fn mix(a: f64, b: f64, p: f64) -> f64 {
@@ -132,7 +134,7 @@ impl Waveform {
     #[must_use]
     pub fn eval(self, x: f64) -> f64 {
         match self {
-            Self::Sine => (std::f64::consts::PI / 2.0 * x).sin(),
+            Self::Sine => math::sin(std::f64::consts::PI / 2.0 * x),
             // The `|| 2` and `|| 1` are JavaScript's: a zero becomes the
             // fallback rather than zero.
             Self::Square => {
