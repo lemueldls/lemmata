@@ -28,4 +28,10 @@ What was ruled out. `kurbo` has a `libm` feature, and it only takes that path wh
 
 What is established. Every transcendental our own code uses now goes through one implementation, so the divergence is not ours. It is confined to `glyf`, two bytes across two glyphs, and every other table including MATH is byte-identical. The wasm build's output has not changed at any point in this work, while the native one moved four bytes and then stopped: the native side is converging towards what wasm already computes, and has not arrived.
 
+How far apart they are. `crates/lemmata-oracle/tests/parity_probe.rs` flattens both fonts and measures the worst distance from either outline to the other. Set `NATIVE_FONT` and `BROWSER_FONT` and run it. Comparing a font with itself gives exactly zero, so the number is the difference and not an artifact of the measurement.
+
+It is **10.57 font units**, on `g`. One other glyph is above half a unit and the remaining seventy-one are below it. `r[drift.outline]` is calibrated to 5 units, which is the worst residual Iosevka's own grid-snap artifact produces, so `g` differs by more than twice the tolerance this project uses to call two outlines the same shape. At 16 ppem that is about 0.16 px, so it will not show in a text preview, and at display sizes it will. This is a defect, not a rounding artefact to accept.
+
+So the answer to "is it only the last bit" is no. Something reshapes one glyph by ten units, which is a subdivision or a convergence decision changing, not a rounding boundary.
+
 The next step is to bisect the pipeline by stage. `crates/lemmata-web` can expose the contours or the tree arcs and the two targets can be compared there, which localises it to the geometry or to the encoding. Until then `r[wasm.parity-bytes]` stands and is unmet, rather than being relaxed to match what the code does.
