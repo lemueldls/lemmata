@@ -41,6 +41,14 @@ Worth knowing before tightening these numbers: Iosevka's exported Bezier drawing
 - the fitted offsets match Iosevka to 1e-6,
 - the unioned and clipped shape matches to 4.2e-5 font units, measured as point-to-curve distance.
 
+## Fairization
+
+`crates/lemmata-geom/src/fairize.rs` ports `fairizeBezierShape` from typo-geom: corner classification, splitting at extrema, canonical start selection, and straight-run reduction into `FairArc::Straight` or a length-parameterized `CombinedArc`. It carries the quadratic root solver (with its compensated discriminant), the 16-point Gauss-Legendre length integral, and typo-geom's `RootSink`.
+
+One upstream quirk is reproduced on purpose: when a cubic's extrema quadratic is degenerate on one axis, `ClampedRootSink.degenerated` sets its counter to `-1`, the next accepted root is written to a negative array index, and that root is lost. A cubic with two extrema on the other axis is therefore split at only one of them. `docs/geometry.md`'s test relies on matching it, because the drift target is Iosevka's actual output.
+
+`tests/fairize.rs` covers five shapes in `corpus/fairize.json` (rectangle, circle, wave, a rectangle split into colinear cubics, and a four-cubic flower). Arc kinds, counts and coordinates match upstream at 1e-9.
+
 ## Quadratic conversion
 
 `crates/lemmata-geom/src/quadify.rs` ports `quadify.mjs` and the `Quadify.auto` fitter from typo-geom: cubic contours become quadratics, then the cleanup pipeline aligns coordinates, drops occurrent points, removes colinear segments, rounds to integers, and rotates the start point. JavaScript's `Math.round` rounds half toward positive infinity, so the port uses `floor(x + 0.5)`.
@@ -53,8 +61,7 @@ Worth knowing before tightening these numbers: Iosevka's exported Bezier drawing
 
 ## Not ported yet
 
-- `fairizeBezierShape` from typo-geom: corner classification, splitting at extrema, and straight-run reduction. `StrokeGeometry` and `SimplifyGeometry` apply it before stroke expansion and quadratic conversion.
-- The geometry tree classes in `packages/geometry/src/index.mjs` that wire spiro, expansion and transforms together.
+- The geometry tree classes in `packages/geometry/src/index.mjs` that wire spiro, expansion, transforms and fairization together.
 
 Everything ported above is verified against upstream on its own inputs.
 
