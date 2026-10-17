@@ -84,11 +84,13 @@ fn build(kit: &Kit, spec: &Value) -> Item {
         "close" => kit.close(),
         "end" => kit.end(),
         "archv" => kit.archv(
-            spec.get("samples").map(|v| v.as_u64().unwrap() as usize),
+            spec.get("samples")
+                .map(|v| usize::try_from(v.as_u64().unwrap()).unwrap()),
             spec.get("superness").map(number),
         ),
         "arcvh" => kit.arcvh(
-            spec.get("samples").map(|v| v.as_u64().unwrap() as usize),
+            spec.get("samples")
+                .map(|v| usize::try_from(v.as_u64().unwrap()).unwrap()),
             spec.get("superness").map(number),
         ),
         "alsoThru" => kit.also_thru(number(&spec["rx"]), number(&spec["ry"]), af),
@@ -144,7 +146,7 @@ fn build(kit: &Kit, spec: &Value) -> Item {
     }
 }
 
-fn knot_type_name(ty: lemmata_geom::KnotType) -> &'static str {
+const fn knot_type_name(ty: lemmata_geom::KnotType) -> &'static str {
     use lemmata_geom::KnotType;
     match ty {
         KnotType::G4 => "g4",
@@ -156,6 +158,11 @@ fn knot_type_name(ty: lemmata_geom::KnotType) -> &'static str {
         KnotType::OpenEnd => "open_end",
     }
 }
+
+/// Coordinates are compared to this. The arc interpolators go through `cos`,
+/// `sin` and `pow`, and V8's implementations are not bit-identical to Rust's,
+/// which shows up around 3e-14. Everything structural is exact.
+const TOLERANCE: f64 = 1e-9;
 
 #[test]
 fn control_layer_matches_upstream() {
@@ -170,10 +177,6 @@ fn control_layer_matches_upstream() {
     let expected_cases = golden["cases"].as_array().unwrap();
     assert_eq!(cases.len(), expected_cases.len());
 
-    // Coordinates are compared to this. The arc interpolators go through cos,
-    // sin and pow, and V8's implementations are not bit-identical to Rust's,
-    // which shows up around 3e-14. Everything structural is exact.
-    const TOLERANCE: f64 = 1e-9;
     let mut worst = 0.0_f64;
     for (case, expected) in cases.iter().zip(expected_cases) {
         let name = case["name"].as_str().unwrap();
@@ -234,7 +237,7 @@ fn control_layer_matches_upstream() {
             // The capture writes importance as a number.
             let expected_unimportant = expected_knot["unimportant"]
                 .as_bool()
-                .unwrap_or(expected_knot["unimportant"].as_u64() == Some(1));
+                .unwrap_or_else(|| expected_knot["unimportant"].as_u64() == Some(1));
             assert_eq!(
                 knot.unimportant, expected_unimportant,
                 "{context}: importance"

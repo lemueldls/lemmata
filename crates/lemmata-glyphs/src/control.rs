@@ -449,7 +449,7 @@ pub struct Collector {
 
 impl Collector {
     #[must_use]
-    pub fn new(contrast: f64) -> Self {
+    pub const fn new(contrast: f64) -> Self {
         Self {
             contrast,
             closed: false,
@@ -497,20 +497,17 @@ impl Collector {
         self.apply(&knot.af);
     }
 
-    pub fn finish(&mut self) {
+    pub const fn finish(&mut self) {
         self.finished = true;
     }
 
     fn set_widths(&mut self, l: f64, r: f64) {
-        match self.knots.last_mut() {
-            Some(knot) => {
-                knot.d1 = l;
-                knot.d2 = r;
-            }
-            None => {
-                self.default_d1 = l;
-                self.default_d2 = r;
-            }
+        if let Some(knot) = self.knots.last_mut() {
+            knot.d1 = l;
+            knot.d2 = r;
+        } else {
+            self.default_d1 = l;
+            self.default_d2 = r;
         }
     }
 

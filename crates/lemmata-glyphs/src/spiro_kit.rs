@@ -91,7 +91,7 @@ pub struct Kit {
 
 impl Kit {
     #[must_use]
-    pub fn new(stroke: f64, superness: f64, contrast: f64, tiny: f64) -> Self {
+    pub const fn new(stroke: f64, superness: f64, contrast: f64, tiny: f64) -> Self {
         Self {
             stroke,
             superness,
@@ -116,7 +116,7 @@ impl Kit {
 
     /// A plain knot.
     #[must_use]
-    pub fn knot(&self, ty: KnotType, x: f64, y: f64, af: Af) -> Item {
+    pub const fn knot(&self, ty: KnotType, x: f64, y: f64, af: Af) -> Item {
         Item::Control(Control::Knot(crate::control::UserControlKnot {
             ty,
             x,
@@ -159,7 +159,7 @@ impl Kit {
 
     /// A knot that contributes nothing but still splits interpolation.
     #[must_use]
-    pub fn virt(&self, x: f64, y: f64, af: Af) -> Item {
+    pub const fn virt(&self, x: f64, y: f64, af: Af) -> Item {
         Item::Control(Control::Virtual(crate::control::UserControlKnot {
             ty: KnotType::Corner,
             x,
@@ -169,12 +169,12 @@ impl Kit {
     }
 
     #[must_use]
-    pub fn close(&self) -> Item {
+    pub const fn close(&self) -> Item {
         Item::Close
     }
 
     #[must_use]
-    pub fn end(&self) -> Item {
+    pub const fn end(&self) -> Item {
         Item::End
     }
 
