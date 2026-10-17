@@ -15,6 +15,12 @@ shape = "upright"
 menu = "upright"
 css = "normal"
 
+[buildPlans.RefA.slopes.Italic]
+angle = 15
+shape = "oblique"
+menu = "italic"
+css = "italic"
+
 [buildPlans.RefB]
 family = "Lemmata Ref B"
 spacing = "normal"

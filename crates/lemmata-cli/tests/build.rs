@@ -13,7 +13,9 @@ fn advance_to_u16(advance: f64) -> u16 {
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
 use read_fonts::tables::glyf::Glyph as ReadGlyph;
+use read_fonts::tables::head::MacStyle;
 use read_fonts::tables::math::MathConstant;
+use read_fonts::tables::os2::SelectionFlags;
 use read_fonts::types::NameId;
 use read_fonts::{FontRef, TableProvider};
 
@@ -349,4 +351,172 @@ fn math_table_round_trips() {
         expected.script_percent_scale_down,
         profile.script_percent_scale_down
     );
+}
+
+/// The style bits follow the italic angle, which is the one place the style is
+/// decided. A renderer picks an italic face by these bits, so they have to
+/// agree with the angle the glyphs were drawn at.
+#[test]
+fn italic_style_bits_follow_the_angle() {
+    let Some((upright, captured)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+
+    let font = FontRef::new(&upright).expect("reopen the upright font");
+    assert_eq!(
+        font.head().expect("head").mac_style() & MacStyle::ITALIC,
+        MacStyle::empty(),
+        "an upright face is not italic"
+    );
+    assert!(
+        font.os2()
+            .expect("OS/2")
+            .fs_selection()
+            .contains(SelectionFlags::REGULAR)
+    );
+    assert!(
+        !font
+            .os2()
+            .expect("OS/2")
+            .fs_selection()
+            .contains(SelectionFlags::ITALIC)
+    );
+    assert_eq!(
+        font.post().expect("post").italic_angle().to_f64(),
+        0.0,
+        "an upright face has no angle"
+    );
+
+    // The same glyphs at a slant. The outlines do not move, since they come
+    // from the capture; what changes is what the font says about itself.
+    let metrics = Metrics {
+        italic_angle: 15.0,
+        ..Metrics::default()
+    };
+    let slanted = lemmata_build::font::build(
+        &glyph_data(&captured),
+        &metrics,
+        &Names {
+            subfamily: "Italic".to_string(),
+            ..Names::default()
+        },
+    )
+    .expect("build the slanted font");
+
+    let font = FontRef::new(&slanted).expect("reopen the slanted font");
+    assert_eq!(
+        font.head().expect("head").mac_style() & MacStyle::ITALIC,
+        MacStyle::ITALIC,
+        "a slanted face is italic"
+    );
+    let selection = font.os2().expect("OS/2").fs_selection();
+    assert!(selection.contains(SelectionFlags::ITALIC));
+    assert!(
+        !selection.contains(SelectionFlags::REGULAR),
+        "the specification has REGULAR mean neither bold nor italic"
+    );
+    assert_eq!(
+        font.post().expect("post").italic_angle().to_f64(),
+        -15.0,
+        "the angle is counter-clockwise, so a face leaning right is negative"
+    );
+
+    // The name table carries the style a renderer pairs with the family.
+    let name = font.name().expect("name");
+    let string_data = name.string_data();
+    let subfamily = name
+        .name_record()
+        .iter()
+        .find(|record| record.name_id() == NameId::SUBFAMILY_NAME && record.platform_id() == 3)
+        .and_then(|record| record.string(string_data).ok())
+        .map(|value| value.to_string())
+        .expect("subfamily name");
+    assert_eq!(subfamily, "Italic");
+}
+
+/// Where the slanted capture lives. `LEMMATA_ITALIC_DUMP` overrides it.
+fn italic_dump_path() -> PathBuf {
+    std::env::var_os("LEMMATA_ITALIC_DUMP")
+        .map_or_else(|| workspace_path("target/math-italic.bin"), PathBuf::from)
+}
+
+/// The italic capture's outlines lean, which is what makes the face a face
+/// rather than a label. The style bits say italic; this checks the ink.
+///
+/// The two captures hold different sets in a different order, so the
+/// comparison is by codepoint rather than by position.
+#[test]
+#[allow(clippy::items_after_statements, clippy::cast_precision_loss)]
+fn italic_outlines_lean() {
+    let Some((_, upright)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let Ok(data) = std::fs::read(italic_dump_path()) else {
+        eprintln!("skipping: no italic capture");
+        return;
+    };
+    let slanted = lemmata_capture::load(&data).expect("decode the italic capture");
+
+    /// How far a glyph's ink leans: its upper half's centre against its lower
+    /// half's.
+    fn lean(glyph: &Glyph) -> Option<f64> {
+        let points: Vec<_> = lemmata_capture::contours(glyph)
+            .into_iter()
+            .flatten()
+            .collect();
+        let low = points.iter().map(|p| p.y).fold(f64::INFINITY, f64::min);
+        let high = points.iter().map(|p| p.y).fold(f64::NEG_INFINITY, f64::max);
+        let mid = f64::midpoint(low, high);
+        let centre = |upper: bool| {
+            let xs: Vec<f64> = points
+                .iter()
+                .filter(|p| (p.y >= mid) == upper)
+                .map(|p| p.x)
+                .collect();
+            if xs.is_empty() {
+                return None;
+            }
+            Some(f64::midpoint(
+                xs.iter().copied().fold(f64::INFINITY, f64::min),
+                xs.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+            ))
+        };
+        Some(centre(true)? - centre(false)?)
+    }
+
+    let mut by_code = std::collections::HashMap::new();
+    for glyph in &slanted {
+        for code in &glyph.unicodes {
+            by_code.insert(*code, glyph);
+        }
+    }
+
+    let mut extra = 0.0;
+    let mut compared = 0usize;
+    for glyph in &upright {
+        for code in &glyph.unicodes {
+            if !(0x61..=0x7A).contains(code) {
+                continue;
+            }
+            let Some(slanted) = by_code.get(code) else {
+                continue;
+            };
+            let (Some(straight), Some(leaning)) = (lean(glyph), lean(slanted)) else {
+                continue;
+            };
+            extra += leaning - straight;
+            compared += 1;
+            break;
+        }
+    }
+
+    assert!(compared >= 20, "only {compared} letters could be compared");
+    let mean = extra / compared as f64;
+    assert!(
+        mean > 5.0,
+        "the italic capture leans {mean:.1} units more on average, which is not a slant"
+    );
+    eprintln!("italic: {compared} letters, {mean:.1} units more lean");
 }

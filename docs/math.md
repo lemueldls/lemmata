@@ -60,6 +60,16 @@ That gap is in the glyph source rather than in the table, so the capture cannot 
 
 The ranges are not full even where the styles exist, and that is Unicode rather than Iosevka: italic is 51 of 52 codepoints because U+1D455 is reserved, and fraktur and double-struck have five and seven reserved holes respectively.
 
+## The italic face
+
+Math variables are italic. A renderer picks the italic face of a family by the style bits, so a family with only a Regular cannot set an equation: Typst falls back for every variable, which is nearly every equation. This was measured rather than assumed. With the font set on `math.equation`, `1 + 2` and `2/3` render from ours and `x` does not; `upright(x)` renders from ours and `italic(x)` does not.
+
+`Metrics::italic_angle` is the one place the style is decided. A non-zero angle sets the italic bit in `head.macStyle` and in `OS/2.fsSelection`, and writes the angle into `post`. The specification has `fsSelection.REGULAR` mean neither bold nor italic, so an italic face sets `ITALIC` alone.
+
+The outlines come from the capture, so an italic capture is a build of the same plan at a slope. `reference/private-build-plans.toml` carries one at 15 degrees, which is upstream's own slanted preset, and `RefA-Italic.ttf` is what it produces.
+
+Two tests cover it. One builds the same glyphs at two angles and checks the bits, the name table and the angle agree, since a renderer reads the bits and a designer reads the name. The other compares the slanted capture against the upright one and checks the ink actually leans: 26 letters, 114 units more on average. The captures hold different sets in a different order, so that comparison is by codepoint rather than by position.
+
 ## What is deferred
 
 `MathVariants` holds the size variants and the assembly recipes a stretchy delimiter is built from. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis. Those are new glyph designs rather than table code, and they are the last of the table's three parts.

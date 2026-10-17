@@ -45,6 +45,7 @@ pub struct Metrics {
     pub strikeout_thickness: i16,
     pub weight_class: u16,
     pub width_class: u16,
+    pub italic_angle: f64,
 }
 
 impl Default for Metrics {
@@ -68,6 +69,7 @@ impl Default for Metrics {
             strikeout_thickness: 50,
             weight_class: 400,
             width_class: 5,
+            italic_angle: 0.0,
         }
     }
 }
@@ -211,6 +213,10 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
         .max()
         .unwrap_or(0);
 
+    // One source of truth for the style. A renderer picks an italic face by the
+    // style bits, so they have to agree with the angle the glyphs were drawn at.
+    let italic = metrics.italic_angle != 0.0;
+
     let head = Head {
         font_revision: Fixed::from_f64(1.0),
         checksum_adjustment: 0,
@@ -223,7 +229,11 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
         y_min,
         x_max,
         y_max,
-        mac_style: MacStyle::empty(),
+        mac_style: if italic {
+            MacStyle::ITALIC
+        } else {
+            MacStyle::empty()
+        },
         lowest_rec_ppem: 8,
         font_direction_hint: 2,
         index_to_loc_format: match loca_format {
@@ -287,7 +297,13 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
         ul_unicode_range_3: 0,
         ul_unicode_range_4: 0,
         ach_vend_id: names.vendor,
-        fs_selection: SelectionFlags::REGULAR,
+        // The specification has REGULAR mean neither bold nor italic, so an
+        // italic face sets ITALIC alone.
+        fs_selection: if italic {
+            SelectionFlags::ITALIC
+        } else {
+            SelectionFlags::REGULAR
+        },
         us_first_char_index: first_char as u16,
         us_last_char_index: last_char as u16,
         s_typo_ascender: metrics.typo_ascender,
@@ -308,7 +324,9 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
 
     let post = Post {
         version: Version16Dot16::new(3, 0),
-        italic_angle: Fixed::from_f64(0.0),
+        // Counter-clockwise from the vertical, so a face leaning right is
+        // negative.
+        italic_angle: Fixed::from_f64(-metrics.italic_angle),
         underline_position: FWord::new(metrics.underline_position),
         underline_thickness: FWord::new(metrics.underline_thickness),
         is_fixed_pitch: 1,
