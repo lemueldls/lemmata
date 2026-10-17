@@ -404,7 +404,11 @@ fn resolved_arcs_are_close() {
             .iter()
             .map(|contour| contour.as_array().unwrap().len())
             .collect();
-        if our_counts != their_counts {
+        // Which contour comes first is not a structural difference.
+        let (mut ours_sorted, mut theirs_sorted) = (our_counts.clone(), their_counts.clone());
+        ours_sorted.sort_unstable();
+        theirs_sorted.sort_unstable();
+        if ours_sorted != theirs_sorted {
             structural.push(format!(
                 "{} {:?} vs {:?}",
                 glyph.name, our_counts, their_counts

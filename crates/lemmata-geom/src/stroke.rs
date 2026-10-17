@@ -360,7 +360,12 @@ pub fn boolean_shapes(a: &[Vec<Bez3>], b: &[Vec<Bez3>], op: BinaryOp) -> Vec<Vec
         b_path.extend(path.iter());
     }
     if let Ok(contours) = boolean(&a_path, &b_path, op) {
-        crate::boolean::clean_shape(&paths_to_shape(&contours))
+        let mut input = a;
+        input.extend_from_slice(&b);
+        crate::boolean::annex(
+            &crate::boolean::clean_shape(&paths_to_shape(&contours)),
+            &input,
+        )
     } else {
         // The sweep refused the input. Keep both shapes, but still drop the
         // degenerate arcs they may carry.

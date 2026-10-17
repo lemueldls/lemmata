@@ -91,7 +91,12 @@ fn push_segment(segments: &mut Vec<Bez3>, segment: Bez3) {
     segments.push(segment);
 }
 
-fn slice_from_arc<A: CurveArc>(arc: &A, t0: f64, t1: f64) -> Bez3 {
+/// The exact sub-curve of `arc` over `t0..=t1`.
+///
+/// A cubic is fixed by its ends and end derivatives, so the Hermite form
+/// reproduces a slice of a cubic exactly. Used to rejoin pieces of one arc.
+#[must_use]
+pub fn slice_from_arc<A: CurveArc>(arc: &A, t0: f64, t1: f64) -> Bez3 {
     let scalar = t1 - t0;
     let z0 = arc.eval(t0);
     let z1 = arc.eval(t1);

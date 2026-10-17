@@ -9,6 +9,7 @@
 use kurbo::BezPath;
 use linesweeper::{BinaryOp, Error as SweepError, FillRule, binary_op};
 
+use crate::fit;
 use crate::stroke::Bez3;
 
 #[derive(Debug)]
@@ -159,6 +160,163 @@ fn is_collinear_excursion(arc: &Bez3) -> bool {
 
 fn straight(a: kurbo::Point, d: kurbo::Point) -> Bez3 {
     Bez3::new(a, a + (d - a) / 3.0, a + (d - a) * (2.0 / 3.0), d)
+}
+
+/// Which input arc an output arc lies on, and the parameter range along it.
+#[derive(Clone, Copy, Debug)]
+struct Origin {
+    source: usize,
+    t0: f64,
+    t1: f64,
+}
+
+/// An origin that will never match a real one.
+const NO_ORIGIN: Origin = Origin {
+    source: usize::MAX,
+    t0: 0.0,
+    t1: 0.0,
+};
+
+/// How far a point may sit from a source arc and still count as on it.
+const SOURCE_TOLERANCE: f64 = 1e-6;
+/// How close two parameter values have to be to call the pieces contiguous.
+const PARAMETER_EPSILON: f64 = 1e-9;
+
+/// Joins adjacent arcs that are contiguous pieces of one input arc.
+///
+/// A sweep splits the boundary wherever it crosses another contour and leaves
+/// the pieces split. typo-geom's rebuild maps each polygon edge back to the arc
+/// it came from, so contiguous pieces of one arc come out joined. The
+/// difference shows downstream: fairization groups runs at corners, and a split
+/// in the middle of a curve reads as a corner to it.
+///
+/// The origin of each arc is recovered geometrically, which is the information
+/// the rebuild's segment table carries. An arc whose origin cannot be
+/// established is left as it is, so this can only join pieces it can prove came
+/// from the same place.
+#[must_use]
+pub fn annex(shape: &[Vec<Bez3>], input: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
+    let sources: Vec<Bez3> = input.iter().flatten().copied().collect();
+    if sources.is_empty() {
+        return shape.to_vec();
+    }
+    shape
+        .iter()
+        .map(|contour| {
+            let origins: Vec<Origin> = contour
+                .iter()
+                .map(|arc| locate(arc, &sources).unwrap_or(NO_ORIGIN))
+                .collect();
+            let mut merged: Vec<Bez3> = Vec::with_capacity(contour.len());
+            let mut merged_origins: Vec<Origin> = Vec::with_capacity(contour.len());
+            for (arc, origin) in contour.iter().zip(&origins) {
+                if let Some(previous) = merged_origins.last()
+                    && previous.source == origin.source
+                    && origin.source != usize::MAX
+                    && (previous.t1 - origin.t0).abs() <= PARAMETER_EPSILON
+                {
+                    let combined =
+                        fit::slice_from_arc(&sources[origin.source], previous.t0, origin.t1);
+                    if reproduces(&combined, &[*merged.last().unwrap(), *arc]) {
+                        *merged.last_mut().unwrap() = combined;
+                        *merged_origins.last_mut().unwrap() = Origin {
+                            source: origin.source,
+                            t0: previous.t0,
+                            t1: origin.t1,
+                        };
+                        continue;
+                    }
+                }
+                merged.push(*arc);
+                merged_origins.push(*origin);
+            }
+            // The seam between the last arc and the first.
+            if merged.len() > 1 {
+                let last_origin = merged_origins[merged.len() - 1];
+                let first_origin = merged_origins[0];
+                if last_origin.source == first_origin.source
+                    && last_origin.source != usize::MAX
+                    && (last_origin.t1 - first_origin.t0).abs() <= PARAMETER_EPSILON
+                {
+                    let combined = fit::slice_from_arc(
+                        &sources[first_origin.source],
+                        last_origin.t0,
+                        first_origin.t1,
+                    );
+                    let pieces = [merged[merged.len() - 1], merged[0]];
+                    if reproduces(&combined, &pieces) {
+                        merged[0] = combined;
+                        merged_origins[0] = Origin {
+                            source: first_origin.source,
+                            t0: last_origin.t0,
+                            t1: first_origin.t1,
+                        };
+                        merged.pop();
+                    }
+                }
+            }
+            merged
+        })
+        .collect()
+}
+
+/// Finds the input arc an output arc lies on, and the range along it.
+fn locate(arc: &Bez3, sources: &[Bez3]) -> Option<Origin> {
+    const SAMPLES: usize = 4;
+    let mut best: Option<(f64, Origin)> = None;
+    for (index, source) in sources.iter().enumerate() {
+        let (Some(t0), Some(t1)) = (
+            nearest_parameter(source, arc.a),
+            nearest_parameter(source, arc.d),
+        ) else {
+            continue;
+        };
+        // A piece of `source` follows it between the two parameters.
+        let mut worst: f64 = 0.0;
+        for step in 0..=SAMPLES {
+            let fraction = step as f64 / SAMPLES as f64;
+            let expected = source.eval(t0 + (t1 - t0) * fraction);
+            worst = worst.max((expected - arc.eval(fraction)).hypot());
+        }
+        if worst <= SOURCE_TOLERANCE && best.as_ref().is_none_or(|(distance, _)| worst < *distance)
+        {
+            best = Some((
+                worst,
+                Origin {
+                    source: index,
+                    t0,
+                    t1,
+                },
+            ));
+        }
+    }
+    best.map(|(_, origin)| origin)
+}
+
+/// The parameter of the closest point on `source`, if it is close enough.
+fn nearest_parameter(source: &Bez3, point: kurbo::Point) -> Option<f64> {
+    use kurbo::{CubicBez, ParamCurveNearest};
+    let curve = CubicBez::new(source.a, source.b, source.c, source.d);
+    let nearest = curve.nearest(point, 1e-9);
+    (nearest.distance_sq.sqrt() <= SOURCE_TOLERANCE).then_some(nearest.t)
+}
+
+/// True when `merged` passes through both pieces.
+fn reproduces(merged: &Bez3, pieces: &[Bez3]) -> bool {
+    use kurbo::{CubicBez, ParamCurveNearest};
+    const STEPS: usize = 8;
+    /// Distance from the merged cubic that still counts as on it.
+    const TOLERANCE: f64 = 1e-9;
+    let curve = CubicBez::new(merged.a, merged.b, merged.c, merged.d);
+    for piece in pieces {
+        for step in 0..=STEPS {
+            let point = piece.eval(step as f64 / STEPS as f64);
+            if curve.nearest(point, 1e-9).distance_sq.sqrt() > TOLERANCE {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 /// Applies a boolean operation to two shapes, both filled by the non-zero rule.

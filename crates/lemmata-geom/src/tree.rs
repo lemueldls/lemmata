@@ -289,7 +289,10 @@ fn resolve_overlaps(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
         path.extend(contour.iter());
     }
     match remove_overlap(&path) {
-        Ok(contours) => crate::boolean::clean_shape(&paths_to_shape(&contours)),
+        Ok(contours) => crate::boolean::annex(
+            &crate::boolean::clean_shape(&paths_to_shape(&contours)),
+            &shape,
+        ),
         Err(_) => shape,
     }
 }
