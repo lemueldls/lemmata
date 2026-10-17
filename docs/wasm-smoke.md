@@ -50,3 +50,13 @@ It is **10.57 font units**, on `g`. One other glyph is above half a unit and the
 So the answer to "is it only the last bit" is no. Something reshapes one glyph by ten units, which is a subdivision or a convergence decision changing, not a rounding boundary.
 
 The next step is to bisect the pipeline by stage. `crates/lemmata-web` can expose the contours or the tree arcs and the two targets can be compared there, which localises it to the geometry or to the encoding. Until then `r[wasm.parity-bytes]` stands and is unmet, rather than being relaxed to match what the code does.
+
+## The note to send upstream
+
+To `kurbo` (linebender/kurbo), because the limitation is there rather than in `linesweeper`:
+
+> `FloatFuncs` selects the `libm` implementations with `#[cfg(not(feature = "std"))]`, so `libm` is ignored whenever `std` is on. A dependent that compiles for `wasm32-unknown-unknown` alongside native has no way to ask for one implementation of `sin`, `cos`, `tan`, `exp`, `ln`, `log2` and `pow`: enabling `libm` does nothing while `std` is on, and turning `std` off is not an option for a dependent that needs it. Cargo features are additive, so if any crate in a dependency graph enables `kurbo/default`, which enables `kurbo/std`, the choice is gone for everyone.
+>
+> The request is for `libm` to take precedence when both are enabled, or for a separate backend selector so `std` and deterministic float math are independent. Our case is a font generator that must produce byte-identical output from a CLI and from a browser; the only difference between the two builds is that the browser's float math is Rust's `libm` port rather than the host libc, and it moves one glyph by ten font units.
+
+`linesweeper` is the reason we cannot turn `std` off: it declares `kurbo` with `features = ["serde"]` and no `default-features = false`, so it enables `kurbo/default`, and it needs std itself.
