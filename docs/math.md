@@ -18,14 +18,44 @@ The specification treats a constant of zero as "not specified, use the renderer'
 
 These are plumbing, not typography. They make the table exist and parse. A design pass over a reference math font, Latin Modern Math or STIX Two Math, is what would replace them.
 
+## Per-glyph information
+
+`MathGlyphInfo` carries italic corrections and top accent attachments, each as a coverage table over glyphs. Both are written for the math alphanumerics, the 904 codepoints of U+1D400 to U+1D7FF.
+
+An italic correction is how far a slanted letter leans, which a renderer needs to place what follows it. The port measures it rather than taking it from a design: the ink is split at its midline, and the correction is the upper half's centre against the lower half's, clamped at zero and at a quarter of the advance. An upright style measures near zero and an italic one does not, which is what makes the measure testable.
+
+The clamp matters. An italic `l` has a tail that reaches right at the baseline, so its lower half is wide and a raw measurement would report a lean larger than a renderer could use.
+
+A top accent attachment is the horizontal midpoint of the upper ink, which is where an accent is centred over a letter.
+
+These are proxies, like the constants. A design pass against a reference math font is what would replace them.
+
 ## Verification
+
+Two tests, because the table has two halves and they read different captures.
 
 `crates/lemmata-cli/tests/build.rs` builds the font, reopens it with `read-fonts`, and checks that the constants survive the write and the read: the profile's two values, the four derived from measurements, one left at zero to confirm it stays zero, and the mandatory-nonzero set. That is `r[math.table]`.
 
+`crates/lemmata-cli/tests/math.rs` builds from the math capture and checks that every math letter has a correction and an attachment, that both are inside the glyph, and that the italic block leans more than the upright block. That last check is the one that matters: a measure that cannot tell the two apart is not measuring a slant. The italic block averages 77 and the upright block 8.
+
+## The math capture
+
+It is separate from the coverage capture, because it holds a different set. The coverage one is 72 glyphs of Latin letters, digits and punctuation and the outline tests are calibrated against it, so widening it would perturb a calibrated gate. This one holds the math alphanumerics and the operators.
+
+Regenerate it by adding the math codepoints to a build:
+
+```
+LEMMATA_GLYPH_DUMP=target/math.bin LEMMATA_GLYPH_WIDTH=500 \
+LEMMATA_GLYPH_CODEPOINTS=$(python3 -c "print(','.join(str(c) for lo, hi in
+  [(0x1D400, 0x1D7FF), (0x2200, 0x22FF), (0x2308, 0x230B), (0x27E8, 0x27EB)]
+  for c in range(lo, hi + 1)))") \
+npm run build -- ttf-unhinted::RefA
+```
+
+It lands 1168 glyphs: 904 alphanumerics and 256 operators. The alphanumerics are the whole block, which means `r[math.alphabets]` needs no new design work, only the capture.
+
 ## What is deferred
 
-`MathGlyphInfo` holds italic corrections, top accent attachments and math kerning, each as a coverage table over glyphs. It needs math glyphs in the font to cover, and the capture holds none: its 72 glyphs are Latin letters, digits and punctuation.
+`MathVariants` holds the size variants and the assembly recipes a stretchy delimiter is built from. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis. Those are new glyph designs rather than table code, and they are the last of the table's three parts.
 
-`MathVariants` holds the size variants and the assembly recipes a stretchy delimiter is built from. It needs those variants to exist as glyphs.
-
-Both are therefore blocked on glyphs rather than on table code, and the next slice is to widen the capture to the operators and delimiters so the table has something to describe. Iosevka's math symbols live in `packages/font-glyphs/src/symbol/math/`, 243 glyphs across 17 files, and the capture selects by name or codepoint, so widening it is a build run rather than new code.
+Math kerning and the extended shape coverage inside `MathGlyphInfo` are also unwritten. Neither is needed by a simple equation.

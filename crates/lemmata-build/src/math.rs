@@ -20,12 +20,14 @@
 
 #![allow(clippy::cast_possible_truncation)]
 
+use write_fonts::tables::layout::CoverageTable;
 use write_fonts::tables::math::{
-    Math, MathConstants, MathGlyphInfo, MathValueRecord, MathVariants,
+    Math, MathConstants, MathGlyphInfo, MathItalicsCorrectionInfo, MathTopAccentAttachment,
+    MathValueRecord, MathVariants,
 };
-use write_fonts::types::FWord;
+use write_fonts::types::{FWord, GlyphId16};
 
-use crate::font::Metrics;
+use crate::font::{GlyphData, Metrics};
 
 /// The constants the profile has an opinion about.
 #[derive(Clone, Copy, Debug)]
@@ -91,11 +93,116 @@ pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
 }
 
 /// The MATH table.
+///
+/// `glyphs` is the font's glyph order, which is what the per-glyph coverage
+/// tables index into.
 #[must_use]
-pub fn table(metrics: &Metrics, profile: &MathProfile) -> Math {
+pub fn table(metrics: &Metrics, profile: &MathProfile, glyphs: &[GlyphData]) -> Math {
     Math::new(
         constants(metrics, profile),
-        MathGlyphInfo::default(),
+        glyph_info(glyphs),
         MathVariants::default(),
     )
+}
+
+/// The math alphanumerics block: the letters that take an italic correction and
+/// an accent attachment.
+const MATH_ALPHANUMERICS: std::ops::RangeInclusive<u32> = 0x1D400..=0x1D7FF;
+
+/// A glyph's ink split at its midline: the horizontal extent of the upper half
+/// and of the lower half.
+///
+/// Returns `None` for a glyph with no ink on one side of the midline.
+fn ink_halves(glyph: &GlyphData) -> Option<((f64, f64), (f64, f64))> {
+    let (_, y_min, _, y_max) = glyph.bounding_box()?;
+    let midline = f64::from(y_min) + f64::from(y_max - y_min) / 2.0;
+    let mut upper: Option<(f64, f64)> = None;
+    let mut lower: Option<(f64, f64)> = None;
+    for point in glyph.contours.iter().flatten() {
+        let side = if point.y < midline {
+            &mut lower
+        } else {
+            &mut upper
+        };
+        let entry = side.get_or_insert((point.x, point.x));
+        entry.0 = entry.0.min(point.x);
+        entry.1 = entry.1.max(point.x);
+    }
+
+    Some((upper?, lower?))
+}
+
+/// How far a slanted glyph's ink leans: the upper half's centre against the
+/// lower half's.
+///
+/// An upright glyph is symmetric and measures zero, which the bold styles do
+/// exactly. An italic glyph leans and measures positive. It is a proxy for the
+/// design value, which is what a designer measures against a reference face,
+/// and it is clamped to a quarter of the advance so that a letter whose lower
+/// half is a tail, an italic `l` for instance, cannot report more than a
+/// renderer could use.
+fn italics_correction(glyph: &GlyphData) -> i16 {
+    let Some((upper, lower)) = ink_halves(glyph) else {
+        return 0;
+    };
+    let lean = f64::midpoint(upper.0, upper.1) - f64::midpoint(lower.0, lower.1);
+    let limit = f64::from(glyph.advance) / 4.0;
+
+    lean.clamp(0.0, limit).round() as i16
+}
+
+/// The horizontal midpoint of a glyph's upper ink, which is where a top accent
+/// is centred.
+fn top_accent_attachment(glyph: &GlyphData) -> i16 {
+    let Some((upper, _)) = ink_halves(glyph) else {
+        return (glyph.advance / 2).cast_signed();
+    };
+    f64::midpoint(upper.0, upper.1).round() as i16
+}
+
+/// The per-glyph information: italic corrections and top accent attachments for
+/// the math letters.
+///
+/// `glyphs` is the font's glyph order, so a glyph's index plus one is its glyph
+/// id, `.notdef` being zero.
+///
+/// r[impl math.corrections]
+#[must_use]
+pub fn glyph_info(glyphs: &[GlyphData]) -> MathGlyphInfo {
+    let mut ids = Vec::new();
+    let mut corrections = Vec::new();
+    let mut attachments = Vec::new();
+    for (index, glyph) in glyphs.iter().enumerate() {
+        if !glyph
+            .unicodes
+            .iter()
+            .any(|code| MATH_ALPHANUMERICS.contains(code))
+        {
+            continue;
+        }
+        let Ok(id) = u16::try_from(index + 1) else {
+            continue;
+        };
+        ids.push(GlyphId16::new(id));
+        corrections.push(value(italics_correction(glyph)));
+        attachments.push(value(top_accent_attachment(glyph)));
+    }
+    if ids.is_empty() {
+        return MathGlyphInfo::default();
+    }
+    let coverage: CoverageTable = ids.iter().copied().collect();
+
+    MathGlyphInfo {
+        math_italics_correction_info: Some(MathItalicsCorrectionInfo {
+            coverage: coverage.clone().into(),
+            italics_correction: corrections,
+        })
+        .into(),
+        math_top_accent_attachment: Some(MathTopAccentAttachment {
+            top_accent_coverage: coverage.into(),
+            top_accent_attachment: attachments,
+        })
+        .into(),
+        ..MathGlyphInfo::default()
+    }
 }
