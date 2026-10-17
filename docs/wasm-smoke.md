@@ -65,3 +65,23 @@ kurbo v0.13.1
 ```
 
 `write-fonts` enables the same defaults, it is third-party, and it is not the last one that would be found. Cargo features are additive and there is no way to opt out from a dependent, so a chain of vendored copies is the shape of that approach, and it grows every time a dependency changes. The vendored `linesweeper` was reverted, since on its own it achieved nothing.
+
+## What vendoring kurbo showed
+
+kurbo was vendored and its `libm` feature made to imply `no_std`, which removes the inherent `f64` methods from the crate and makes every float call resolve to its own `FloatFuncs` trait, which is `libm`. A successful build is therefore proof that the routing is total, not a claim. `cargo tree` confirms `kurbo feature "libm"` is on. All 42 test targets pass.
+
+The native build changed (11,216 to 11,264 bytes), so kurbo's math was on the path after all, and the earlier conclusion that it was not came from the feature never having taken effect.
+
+It did not close the gap. The deviation is **10.5745 font units**, on `g`, exactly as before vendoring. Three more experiments say the same thing:
+
+| change | deviation |
+| --- | --- |
+| our own transcendentals routed through `lemmata_geom::math` | 10.5745 |
+| kurbo on `libm` | 10.5745 |
+| native built in release rather than debug | 10.5745 |
+
+Identical to four decimals across all of them. Float math is therefore ruled out: noise from it would move, and this does not move. It is deterministic on each side and different between them, which is the signature of a discrete decision, not an accumulating error.
+
+The leading suspect is now `linesweeper`, which is the other dependency on the geometry path. It depends on `rustc-hash`, and `FxHasher` feeds the bytes of a `usize` to its hash, so hashes differ between a 32-bit target and a 64-bit one. Where the sweep-line breaks a tie by iteration order, the output differs, deterministically and per platform. That is a hypothesis, not a measurement, and it is testable: build for a 32-bit host target and see whether the native output moves towards the browser's.
+
+Vendoring kurbo is kept. It is what the plan's risk row asks for under "deterministic pure-Rust math paths", it is verified to build, and it is a `[patch.crates-io]` that deletes cleanly. But it is not the fix for the measured gap, and the upstream note in the previous section is still the way to retire it.
