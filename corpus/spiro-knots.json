@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "name": "open-line",
+      "closed": false,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "open" },
+        { "x": 400, "y": 0, "type": "open_end" }
+      ]
+    },
+    {
+      "name": "open-g4",
+      "closed": false,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "open" },
+        { "x": 200, "y": 120, "type": "g4" },
+        { "x": 400, "y": 0, "type": "open_end" }
+      ]
+    },
+    {
+      "name": "open-g2",
+      "closed": false,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "open" },
+        { "x": 200, "y": 120, "type": "g2" },
+        { "x": 400, "y": 0, "type": "open_end" }
+      ]
+    },
+    {
+      "name": "open-corner",
+      "closed": false,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "open" },
+        { "x": 200, "y": 0, "type": "corner" },
+        { "x": 200, "y": 200, "type": "open_end" }
+      ]
+    },
+    {
+      "name": "open-left-right",
+      "closed": false,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "open" },
+        { "x": 200, "y": 120, "type": "left" },
+        { "x": 400, "y": 0, "type": "right" },
+        { "x": 600, "y": 120, "type": "open_end" }
+      ]
+    },
+    {
+      "name": "square-corner",
+      "closed": true,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "corner" },
+        { "x": 400, "y": 0, "type": "corner" },
+        { "x": 400, "y": 400, "type": "corner" },
+        { "x": 0, "y": 400, "type": "corner" }
+      ]
+    },
+    {
+      "name": "square-g2",
+      "closed": true,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "g2" },
+        { "x": 400, "y": 0, "type": "g2" },
+        { "x": 400, "y": 400, "type": "g2" },
+        { "x": 0, "y": 400, "type": "g2" }
+      ]
+    },
+    {
+      "name": "blob-g4",
+      "closed": true,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "g4" },
+        { "x": 400, "y": 0, "type": "g4" },
+        { "x": 400, "y": 400, "type": "g4" },
+        { "x": 0, "y": 400, "type": "g4" }
+      ]
+    },
+    {
+      "name": "six-knot-loop",
+      "closed": true,
+      "delta": 0.25,
+      "knots": [
+        { "x": 0, "y": 0, "type": "g4" },
+        { "x": 250, "y": -80, "type": "g4" },
+        { "x": 500, "y": 0, "type": "g4" },
+        { "x": 500, "y": 300, "type": "g4" },
+        { "x": 250, "y": 380, "type": "g4" },
+        { "x": 0, "y": 300, "type": "g4" }
+      ]
+    }
+  ]
+}

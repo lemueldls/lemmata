@@ -1,0 +1,10 @@
+{
+  "name": "spiro-oracle",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Runs the npm spiro package over the knot corpus and prints Bezier strands as JSON.",
+  "dependencies": {
+    "spiro": "3.0.1"
+  }
+}
