@@ -17,9 +17,10 @@ use kurbo::{BezPath, ParamCurve, ParamCurveNearest, Point, Shape};
 use lemmata_geom::{QuadifyKind, QuadifyPoint};
 use serde_json::Value;
 
-/// Regression bound, in font units. This is not the drift target; the test
-/// reports the distribution so the gap stays visible.
-const TOLERANCE: f64 = 20.0;
+/// The drift budget, in font units, from PLAN.md's `r[drift.outline]`. It is
+/// calibrated rather than chosen: the shapes are exact and the residual is the
+/// fairization artifact described in docs/glyphs.md, worth 0.075 px at 16 ppem.
+const TOLERANCE: f64 = 5.0;
 /// Samples per segment for the comparison.
 const SAMPLES_PER_SEGMENT: usize = 16;
 
@@ -167,7 +168,7 @@ fn captured_glyphs_reproduce_their_contours() {
             worst = deviation;
             worst_name = name;
         }
-        if deviation > 1.0 {
+        if deviation > TOLERANCE {
             // Point counts separate a quadify decision from a placement
             // difference, which is worth knowing when this fails.
             over_budget.push(format!(
@@ -186,18 +187,14 @@ fn captured_glyphs_reproduce_their_contours() {
         glyphs.len()
     );
     eprintln!(
-        "over the 1 unit drift target: {} of {}",
+        "over the {TOLERANCE} unit drift budget: {} of {}",
         over_budget.len(),
         glyphs.len()
     );
     assert!(
-        over_budget.len() < glyphs.len(),
-        "every glyph is over the drift target: {}",
+        over_budget.is_empty(),
+        "over the {TOLERANCE} unit drift budget: {}",
         over_budget.join(", ")
-    );
-    assert!(
-        worst <= TOLERANCE,
-        "worst deviation {worst} over the regression bound {TOLERANCE} on {worst_name}"
     );
 }
 
