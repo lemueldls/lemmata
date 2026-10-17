@@ -51,6 +51,61 @@ fn build_math_font() -> Option<(Vec<u8>, Vec<Glyph>)> {
     Some((bytes, captured))
 }
 
+/// The styles `r[math.alphabets]` names, as the ranges they occupy in the math
+/// alphanumerics block.
+///
+/// Iosevka implements all of them except the script pair. That gap is in the
+/// glyph source rather than in the table, so the test pins it instead of hiding
+/// it: the day the source grows script letters, the assertion flips and the
+/// requirement can be closed.
+const STYLES: &[(&str, u32, u32)] = &[
+    ("bold", 0x1D400, 0x1D433),
+    ("italic", 0x1D434, 0x1D467),
+    ("bold italic", 0x1D468, 0x1D49B),
+    ("script", 0x1D49C, 0x1D4CF),
+    ("fraktur", 0x1D504, 0x1D537),
+    ("double-struck", 0x1D538, 0x1D56B),
+    ("sans-serif", 0x1D5A0, 0x1D5D3),
+    ("monospace", 0x1D670, 0x1D6A3),
+];
+
+/// `r[math.alphabets]`: every named style is in the font and reachable, apart
+/// from script, which the glyph source does not have.
+#[test]
+fn math_alphabets_are_present() {
+    let Some((bytes, _)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let cmap = font.cmap().expect("the font has a cmap");
+
+    let mut present = Vec::new();
+    let mut missing = Vec::new();
+    for (style, low, high) in STYLES {
+        let mapped = (*low..=*high)
+            .filter(|code| cmap.map_codepoint(*code).is_some())
+            .count();
+        if mapped == 0 {
+            missing.push(*style);
+        } else {
+            present.push(*style);
+        }
+    }
+
+    assert_eq!(
+        missing,
+        ["script"],
+        "the only style the glyph source lacks should be script"
+    );
+    assert_eq!(present.len(), STYLES.len() - 1);
+    eprintln!(
+        "math alphabets: {} of {} styles present, missing {missing:?}",
+        present.len(),
+        STYLES.len()
+    );
+}
+
 /// `r[math.corrections]`: italic corrections and top accent positions exist for
 /// every math letter, and are inside the glyph.
 #[test]

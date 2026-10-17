@@ -52,7 +52,13 @@ LEMMATA_GLYPH_CODEPOINTS=$(python3 -c "print(','.join(str(c) for lo, hi in
 npm run build -- ttf-unhinted::RefA
 ```
 
-It lands 1168 glyphs: 904 alphanumerics and 256 operators. The alphanumerics are the whole block, which means `r[math.alphabets]` needs no new design work, only the capture.
+It lands 1168 glyphs: 904 alphanumerics and 256 operators.
+
+The alphanumerics are the whole block, and Iosevka draws every style in it except one. `r[math.alphabets]` names eight: bold, italic, bold italic, script, fraktur, double-struck, sans-serif and monospace. The pinned build has seven of them. **Script is absent**, both the plain and the bold pair, 104 codepoints with no glyphs behind them.
+
+That gap is in the glyph source rather than in the table, so the capture cannot close it and neither can the table. The test pins it: it asserts that script is the only style missing, so the day the source grows script letters the assertion flips and the requirement can be closed.
+
+The ranges are not full even where the styles exist, and that is Unicode rather than Iosevka: italic is 51 of 52 codepoints because U+1D455 is reserved, and fraktur and double-struck have five and seven reserved holes respectively.
 
 ## What is deferred
 
