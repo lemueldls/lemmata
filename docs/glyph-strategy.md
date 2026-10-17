@@ -39,6 +39,34 @@ The glyph definitions stay where upstream maintains them, so an update is a tag 
 
 If coarse batching turns out to be impossible, the fallback is hand-porting the glyphs, measured against the same oracle.
 
+## Port surface
+
+A pilot on `letter/latin/lower-a.ptl` (473 lines, and the file behind the captured `a`) asked what a port needs beyond the twelve primitives.
+
+The primitives are what a *host* shims. A *port* also needs the control-knot layer the definitions are written in, because that is what turns `corner`, `curl`, `flat`, `archv` and `widths.rhs` into the knots the primitives consume:
+
+| Piece | Lines | Language |
+| --- | --- | --- |
+| `geometry/spiro-control.mjs` | 352 | JS |
+| `font-kits/spiro-kit.mjs` | 549 | JS |
+| `font-kits/letter-model.mjs` | 298 | JS |
+| `font-kits/weight-control.mjs`, `boole-kit.mjs` | 122 | JS |
+| `glyph/glyph.mjs`, `block.mjs`, `relation.mjs`, `store.mjs` | 1,161 | JS |
+| `util` | 443 | JS |
+| `meta/aesthetics` | ~544 | PTL |
+| **Total** | **~3,470** | mostly plain JS |
+
+That layer is one-time and shared, and the whole corpus uses **51 distinct names** from it. The twenty most used are `corner`, `heading`, `dispiro`, `flat`, `curl`, `g4`, `widths.rhs`, `widths.center`, `widths.lhs`, `spiro-outline`, `archv`, `Arch.lhs`, `Arch.rhs`, `Arch.adjust-x.bot`, `widths.heading`, `g4.down.mid`, `Arch.adjust-x.top`, `g4.up.start`, `g4.right.mid`, `g4.down.start`.
+
+So the two strategies cost, in round numbers:
+
+- **Host**: the twelve primitives, which `lemmata-geom` already implements, plus an engine.
+- **Port**: ~3,470 lines of shared DSL, then the definitions per file, with the stage capture as an exact gate.
+
+The second number is about twenty times the first, which is the correction this pilot makes to the Phase 1 reading. The definitions themselves are 60,020 lines across 349 files, and a single variant of one glyph is a small slice of its file: `a.doubleStoreySerifless` is the union of two shape functions, roughly 60 lines of PTL.
+
+What the pilot did not measure is how fast an automated loop converges on one file with the oracle as its gate. That number, not the line counts, decides whether the definitions are portable by hand or only by machine.
+
 ## How the measurement was taken
 
 The scratch build's `packages/geometry/src/index.mjs` was wrapped with counters and JSON capture, the build cache was removed, and `npm run build -- ttf-unhinted::RefA` was run with `LEMMATA_DUMP` set. The same run produced the captured skeletons that `crates/lemmata-geom/tests/glyph_spiro.rs` replays. The instrumented tree is disposable and lives outside the repository.
