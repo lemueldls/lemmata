@@ -424,6 +424,12 @@ fn build_name_table(names: &Names, metrics: &Metrics) -> Name {
         (NameId::FULL_NAME, full_name),
         (NameId::VERSION_STRING, names.version.clone()),
         (NameId::POSTSCRIPT_NAME, postscript_name),
+        // The typographic pair is what lets a renderer find the Italic face of
+        // the family rather than treating it as a family of its own. Without
+        // it a math renderer sets variables upright, because it never pairs
+        // the two.
+        (NameId::TYPOGRAPHIC_FAMILY_NAME, names.family.clone()),
+        (NameId::TYPOGRAPHIC_SUBFAMILY_NAME, names.subfamily.clone()),
     ];
     let mut name_record = Vec::new();
     for (name_id, value) in records {

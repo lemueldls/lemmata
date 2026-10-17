@@ -70,6 +70,8 @@ The outlines come from the capture, so an italic capture is a build of the same 
 
 Two tests cover it. One builds the same glyphs at two angles and checks the bits, the name table and the angle agree, since a renderer reads the bits and a designer reads the name. The other compares the slanted capture against the upright one and checks the ink actually leans: 26 letters, 114 units more on average. The captures hold different sets in a different order, so that comparison is by codepoint rather than by position.
 
+With both faces built, Typst sets the equation corpus from the family with no fallback to its bundled math font. It embeds the Regular rather than the Italic, which is not what the style bits alone would predict. The likely reason is that the Regular carries the math italic alphanumerics, U+1D465 for an italic `x`, so a renderer that reaches for those never needs the slanted face. That is worth knowing rather than assuming: the faces are paired by the typographic family and subfamily records, nameID 16 and 17, and the corpus renders correctly either way.
+
 ## What is deferred
 
 `MathVariants` holds the size variants and the assembly recipes a stretchy delimiter is built from. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis. Those are new glyph designs rather than table code, and they are the last of the table's three parts.
