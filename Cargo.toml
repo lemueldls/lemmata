@@ -15,9 +15,12 @@ resolver = "3"
 facet = "=0.50.0-rc.7"
 facet-toml = "=0.50.0-rc.7"
 figue = "=5.0.0-rc.6"
-# default-features off, libm on: kurbo calls the platform's float math
-# otherwise, and the host and wasm32 disagree in the last bit. r[wasm.parity-bytes]
-kurbo = { version = "0.13.1", default-features = false, features = ["libm"] }
+# kurbo has a `libm` feature that would put its float math on one implementation
+# for every target, which is what r[wasm.parity-bytes] needs. It cannot be turned
+# on from here: linesweeper enables kurbo's default features, which enables
+# `kurbo/std`, and cargo features are additive with no way to opt out. See
+# docs/wasm-smoke.md.
+kurbo = "0.13.1"
 libm = "=0.2.16"
 linesweeper = "0.5.0"
 picante = "=3.0.0-rc.5"

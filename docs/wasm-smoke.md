@@ -22,11 +22,26 @@ What it does not do is produce the *same* font. Building the same capture on the
 
 The cause is float math. Rust's `f64` methods call the platform's, and on `wasm32-unknown-unknown` that is Rust's own port of `libm` rather than the host's C library. A sweep over 400 inputs shows `sin`, `cos`, `tan`, `tanh`, `exp`, `ln`, `log2`, `pow` and `hypot` all differing, mostly by one unit in the last place. `atanh` and `sqrt` agree. The pipeline routes every one of those calls through `lemmata_geom::math`, which is `libm` on both targets, so our own arithmetic now agrees by construction.
 
-It is not enough. Something in the dependency closure still computes with the platform, and it is not yet identified.
+It is not enough, and the reason is a dependency feature, not arithmetic.
 
-What was ruled out. `kurbo` has a `libm` feature, and it only takes that path when its `std` feature is off, so the workspace now builds it with `default-features = false, features = ["libm"]`. That changed neither output: its divergent functions are not on the path from a point to an outline. `write-fonts` calls `log2` once, in the search-range calculation, where the argument is a small count and `floor` of its logarithm lands the same way on both targets. `linesweeper` computes only `hypot2` and `sqrt`, and the `hypot` calls left in `lemmata-geom` are all `kurbo`'s, which is written as `sqrt(x² + y²)` on purpose. `mul_add` agrees on both targets. There is no function-call form of these left in our crates; the routing catches all of them.
+`kurbo` would solve it. It has a `libm` feature, and it takes that path whenever its own `std` feature is off, so a workspace can ask for `default-features = false, features = ["libm"]` and get one implementation on both targets. That was tried and it changed nothing, and `cargo tree -i kurbo -e features` says why:
 
-What is established. Every transcendental our own code uses now goes through one implementation, so the divergence is not ours. It is confined to `glyf`, two bytes across two glyphs, and every other table including MATH is byte-identical. The wasm build's output has not changed at any point in this work, while the native one moved four bytes and then stopped: the native side is converging towards what wasm already computes, and has not arrived.
+```
+kurbo v0.13.1
+└── kurbo feature "default"
+    └── linesweeper v0.5.0
+        └── linesweeper feature "default"
+```
+
+`linesweeper` enables `kurbo`'s default features, which enables `kurbo/std`, and cargo features are additive: a feature any dependent enables cannot be turned off by another. So `kurbo` computes with the platform's `atan2`, `cbrt`, `cos`, `sin`, `tan`, `ln` and `log2`, and there is no way to opt out from this side of the dependency.
+
+That is the whole of it. Our own transcendentals go through `lemmata_geom::math` and agree by construction; `linesweeper` itself computes nothing but `hypot2` and `sqrt`, both exact; `kurbo` is the remaining platform user on the path, and it is pinned there by its dependent.
+
+Three ways out, in order of how much they cost:
+
+- `linesweeper` declares `kurbo` with `default-features = false`, or grows a `libm` passthrough. Small, correct, and worth telling upstream about, since any user wanting deterministic output hits this.
+- Patch or vendor `kurbo` in the workspace. Works today, costs a maintained fork.
+- Treat `wasm.parity-bytes` as geometric rather than byte parity, inside the drift budget that already exists. Cheapest, and it is a real answer, but it should be a recorded decision rather than a side effect.
 
 How far apart they are. `crates/lemmata-oracle/tests/parity_probe.rs` flattens both fonts and measures the worst distance from either outline to the other. Set `NATIVE_FONT` and `BROWSER_FONT` and run it. Comparing a font with itself gives exactly zero, so the number is the difference and not an artifact of the measurement.
 
