@@ -18,6 +18,7 @@
 
 use kurbo::Point;
 
+use crate::fit::CurveArc;
 use crate::stroke::Bez3;
 
 /// Occurrent precision, from `curve-util.mjs`.
@@ -125,12 +126,13 @@ impl QuadifySink {
         self.last_contour.push(QuadifyPoint::corner(x, y));
     }
 
-    pub fn arc_to(&mut self, arc: &Bez3) {
+    /// Emits the quadratics that approximate `arc`, then the corner at `x, y`.
+    pub fn arc_to<A: CurveArc>(&mut self, arc: &A, x: f64, y: f64) {
         for point in auto_quadify(arc, ALLOW_ERROR, MAX_SEGMENTS) {
             self.last_contour
                 .push(QuadifyPoint::quadratic(point.x, point.y));
         }
-        self.line_to(arc.d.x, arc.d.y);
+        self.line_to(x, y);
     }
 }
 
@@ -149,7 +151,7 @@ pub fn quadify(shape: &[Vec<Bez3>]) -> Vec<Vec<QuadifyPoint>> {
             if !points_close(arc.a, current, GEOMETRY_PRECISION) {
                 sink.line_to(arc.a.x, arc.a.y);
             }
-            sink.arc_to(arc);
+            sink.arc_to(arc, arc.d.x, arc.d.y);
             current = arc.d;
         }
     }
@@ -160,7 +162,7 @@ pub fn quadify(shape: &[Vec<Bez3>]) -> Vec<Vec<QuadifyPoint>> {
 /// The autofitter from `Quadify.auto`: off-points for the fewest segments that
 /// fit within `allow_error`.
 #[must_use]
-pub fn auto_quadify(arc: &Bez3, allow_error: f64, max_segments: usize) -> Vec<Point> {
+pub fn auto_quadify<A: CurveArc>(arc: &A, allow_error: f64, max_segments: usize) -> Vec<Point> {
     let mut results: Option<Vec<Point>> = None;
     for segments in 1..=max_segments {
         let off_points = quadify_curve(arc, segments);
@@ -175,7 +177,7 @@ pub fn auto_quadify(arc: &Bez3, allow_error: f64, max_segments: usize) -> Vec<Po
     results.unwrap_or_default()
 }
 
-fn quadify_curve(arc: &Bez3, segments: usize) -> Vec<Point> {
+fn quadify_curve<A: CurveArc>(arc: &A, segments: usize) -> Vec<Point> {
     let mut knots = Vec::with_capacity(2 * segments);
     let mut z_before = arc.eval(0.0);
     let mut d_before = arc.derivative(0.0);
@@ -198,7 +200,7 @@ fn quadify_curve(arc: &Bez3, segments: usize) -> Vec<Point> {
     knots
 }
 
-fn error_fits_in(arc: &Bez3, off_points: &[Point], square_error: f64) -> bool {
+fn error_fits_in<A: CurveArc>(arc: &A, off_points: &[Point], square_error: f64) -> bool {
     let n = off_points.len();
     let mut z_before = arc.eval(0.0);
     let mut d_before = arc.derivative(0.0);

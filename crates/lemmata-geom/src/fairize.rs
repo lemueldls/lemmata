@@ -23,6 +23,7 @@
 
 use kurbo::{Point, Vec2};
 
+use crate::fit::CurveArc;
 use crate::stroke::Bez3;
 
 const EPSILON: f64 = 1e-12;
@@ -69,6 +70,16 @@ impl FairArc {
             Self::Straight { a, b } => Vec2::new(b.x - a.x, b.y - a.y),
             Self::Combined(combined) => combined.derivative(t),
         }
+    }
+}
+
+impl CurveArc for FairArc {
+    fn eval(&self, t: f64) -> Point {
+        FairArc::eval(self, t)
+    }
+
+    fn derivative(&self, t: f64) -> Vec2 {
+        FairArc::derivative(self, t)
     }
 }
 

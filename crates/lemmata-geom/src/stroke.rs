@@ -1,8 +1,10 @@
 //! Stroke expansion: offset a filled shape's boundary and union the sides.
 //!
 //! Ported from `stroke.mjs` and the arc helpers it uses from `curve-util.mjs`.
-//! Non-cubic arcs (the offsets and the round caps) are fitted to cubics with the
-//! same subdivision scheme typo-geom uses, so the fitted contours match.
+//! The arcs being offset can be any [`CurveArc`], matching upstream, where a
+//! stroke's bones are whatever the geometry tree hands over. Non-cubic arcs (the
+//! offsets and the round caps) are fitted to cubics with the same subdivision
+//! scheme typo-geom uses, so the fitted contours match.
 
 #![allow(
     clippy::cast_possible_truncation,
@@ -16,11 +18,11 @@
     clippy::while_float
 )]
 
-use kurbo::{BezPath, Point, Vec2};
+use kurbo::{BezPath, PathSeg, Point, Vec2};
 use linesweeper::BinaryOp;
 
 use crate::boolean::boolean;
-use crate::fit::{CurveArc, fit_contour};
+use crate::fit::{CurveArc, fit_contour, straight_bez3};
 
 /// Fit tolerance for the cubic conversion, from `curve-util.mjs`.
 const GEOMETRY_PRECISION: f64 = 0.25;
@@ -75,15 +77,15 @@ impl CurveArc for Bez3 {
     }
 }
 
-/// An offset of a cubic along its normal.
-#[derive(Clone, Copy, Debug)]
-struct OffsetCurve {
-    bone: Bez3,
+/// An offset of a bone curve along its normal.
+#[derive(Clone, Debug)]
+struct OffsetCurve<A> {
+    bone: A,
     offset: f64,
     contrast: f64,
 }
 
-impl OffsetCurve {
+impl<A: CurveArc> CurveArc for OffsetCurve<A> {
     fn eval(&self, t: f64) -> Point {
         let c = self.bone.eval(t);
         let d = self.bone.derivative(t);
@@ -143,7 +145,9 @@ impl RoundCapCurve {
             r1,
         }
     }
+}
 
+impl CurveArc for RoundCapCurve {
     fn eval(&self, t: f64) -> Point {
         let center_x = mix(self.center0.x, self.center1.x, t);
         let center_y = mix(self.center0.y, self.center1.y, t);
@@ -170,13 +174,13 @@ impl RoundCapCurve {
 
 /// Arc types the offset step produces.
 #[derive(Clone, Debug)]
-enum Curve {
-    Offset(OffsetCurve),
+enum Curve<A> {
+    Offset(OffsetCurve<A>),
     Cap(RoundCapCurve),
-    Reverted(Box<Curve>),
+    Reverted(Box<Curve<A>>),
 }
 
-impl Curve {
+impl<A: CurveArc> CurveArc for Curve<A> {
     fn eval(&self, t: f64) -> Point {
         match self {
             Self::Offset(offset) => offset.eval(t),
@@ -194,50 +198,40 @@ impl Curve {
     }
 }
 
-impl CurveArc for Curve {
-    fn eval(&self, t: f64) -> Point {
-        Curve::eval(self, t)
-    }
-
-    fn derivative(&self, t: f64) -> Vec2 {
-        Curve::derivative(self, t)
-    }
-}
-
 /// Offsets one contour both ways and fits the result to cubics.
 ///
 /// Returns the left and right fitted contours, matching the two shapes
 /// `strokeArcs` converts before it unions anything.
 #[must_use]
-pub fn stroke_offsets(
-    contour: &[Bez3],
+pub fn stroke_offsets<A: CurveArc>(
+    contour: &[A],
     radius: f64,
     contrast: f64,
-) -> (Vec<BezPath>, Vec<BezPath>) {
+) -> (Vec<Vec<Bez3>>, Vec<Vec<Bez3>>) {
     let left = offset_contour(contour, -radius, contrast);
     let right = offset_contour(contour, radius, contrast);
     (
-        vec![contour_to_path(&fit_contour(&left, GEOMETRY_PRECISION))],
-        vec![contour_to_path(&fit_contour(&right, GEOMETRY_PRECISION))],
+        vec![fit_contour(&left, GEOMETRY_PRECISION)],
+        vec![fit_contour(&right, GEOMETRY_PRECISION)],
     )
 }
 
 /// The `strokeArcs` entry point: offset every contour, union the sides, and
 /// optionally clip to the original shape.
 #[must_use]
-pub fn stroke_arcs(
-    contours: &[Vec<Bez3>],
+pub fn stroke_arcs<A: CurveArc>(
+    contours: &[Vec<A>],
     radius: f64,
     contrast: f64,
     inside: bool,
-) -> Vec<BezPath> {
-    let mut current: Option<Vec<BezPath>> = None;
+) -> Vec<Vec<Bez3>> {
+    let mut current: Option<Vec<Vec<Bez3>>> = None;
     for contour in contours {
         let left = offset_contour(contour, -radius, contrast);
         let right = offset_contour(contour, radius, contrast);
 
-        let mut bezs = vec![contour_to_path(&fit_contour(&left, GEOMETRY_PRECISION))];
-        bezs.push(contour_to_path(&fit_contour(&right, GEOMETRY_PRECISION)));
+        let mut bezs = vec![fit_contour(&left, GEOMETRY_PRECISION)];
+        bezs.push(fit_contour(&right, GEOMETRY_PRECISION));
 
         current = Some(match current {
             None => bezs,
@@ -248,27 +242,30 @@ pub fn stroke_arcs(
     match current {
         None => Vec::new(),
         Some(current) if inside => {
-            let original: Vec<BezPath> = contours.iter().map(|c| contour_to_path(c)).collect();
+            let original: Vec<Vec<Bez3>> = contours
+                .iter()
+                .map(|contour| fit_contour(contour, GEOMETRY_PRECISION))
+                .collect();
             boolean_shapes(&original, &current, BinaryOp::Intersection)
         }
         Some(current) => current,
     }
 }
 
-fn offset_contour(contour: &[Bez3], distance: f64, contrast: f64) -> Vec<Curve> {
+fn offset_contour<A: CurveArc>(contour: &[A], distance: f64, contrast: f64) -> Vec<Curve<A>> {
     let reverse = distance < 0.0;
     let mut offset_arcs = Vec::new();
 
     // Start from the last arc so the first iteration has a predecessor.
     let mut previous = Curve::Offset(OffsetCurve {
-        bone: contour[contour.len() - 1],
+        bone: contour[contour.len() - 1].clone(),
         offset: distance,
         contrast,
     });
 
     for arc in contour {
         let current = Curve::Offset(OffsetCurve {
-            bone: *arc,
+            bone: arc.clone(),
             offset: distance,
             contrast,
         });
@@ -279,7 +276,7 @@ fn offset_contour(contour: &[Bez3], distance: f64, contrast: f64) -> Vec<Curve> 
             || (previous_end.y - current_start.y).abs() > OCCURRENT_PRECISION
         {
             let (bone0, bone1) = match (&previous, &current) {
-                (Curve::Offset(p), Curve::Offset(c)) => (p.bone, c.bone),
+                (Curve::Offset(p), Curve::Offset(c)) => (&p.bone, &c.bone),
                 _ => unreachable!("offset contour holds only offsets"),
             };
             offset_arcs.push(Curve::Cap(RoundCapCurve::new(
@@ -305,29 +302,61 @@ fn offset_contour(contour: &[Bez3], distance: f64, contrast: f64) -> Vec<Curve> 
     offset_arcs
 }
 
-fn contour_to_path(contour: &[Bez3]) -> BezPath {
-    let mut path = BezPath::new();
-    if let Some(first) = contour.first() {
-        path.move_to(first.a);
-        for segment in contour {
-            path.curve_to(segment.b, segment.c, segment.d);
-        }
-        path.close_path();
-    }
-    path
+/// A shape of cubics as kurbo paths, one per contour.
+#[must_use]
+pub fn shape_to_paths(shape: &[Vec<Bez3>]) -> Vec<BezPath> {
+    shape
+        .iter()
+        .map(|contour| {
+            let mut path = BezPath::new();
+            if let Some(first) = contour.first() {
+                path.move_to(first.a);
+                for segment in contour {
+                    path.curve_to(segment.b, segment.c, segment.d);
+                }
+                path.close_path();
+            }
+            path
+        })
+        .collect()
 }
 
-fn boolean_shapes(a: &[BezPath], b: &[BezPath], op: BinaryOp) -> Vec<BezPath> {
+/// A shape of kurbo paths as cubics, one list per contour.
+#[must_use]
+pub fn paths_to_shape(paths: &[BezPath]) -> Vec<Vec<Bez3>> {
+    paths
+        .iter()
+        .map(|path| {
+            path.segments()
+                .map(|segment| match segment {
+                    PathSeg::Line(line) => straight_bez3(line.p0, line.p1),
+                    PathSeg::Quad(quad) => {
+                        let c1 = quad.p0 + (quad.p1 - quad.p0) * (2.0 / 3.0);
+                        let c2 = quad.p2 + (quad.p1 - quad.p2) * (2.0 / 3.0);
+                        Bez3::new(quad.p0, c1, c2, quad.p2)
+                    }
+                    PathSeg::Cubic(cubic) => Bez3::new(cubic.p0, cubic.p1, cubic.p2, cubic.p3),
+                })
+                .collect()
+        })
+        .collect()
+}
+
+/// Applies a boolean operation to two shapes of cubics.
+#[must_use]
+pub fn boolean_shapes(a: &[Vec<Bez3>], b: &[Vec<Bez3>], op: BinaryOp) -> Vec<Vec<Bez3>> {
+    let a_paths = shape_to_paths(a);
+    let b_paths = shape_to_paths(b);
     let mut a_path = BezPath::new();
-    for path in a {
+    for path in &a_paths {
         a_path.extend(path.iter());
     }
     let mut b_path = BezPath::new();
-    for path in b {
+    for path in &b_paths {
         b_path.extend(path.iter());
     }
     if let Ok(contours) = boolean(&a_path, &b_path, op) {
-        contours
+        paths_to_shape(&contours)
     } else {
         let mut fallback = a.to_vec();
         fallback.extend_from_slice(b);
@@ -335,7 +364,7 @@ fn boolean_shapes(a: &[BezPath], b: &[BezPath], op: BinaryOp) -> Vec<BezPath> {
     }
 }
 
-fn derivative_from_finite_difference(curve: &impl CurveEval, t: f64) -> Vec2 {
+fn derivative_from_finite_difference(curve: &impl CurveArc, t: f64) -> Vec2 {
     let forward2 = curve.eval(t + 2.0 * FINITE_DIFFERENCE_DELTA);
     let forward1 = curve.eval(t + FINITE_DIFFERENCE_DELTA);
     let backward1 = curve.eval(t - FINITE_DIFFERENCE_DELTA);
@@ -346,16 +375,6 @@ fn derivative_from_finite_difference(curve: &impl CurveEval, t: f64) -> Vec2 {
         (backward2.y - 8.0 * backward1.y + 8.0 * forward1.y - forward2.y)
             / (12.0 * FINITE_DIFFERENCE_DELTA),
     )
-}
-
-trait CurveEval {
-    fn eval(&self, t: f64) -> Point;
-}
-
-impl CurveEval for OffsetCurve {
-    fn eval(&self, t: f64) -> Point {
-        OffsetCurve::eval(self, t)
-    }
 }
 
 fn mix(a: f64, b: f64, t: f64) -> f64 {

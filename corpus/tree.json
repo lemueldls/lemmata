@@ -1,0 +1,723 @@
+{
+  "cases": [
+    {
+      "name": "spiro-closed",
+      "output": "arcs",
+      "tolerance": 1e-06,
+      "geom": {
+        "kind": "spiro",
+        "closed": true,
+        "knots": [
+          {
+            "type": "g4",
+            "x": 0,
+            "y": 0,
+            "unimportant": false
+          },
+          {
+            "type": "g4",
+            "x": 250,
+            "y": -80,
+            "unimportant": false
+          },
+          {
+            "type": "g4",
+            "x": 500,
+            "y": 0,
+            "unimportant": false
+          },
+          {
+            "type": "g4",
+            "x": 500,
+            "y": 300,
+            "unimportant": false
+          },
+          {
+            "type": "g4",
+            "x": 250,
+            "y": 380,
+            "unimportant": false
+          },
+          {
+            "type": "g4",
+            "x": 0,
+            "y": 300,
+            "unimportant": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "diSpiro-closed",
+      "output": "arcs",
+      "tolerance": 1e-06,
+      "geom": {
+        "kind": "diSpiro",
+        "contrast": 1.0,
+        "closed": true,
+        "knots": [
+          {
+            "type": "g4",
+            "x": 0,
+            "y": 0,
+            "d1": 80,
+            "d2": 80
+          },
+          {
+            "type": "g4",
+            "x": 400,
+            "y": 0,
+            "d1": 80,
+            "d2": 80
+          },
+          {
+            "type": "g4",
+            "x": 400,
+            "y": 300,
+            "d1": 80,
+            "d2": 80
+          },
+          {
+            "type": "g4",
+            "x": 0,
+            "y": 300,
+            "d1": 80,
+            "d2": 80
+          }
+        ]
+      }
+    },
+    {
+      "name": "diSpiro-open",
+      "output": "arcs",
+      "tolerance": 1e-06,
+      "geom": {
+        "kind": "diSpiro",
+        "contrast": 1.0,
+        "closed": false,
+        "knots": [
+          {
+            "type": "open",
+            "x": 0,
+            "y": 0,
+            "d1": 50,
+            "d2": 50
+          },
+          {
+            "type": "g4",
+            "x": 200,
+            "y": 120,
+            "d1": 50,
+            "d2": 50
+          },
+          {
+            "type": "open_end",
+            "x": 400,
+            "y": 0,
+            "d1": 50,
+            "d2": 50
+          }
+        ]
+      }
+    },
+    {
+      "name": "spiroPen",
+      "output": "arcs",
+      "tolerance": 0.2,
+      "geom": {
+        "kind": "spiroPen",
+        "closed": false,
+        "profile": [
+          {
+            "x": -40,
+            "y": 0
+          },
+          {
+            "x": 40,
+            "y": 0
+          }
+        ],
+        "knots": [
+          {
+            "type": "open",
+            "x": 0,
+            "y": 0,
+            "profile": [
+              {
+                "x": -40,
+                "y": 0
+              },
+              {
+                "x": 40,
+                "y": 0
+              }
+            ]
+          },
+          {
+            "type": "g4",
+            "x": 250,
+            "y": 200,
+            "profile": [
+              {
+                "x": -40,
+                "y": 0
+              },
+              {
+                "x": 40,
+                "y": 0
+              }
+            ]
+          },
+          {
+            "type": "open_end",
+            "x": 500,
+            "y": 0,
+            "profile": [
+              {
+                "x": -40,
+                "y": 0
+              },
+              {
+                "x": 40,
+                "y": 0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "stroke",
+      "output": "arcs",
+      "tolerance": 0.2,
+      "geom": {
+        "kind": "stroke",
+        "gizmo": {
+          "xx": 1,
+          "xy": 0,
+          "yx": 0,
+          "yy": 1,
+          "tx": 0,
+          "ty": 0
+        },
+        "radius": 40,
+        "contrast": 1.0,
+        "inside": false,
+        "geom": {
+          "kind": "spiro",
+          "closed": true,
+          "knots": [
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": -80,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 300,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": 380,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 300,
+              "unimportant": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "stroke-inside",
+      "output": "arcs",
+      "tolerance": 0.2,
+      "geom": {
+        "kind": "stroke",
+        "gizmo": {
+          "xx": 1,
+          "xy": 0,
+          "yx": 0,
+          "yy": 1,
+          "tx": 0,
+          "ty": 0
+        },
+        "radius": 40,
+        "contrast": 1.0,
+        "inside": true,
+        "geom": {
+          "kind": "spiro",
+          "closed": true,
+          "knots": [
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": -80,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 300,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": 380,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 300,
+              "unimportant": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "removeHoles",
+      "output": "arcs",
+      "tolerance": 0.2,
+      "geom": {
+        "kind": "removeHoles",
+        "gizmo": {
+          "xx": 1,
+          "xy": 0,
+          "yx": 0,
+          "yy": 1,
+          "tx": 0,
+          "ty": 0
+        },
+        "geom": {
+          "kind": "stroke",
+          "gizmo": {
+            "xx": 1,
+            "xy": 0,
+            "yx": 0,
+            "yy": 1,
+            "tx": 0,
+            "ty": 0
+          },
+          "radius": 40,
+          "contrast": 1.0,
+          "inside": false,
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 250,
+                "y": -80,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 500,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 500,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 250,
+                "y": 380,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "simplify-arcs",
+      "output": "arcs",
+      "tolerance": 0.2,
+      "geom": {
+        "kind": "simplify",
+        "gizmo": {
+          "xx": 1,
+          "xy": 0,
+          "yx": 0,
+          "yy": 1,
+          "tx": 0,
+          "ty": 0
+        },
+        "geom": {
+          "kind": "spiro",
+          "closed": true,
+          "knots": [
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": -80,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 300,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": 380,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 300,
+              "unimportant": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "simplify-contours",
+      "output": "contours",
+      "tolerance": 2.0,
+      "geom": {
+        "kind": "simplify",
+        "gizmo": {
+          "xx": 1,
+          "xy": 0,
+          "yx": 0,
+          "yy": 1,
+          "tx": 0,
+          "ty": 0
+        },
+        "geom": {
+          "kind": "spiro",
+          "closed": true,
+          "knots": [
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": -80,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 300,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": 380,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 300,
+              "unimportant": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "combine",
+      "output": "arcs",
+      "tolerance": 1e-06,
+      "geom": {
+        "kind": "combine",
+        "parts": [
+          {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 250,
+                "y": -80,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 500,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 500,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 250,
+                "y": 380,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          },
+          {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g2",
+                "x": 600,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g2",
+                "x": 900,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g2",
+                "x": 900,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g2",
+                "x": 600,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "boolean-union",
+      "output": "arcs",
+      "tolerance": 0.2,
+      "geom": {
+        "kind": "boolean",
+        "op": "union",
+        "operands": [
+          {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 250,
+                "y": -80,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 500,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 500,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 250,
+                "y": 380,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          },
+          {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g2",
+                "x": 600,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g2",
+                "x": 900,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g2",
+                "x": 900,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g2",
+                "x": 600,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "transform",
+      "output": "arcs",
+      "tolerance": 1e-06,
+      "geom": {
+        "kind": "transform",
+        "tf": {
+          "xx": 0.5,
+          "xy": 0,
+          "yx": 0,
+          "yy": 0.5,
+          "tx": 50,
+          "ty": 60
+        },
+        "geom": {
+          "kind": "spiro",
+          "closed": true,
+          "knots": [
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": -80,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 0,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 500,
+              "y": 300,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 250,
+              "y": 380,
+              "unimportant": false
+            },
+            {
+              "type": "g4",
+              "x": 0,
+              "y": 300,
+              "unimportant": false
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -49,6 +49,14 @@ Worth knowing before tightening these numbers: Iosevka's exported Bezier drawing
 
 One subtlety: typo-geom's `convertShapeToBez3` handles a combined arc by recursing into its segments rather than fitting the combination, so runs are flattened before fitting. Fitting the combination instead gave different splits, which is how that was found.
 
+## Geometry tree
+
+`crates/lemmata-geom/src/tree.rs` carries the classes from `index.mjs` as one enum: `Spiro`, `DiSpiro`, `SpiroPen`, `Stroke`, `RemoveHoles`, `Simplify`, `Combine`, `Boolean`, `Transformed`, `Contours`, `Tagged`, `Radical` and `Invalid`. Each has `to_bez_arcs`, `to_contours` and `measure_complexity`. Stroke expansion and quadification take any `CurveArc`, so fairized arcs flow into them directly, as upstream.
+
+`tests/tree.rs` builds twelve trees in `corpus/tree.json` and compares against the matching upstream classes. Pure compositions match at 1e-6. Cases that pass through boolean operations allow 0.2 font units, and the quadratified contours of a simplified stroke allow 2. The worst case uses 0.36 of its budget.
+
+Two things are deliberately not modeled: `ReferenceGeometry`, which needs the glyph objects the geometry package does not own, and the `hash` methods, which exist for upstream's geometry cache.
+
 ## Fairization
 
 `crates/lemmata-geom/src/fairize.rs` ports `fairizeBezierShape` from typo-geom: corner classification, splitting at extrema, canonical start selection, and straight-run reduction into `FairArc::Straight` or a length-parameterized `CombinedArc`. It carries the quadratic root solver (with its compensated discriminant), the 16-point Gauss-Legendre length integral, and typo-geom's `RootSink`.
@@ -69,9 +77,7 @@ One upstream quirk is reproduced on purpose: when a cubic's extrema quadratic is
 
 ## Not ported yet
 
-- The geometry tree classes in `packages/geometry/src/index.mjs` that wire spiro, expansion, transforms and fairization together.
-
-Everything ported above is verified against upstream on its own inputs.
+Nothing in the geometry package is left unported. `ReferenceGeometry` would need the glyph objects upstream keeps outside the package, and the `hash` methods serve upstream's geometry cache rather than font output.
 
 ## Captured fixtures
 

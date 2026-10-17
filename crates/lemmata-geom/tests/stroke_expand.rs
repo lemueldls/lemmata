@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use kurbo::{BezPath, ParamCurve, ParamCurveNearest, PathEl, Point};
-use lemmata_geom::{Bez3, stroke_arcs, stroke_offsets};
+use lemmata_geom::{Bez3, shape_to_paths, stroke_arcs, stroke_offsets};
 use serde_json::Value;
 
 /// Coordinate tolerance for the fitted offsets.
@@ -155,13 +155,13 @@ fn stroke_expansion_matches_upstream() {
 
         let (left, right) = stroke_offsets(contour, radius, contrast);
         assert_close(
-            &path_points(&left[0]),
+            &path_points(&shape_to_paths(&left)[0]),
             &golden_points(&expected["left"]),
             OFFSET_TOLERANCE,
             &format!("{name} left"),
         );
         assert_close(
-            &path_points(&right[0]),
+            &path_points(&shape_to_paths(&right)[0]),
             &golden_points(&expected["right"]),
             OFFSET_TOLERANCE,
             &format!("{name} right"),
@@ -169,7 +169,7 @@ fn stroke_expansion_matches_upstream() {
 
         let mut ours_samples = Vec::new();
         let mut ours_path = BezPath::new();
-        for path in stroke_arcs(&contours, radius, contrast, inside) {
+        for path in shape_to_paths(&stroke_arcs(&contours, radius, contrast, inside)) {
             sample_path(&path, &mut ours_samples);
             ours_path.extend(path.iter());
         }

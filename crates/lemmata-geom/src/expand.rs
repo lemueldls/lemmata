@@ -98,7 +98,7 @@ impl MonoKnot {
         Knot::new(self.x, self.y, self.ty)
     }
 
-    const fn reverse_type(&mut self) {
+    pub(crate) const fn reverse_type(&mut self) {
         self.ty = match self.ty {
             KnotType::Left => KnotType::Right,
             KnotType::Right => KnotType::Left,
