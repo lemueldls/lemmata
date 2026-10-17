@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 
 pub mod font;
+pub mod math;
 
 /// Hit and miss counters for one table.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

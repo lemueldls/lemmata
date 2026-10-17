@@ -329,6 +329,8 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
     let cmap = Cmap::from_mappings(cmap_mappings).map_err(|error| format!("cmap: {error}"))?;
     let name = build_name_table(names, metrics);
 
+    let math = crate::math::table(metrics, &crate::math::MathProfile::default());
+
     let bytes = FontBuilder::new()
         .add_table(&head)
         .map_err(|error| format!("head: {error}"))?
@@ -350,6 +352,8 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
         .map_err(|error| format!("glyf: {error}"))?
         .add_table(&loca)
         .map_err(|error| format!("loca: {error}"))?
+        .add_table(&math)
+        .map_err(|error| format!("MATH: {error}"))?
         .build();
 
     Ok(bytes)

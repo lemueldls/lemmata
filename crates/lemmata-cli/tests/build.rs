@@ -13,6 +13,7 @@ fn advance_to_u16(advance: f64) -> u16 {
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
 use read_fonts::tables::glyf::Glyph as ReadGlyph;
+use read_fonts::tables::math::MathConstant;
 use read_fonts::types::NameId;
 use read_fonts::{FontRef, TableProvider};
 
@@ -273,4 +274,79 @@ fn output_family_is_not_an_iosevka_name() {
     ] {
         assert_ne!(family, reserved, "the family name is reserved by Iosevka");
     }
+}
+
+/// `r[math.table]`: the constants the profile names survive the write and the
+/// read, and the ones it marks mandatory-nonzero are not zero.
+#[test]
+fn math_table_round_trips() {
+    let Some((bytes, _)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let math = font.math().expect("the font has a MATH table");
+    let constants = math.math_constants().expect("MathConstants");
+
+    let metrics = Metrics::default();
+    let profile = lemmata_build::math::MathProfile::default();
+    let expected = lemmata_build::math::constants(&metrics, &profile);
+
+    // The scale percentages are what the profile decides.
+    assert_eq!(
+        constants.constant(MathConstant::ScriptPercentScaleDown),
+        i32::from(profile.script_percent_scale_down)
+    );
+    assert_eq!(
+        constants.constant(MathConstant::ScriptScriptPercentScaleDown),
+        i32::from(profile.script_script_percent_scale_down)
+    );
+
+    // The rest follow from the font's measurements.
+    assert_eq!(
+        constants.constant(MathConstant::AxisHeight),
+        i32::from(metrics.x_height / 2)
+    );
+    assert_eq!(
+        constants.constant(MathConstant::AccentBaseHeight),
+        i32::from(metrics.cap_height)
+    );
+    assert_eq!(
+        constants.constant(MathConstant::FlattenedAccentBaseHeight),
+        i32::from(metrics.cap_height)
+    );
+    for rule in [
+        MathConstant::FractionRuleThickness,
+        MathConstant::OverbarRuleThickness,
+        MathConstant::UnderbarRuleThickness,
+        MathConstant::RadicalRuleThickness,
+    ] {
+        assert_eq!(
+            constants.constant(rule),
+            i32::from(metrics.underline_thickness),
+            "{rule:?} is drawn at the stroke width"
+        );
+    }
+
+    // A constant the profile leaves at zero stays zero: the renderer decides.
+    assert_eq!(constants.constant(MathConstant::MathLeading), 0);
+
+    // r[math.table]: mandatory-nonzero constants are nonzero.
+    for constant in [
+        MathConstant::ScriptPercentScaleDown,
+        MathConstant::ScriptScriptPercentScaleDown,
+        MathConstant::AxisHeight,
+    ] {
+        assert_ne!(
+            constants.constant(constant),
+            0,
+            "{constant:?} must not be zero"
+        );
+    }
+
+    // The writer and the reader agree on what the profile produced.
+    assert_eq!(
+        expected.script_percent_scale_down,
+        profile.script_percent_scale_down
+    );
 }
