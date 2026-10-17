@@ -39,24 +39,29 @@ That is the whole of it. Our own transcendentals go through `lemmata_geom::math`
 
 Three ways out, in order of how much they cost:
 
-- `linesweeper` declares `kurbo` with `default-features = false`, or grows a `libm` passthrough. Small, correct, and worth telling upstream about, since any user wanting deterministic output hits this.
-- Patch or vendor `kurbo` in the workspace. Works today, costs a maintained fork.
-- Treat `wasm.parity-bytes` as geometric rather than byte parity, inside the drift budget that already exists. Cheapest, and it is a real answer, but it should be a recorded decision rather than a side effect.
+- **Fix it inside kurbo**, by making `libm` win when both it and `std` are enabled, or by giving the float backend its own feature so `std` and deterministic math stop being the same switch. This is the only place the fix can live, and the reason is that patching the *enablers* does not end.
+- Patch or vendor `kurbo` with its call sites rewritten to go through `libm` directly when the feature is on. Works today, costs a vendored copy (18,310 lines, 788 KB) carrying a mechanical but wide diff, maintained until upstream takes the fix.
+- Treat `wasm.parity` as the font-unit fallback the risk table already names, with a documented budget. Cheapest, and it is a real answer, but the measured gap does not fit it: `g` is 10.57 font units apart, and font-unit precision is not ten units.
 
-How far apart they are. `crates/lemmata-oracle/tests/parity_probe.rs` flattens both fonts and measures the worst distance from either outline to the other. Set `NATIVE_FONT` and `BROWSER_FONT` and run it. Comparing a font with itself gives exactly zero, so the number is the difference and not an artifact of the measurement.
+### Patching the enablers does not end
 
-It is **10.57 font units**, on `g`. One other glyph is above half a unit and the remaining seventy-one are below it. `r[drift.outline]` is calibrated to 5 units, which is the worst residual Iosevka's own grid-snap artifact produces, so `g` differs by more than twice the tolerance this project uses to call two outlines the same shape. At 16 ppem that is about 0.16 px, so it will not show in a text preview, and at display sizes it will. This is a defect, not a rounding artefact to accept.
+`linesweeper` was the first enabler found:
 
-So the answer to "is it only the last bit" is no. Something reshapes one glyph by ten units, which is a subdivision or a convergence decision changing, not a rounding boundary.
+```
+kurbo v0.13.1
+└── kurbo feature "default"
+    └── linesweeper v0.5.0
+```
 
-The next step is to bisect the pipeline by stage. `crates/lemmata-web` can expose the contours or the tree arcs and the two targets can be compared there, which localises it to the geometry or to the encoding. Until then `r[wasm.parity-bytes]` stands and is unmet, rather than being relaxed to match what the code does.
+It was vendored and changed to ask for `kurbo` without default features. That moved the enabler rather than removing it:
 
-## The note to send upstream
+```
+kurbo v0.13.1
+├── kurbo feature "default"
+│   └── write-fonts v0.54.1
+│       └── lemmata-build
+└── kurbo feature "libm"
+    └── (our crates)
+```
 
-To `kurbo` (linebender/kurbo), because the limitation is there rather than in `linesweeper`:
-
-> `FloatFuncs` selects the `libm` implementations with `#[cfg(not(feature = "std"))]`, so `libm` is ignored whenever `std` is on. A dependent that compiles for `wasm32-unknown-unknown` alongside native has no way to ask for one implementation of `sin`, `cos`, `tan`, `exp`, `ln`, `log2` and `pow`: enabling `libm` does nothing while `std` is on, and turning `std` off is not an option for a dependent that needs it. Cargo features are additive, so if any crate in a dependency graph enables `kurbo/default`, which enables `kurbo/std`, the choice is gone for everyone.
->
-> The request is for `libm` to take precedence when both are enabled, or for a separate backend selector so `std` and deterministic float math are independent. Our case is a font generator that must produce byte-identical output from a CLI and from a browser; the only difference between the two builds is that the browser's float math is Rust's `libm` port rather than the host libc, and it moves one glyph by ten font units.
-
-`linesweeper` is the reason we cannot turn `std` off: it declares `kurbo` with `features = ["serde"]` and no `default-features = false`, so it enables `kurbo/default`, and it needs std itself.
+`write-fonts` enables the same defaults, it is third-party, and it is not the last one that would be found. Cargo features are additive and there is no way to opt out from a dependent, so a chain of vendored copies is the shape of that approach, and it grows every time a dependency changes. The vendored `linesweeper` was reverted, since on its own it achieved nothing.
