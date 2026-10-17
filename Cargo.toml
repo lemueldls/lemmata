@@ -1,0 +1,31 @@
+[workspace]
+members = []
+package.authors = []
+package.categories = []
+package.description = ""
+package.edition = "2024"
+package.keywords = []
+package.license = ""
+package.repository = "https://github.com/lemueldls/lemmata"
+package.version = "0.1.0"
+resolver = "3"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# nursery
+option_if_let_else = "allow"
+use_self = "allow"
+
+# pedantic
+format_push_string = "allow"
+manual_let_else = "allow"
+map_unwrap_or = "allow"
+match_same_arms = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+redundant_closure_for_method_calls = "allow"
+too_many_lines = "allow"
+used_underscore_items = "allow"
