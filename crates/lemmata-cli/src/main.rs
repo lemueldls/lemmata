@@ -81,7 +81,9 @@ fn build(args: &[String]) -> Result<(), String> {
     // comes from the source rather than from a flag.
     let coefficients = captured
         .first()
-        .map_or([1.0, 0.0, 0.0, 1.0, 0.0, 0.0], |glyph| glyph.gizmo.as_coeffs());
+        .map_or([1.0, 0.0, 0.0, 1.0, 0.0, 0.0], |glyph| {
+            glyph.gizmo.as_coeffs()
+        });
     let italic_angle = coefficients[2].atan2(coefficients[0]).to_degrees();
     let metrics = Metrics {
         italic_angle,

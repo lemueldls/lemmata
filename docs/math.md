@@ -72,6 +72,16 @@ Two tests cover it. One builds the same glyphs at two angles and checks the bits
 
 With both faces built, Typst sets the equation corpus from the family with no fallback to its bundled math font. It embeds the Regular rather than the Italic, which is not what the style bits alone would predict. The likely reason is that the Regular carries the math italic alphanumerics, U+1D465 for an italic `x`, so a renderer that reaches for those never needs the slanted face. That is worth knowing rather than assuming: the faces are paired by the typographic family and subfamily records, nameID 16 and 17, and the corpus renders correctly either way.
 
+## The corpus and the harness
+
+`corpus/equations.typ` is the equation corpus `r[test.corpus]` asks for. It holds every construct a math font has to serve: a variable, arithmetic, a script, a fraction, a radical, a large operator with limits, a stretchy delimiter pair, a limit and Greek letters.
+
+`crates/lemmata-cli/tests/typst.rs` compiles it against the built font and reads the PDF back. A renderer that cannot serve a glyph or a table falls back to a font of its own, and the PDF says so in its font names, so the test asserts that every embedded font is ours. That is what `r[math.typst]` means from the outside: no missing glyph and no missing table, observed rather than assumed.
+
+Two details make it work, and both cost time to find. The font needs `--font-path`, and the font has to be set on `math.equation` rather than on `text`, because a text font does not reach math mode. A cache directory of the harness's own keeps a stale font list from deciding the result.
+
+It skips when Typst is not installed, like the tests that skip without a capture. It found the font wanting the first time it ran: the corpus needs the Greek letters and `times`, which the capture did not have.
+
 ## What is deferred
 
 `MathVariants` holds the size variants and the assembly recipes a stretchy delimiter is built from. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis. Those are new glyph designs rather than table code, and they are the last of the table's three parts.
