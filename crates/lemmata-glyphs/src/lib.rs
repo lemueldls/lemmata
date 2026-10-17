@@ -7,13 +7,16 @@
 //! geometry code, which is how the seam is meant to work: upstream's glyph
 //! definitions, our primitives.
 //!
-//! [`control`] and [`spiro_kit`] are the first slice of the layer the
-//! definitions themselves are written in: control knots, knot pairs, the
+//! [`control`], [`spiro_kit`] and [`metrics`] are the first slices of the layer
+//! the definitions themselves are written in: control knots, knot pairs, the
 //! flattener that resolves interpolators, the collector that turns controls
-//! into bi-knots, and the knot builders. `tests/spiro_kit.rs` compares all of it
-//! against upstream's, on the corpus in `corpus/spiro-kit.json`.
+//! into bi-knots, the knot builders, and the metrics every definition reads.
+//! `tests/spiro_kit.rs` compares the control layer against upstream's own, and
+//! `tests/metrics.rs` compares all 105 metrics against the ones the build
+//! derived.
 
 pub mod control;
+pub mod metrics;
 pub mod spiro_kit;
 
 use kurbo::{Affine, Vec2};
