@@ -41,6 +41,14 @@ Worth knowing before tightening these numbers: Iosevka's exported Bezier drawing
 - the fitted offsets match Iosevka to 1e-6,
 - the unioned and clipped shape matches to 4.2e-5 font units, measured as point-to-curve distance.
 
+## Spiro outline
+
+`crates/lemmata-geom/src/outline.rs` ports `spiro-to-outline.mjs`, the body of `SpiroGeometry.toBezArcs`: solve the skeleton, group arcs into runs that end at important knots, drop runs shorter than a hair, fit the remaining arcs to cubics, and apply the gizmo. A shared fitter in `fit.rs` serves this and stroke expansion.
+
+`tests/outline.rs` covers six skeletons in `corpus/outline.json` (open and closed, unimportant knots, a translated gizmo). Arc counts and control points match `SpiroGeometry` at 1e-6.
+
+One subtlety: typo-geom's `convertShapeToBez3` handles a combined arc by recursing into its segments rather than fitting the combination, so runs are flattened before fitting. Fitting the combination instead gave different splits, which is how that was found.
+
 ## Fairization
 
 `crates/lemmata-geom/src/fairize.rs` ports `fairizeBezierShape` from typo-geom: corner classification, splitting at extrema, canonical start selection, and straight-run reduction into `FairArc::Straight` or a length-parameterized `CombinedArc`. It carries the quadratic root solver (with its compensated discriminant), the 16-point Gauss-Legendre length integral, and typo-geom's `RootSink`.
