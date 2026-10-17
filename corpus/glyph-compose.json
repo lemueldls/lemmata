@@ -1,0 +1,1127 @@
+{
+  "cases": [
+    {
+      "name": "include-two-shapes",
+      "ops": [
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          }
+        },
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 200,
+                "y": -100,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 600,
+                "y": -100,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 600,
+                "y": 200,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 200,
+                "y": 200,
+                "unimportant": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "apply-transform",
+      "ops": [
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          }
+        },
+        {
+          "op": "applyTransform",
+          "tf": {
+            "xx": 1,
+            "xy": 0,
+            "yx": 0,
+            "yy": 1,
+            "tx": 50,
+            "ty": 20
+          }
+        }
+      ]
+    },
+    {
+      "name": "set-width",
+      "ops": [
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          }
+        },
+        {
+          "op": "setWidth",
+          "w": 700
+        }
+      ]
+    },
+    {
+      "name": "include-glyph-by-reference",
+      "ops": [
+        {
+          "op": "includeGlyph",
+          "glyph": {
+            "identifier": "sub",
+            "ops": [
+              {
+                "op": "includeGeometry",
+                "geom": {
+                  "kind": "spiro",
+                  "closed": true,
+                  "knots": [
+                    {
+                      "type": "g4",
+                      "x": 0,
+                      "y": 0,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 400,
+                      "y": 0,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 400,
+                      "y": 300,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 0,
+                      "y": 300,
+                      "unimportant": false
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 200,
+                "y": -100,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 600,
+                "y": -100,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 600,
+                "y": 200,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 200,
+                "y": 200,
+                "unimportant": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "include-glyph-anonymous",
+      "ops": [
+        {
+          "op": "includeGlyph",
+          "glyph": {
+            "ops": [
+              {
+                "op": "includeGeometry",
+                "geom": {
+                  "kind": "spiro",
+                  "closed": true,
+                  "knots": [
+                    {
+                      "type": "g4",
+                      "x": 0,
+                      "y": 0,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 400,
+                      "y": 0,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 400,
+                      "y": 300,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 0,
+                      "y": 300,
+                      "unimportant": false
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "applyTransform",
+                "tf": {
+                  "xx": 1,
+                  "xy": 0,
+                  "yx": 0,
+                  "yy": 1,
+                  "tx": 10,
+                  "ty": 10
+                }
+              }
+            ]
+          }
+        },
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": -100,
+                "y": 50,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 300,
+                "y": 50,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 300,
+                "y": 250,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": -100,
+                "y": 250,
+                "unimportant": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "include-proc",
+      "ops": [
+        {
+          "op": "includeProc",
+          "proc": {
+            "ops": [
+              {
+                "op": "includeGeometry",
+                "geom": {
+                  "kind": "spiro",
+                  "closed": true,
+                  "knots": [
+                    {
+                      "type": "g4",
+                      "x": 0,
+                      "y": 0,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 400,
+                      "y": 0,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 400,
+                      "y": 300,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 0,
+                      "y": 300,
+                      "unimportant": false
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "includeGeometry",
+                "geom": {
+                  "kind": "spiro",
+                  "closed": true,
+                  "knots": [
+                    {
+                      "type": "g4",
+                      "x": 200,
+                      "y": -100,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 600,
+                      "y": -100,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 600,
+                      "y": 200,
+                      "unimportant": false
+                    },
+                    {
+                      "type": "g4",
+                      "x": 200,
+                      "y": 200,
+                      "unimportant": false
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": -100,
+                "y": 50,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 300,
+                "y": 50,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 300,
+                "y": 250,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": -100,
+                "y": 250,
+                "unimportant": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "boole-union",
+      "ops": [
+        {
+          "op": "boole",
+          "operator": "union",
+          "operands": [
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 300,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 300,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": 200,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": 200,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "boole-difference",
+      "ops": [
+        {
+          "op": "boole",
+          "operator": "difference",
+          "operands": [
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 300,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 300,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": 200,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": 200,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "boole-intersection",
+      "ops": [
+        {
+          "op": "boole",
+          "operator": "intersection",
+          "operands": [
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 300,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 300,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": 200,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": 200,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "boole-three-operands",
+      "ops": [
+        {
+          "op": "boole",
+          "operator": "union",
+          "operands": [
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 300,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 300,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": 200,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": 200,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": -100,
+                        "y": 50,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 300,
+                        "y": 50,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 300,
+                        "y": 250,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": -100,
+                        "y": 250,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ctx-tag-ejected",
+      "ops": [
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          }
+        },
+        {
+          "op": "ctxTag",
+          "tag": "AS-BASE"
+        },
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 200,
+                "y": -100,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 600,
+                "y": -100,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 600,
+                "y": 200,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 200,
+                "y": 200,
+                "unimportant": false
+              }
+            ]
+          }
+        },
+        {
+          "op": "ejectTagged",
+          "tag": "AS-BASE"
+        }
+      ]
+    },
+    {
+      "name": "ctx-tag-kept",
+      "ops": [
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 0,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 400,
+                "y": 300,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 0,
+                "y": 300,
+                "unimportant": false
+              }
+            ]
+          }
+        },
+        {
+          "op": "ctxTag",
+          "tag": "AS-BASE"
+        },
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": 200,
+                "y": -100,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 600,
+                "y": -100,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 600,
+                "y": 200,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 200,
+                "y": 200,
+                "unimportant": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "nested-procs-and-boole",
+      "ops": [
+        {
+          "op": "boole",
+          "operator": "difference",
+          "operands": [
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 0,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 400,
+                        "y": 300,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 0,
+                        "y": 300,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": -100,
+                        "y": 50,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 300,
+                        "y": 50,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 300,
+                        "y": 250,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": -100,
+                        "y": 250,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "ops": [
+                {
+                  "op": "includeGeometry",
+                  "geom": {
+                    "kind": "spiro",
+                    "closed": true,
+                    "knots": [
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": -100,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 600,
+                        "y": 200,
+                        "unimportant": false
+                      },
+                      {
+                        "type": "g4",
+                        "x": 200,
+                        "y": 200,
+                        "unimportant": false
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "op": "includeGeometry",
+          "geom": {
+            "kind": "spiro",
+            "closed": true,
+            "knots": [
+              {
+                "type": "g4",
+                "x": -100,
+                "y": 50,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 300,
+                "y": 50,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": 300,
+                "y": 250,
+                "unimportant": false
+              },
+              {
+                "type": "g4",
+                "x": -100,
+                "y": 250,
+                "unimportant": false
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

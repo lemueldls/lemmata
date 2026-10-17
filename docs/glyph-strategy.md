@@ -77,7 +77,9 @@ The metrics layer is ported too. `lemmata-glyphs::metrics` carries `calculateMet
 
 The per-glyph frame is ported as well. `lemmata-glyphs::letter_model` carries `DivFrame`: the division, the sidebearings, the middle, the stroke width, the arch depths, and the slicing and advice methods. The capture dumps eleven frames at several divisions plus the values they derive, and `tests/letter_model.rs` compares 275 of them. The worst deviation is 2.8e-14.
 
-What remains of the layer: the `glyph` package (`GlyphProc`, `union`, `difference`, `include`, the block executor) and `util`. Roughly 1,600 lines. The definitions also pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), which are part of the 60,020 and amortize across glyphs.
+The composition layer is ported too. `lemmata-glyphs::glyph` carries `Glyph` (the accumulating combine, the transforms, the width, the context tag), `GlyphProc` and `ForkGlyphProc`, `combineWith`, and the boolean procs from `boole-kit.mjs` (`union`, `intersection`, `difference`, `with-knockout`). `reference/glyph-oracle` builds compositions with upstream's own layer and `tests/glyph_compose.rs` compares thirteen of them: includes, transforms, widths, references, nested procs, tag ejection and booleans. Worst deviation 0.000.
+
+What remains of the layer: `util` (443 lines of small pure helpers), and the parts of the `glyph` package that name and order glyphs rather than compose them (`store.mjs`, `relation.mjs`, the block executor), which the layout work needs and the outlines do not. The block executor is the driver that runs a glyph module and collects what it creates; it is what a glyph port will need next. The definitions also pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), which are part of the 60,020 and amortize across glyphs.
 
 ## How the measurement was taken
 

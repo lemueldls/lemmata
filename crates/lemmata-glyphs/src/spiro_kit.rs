@@ -345,12 +345,16 @@ impl Kit {
 
     /// An outline shape: what `spiro-outline` builds.
     #[must_use]
-    pub fn spiro_outline(&self, items: Vec<Item>) -> Vec<MonoKnot> {
-        self.collect(items)
-            .knots
-            .iter()
-            .map(|knot| MonoKnot::new(knot.ty, knot.x, knot.y, knot.unimportant))
-            .collect()
+    pub fn spiro_outline(&self, items: Vec<Item>) -> SpiroOutline {
+        let collector = self.collect(items);
+        SpiroOutline {
+            closed: collector.closed,
+            knots: collector
+                .knots
+                .iter()
+                .map(|knot| MonoKnot::new(knot.ty, knot.x, knot.y, knot.unimportant))
+                .collect(),
+        }
     }
 }
 
@@ -360,6 +364,39 @@ fn or_unimportant(af: Af) -> Af {
         vec![Amendment::Unimportant]
     } else {
         af
+    }
+}
+
+/// The knots a `spiro-outline` sequence produced.
+#[derive(Clone, Debug)]
+pub struct SpiroOutline {
+    pub closed: bool,
+    pub knots: Vec<MonoKnot>,
+}
+
+impl crate::glyph::Component for SpiroOutline {
+    fn apply_to_glyph(
+        &self,
+        glyph: &mut crate::glyph::Glyph,
+        _copy_anchors: bool,
+        _copy_width: bool,
+    ) {
+        glyph.include_geometry(Geometry::Spiro {
+            gizmo: glyph.gizmo,
+            closed: self.closed,
+            knots: self.knots.clone(),
+        });
+    }
+}
+
+impl crate::glyph::Component for Dispiro {
+    fn apply_to_glyph(
+        &self,
+        glyph: &mut crate::glyph::Glyph,
+        _copy_anchors: bool,
+        _copy_width: bool,
+    ) {
+        glyph.include_geometry(self.geometry(glyph.gizmo));
     }
 }
 

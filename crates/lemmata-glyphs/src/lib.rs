@@ -16,6 +16,7 @@
 //! derived.
 
 pub mod control;
+pub mod glyph;
 pub mod letter_model;
 pub mod metrics;
 pub mod spiro_kit;
