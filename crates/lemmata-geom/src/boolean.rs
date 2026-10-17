@@ -207,9 +207,24 @@ pub fn annex(shape: &[Vec<Bez3>], input: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
                 .iter()
                 .map(|arc| locate(arc, &sources).unwrap_or(NO_ORIGIN))
                 .collect();
-            let mut merged: Vec<Bez3> = Vec::with_capacity(contour.len());
-            let mut merged_origins: Vec<Origin> = Vec::with_capacity(contour.len());
-            for (arc, origin) in contour.iter().zip(&origins) {
+            // Put each arc back on the curve it came from. A sweep re-derives
+            // the pieces it cuts, and two re-derived pieces of one cubic do not
+            // satisfy the collinearity test that decides whether a junction is
+            // smooth, so fairization reads a corner where upstream sees none.
+            let snapped: Vec<Bez3> = contour
+                .iter()
+                .zip(&origins)
+                .map(|(arc, origin)| {
+                    if origin.source == usize::MAX {
+                        *arc
+                    } else {
+                        fit::slice_from_arc(&sources[origin.source], origin.t0, origin.t1)
+                    }
+                })
+                .collect();
+            let mut merged: Vec<Bez3> = Vec::with_capacity(snapped.len());
+            let mut merged_origins: Vec<Origin> = Vec::with_capacity(snapped.len());
+            for (arc, origin) in snapped.iter().zip(&origins) {
                 if let Some(previous) = merged_origins.last()
                     && previous.source == origin.source
                     && origin.source != usize::MAX

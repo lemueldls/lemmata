@@ -83,7 +83,7 @@ Two kinds of degenerate input and output have to be dropped as well, because typ
 
 Arc structure is closer but not identical. The sweep splits the boundary wherever it crosses another contour and leaves the pieces split; upstream's rebuild maps each polygon edge back to the arc it came from, so contiguous pieces of one arc come out joined. `annex` recovers the same information geometrically: each output arc is matched to the input arc it lies on, and adjacent pieces with contiguous parameters are rejoined by slicing the source arc, which is exact. That took the glyphs carrying a different arc count from 28 of 59 to 19, with the shapes unchanged.
 
-A plain geometric merge was tried first and rejected: joining any two pieces that line up also joins pieces of *different* source arcs, which upstream keeps apart. Matching on the source arc is what makes it safe. The 19 that remain differ by one or two arcs, or only in which contour comes first.
+A plain geometric merge was tried first and rejected: joining any two pieces that line up also joins pieces of *different* source arcs, which upstream keeps apart. Matching on the source arc is what makes it safe. Each arc is also put back on the curve it came from, because a sweep re-derives the pieces it cuts and a re-derived piece is not a de Casteljau slice of its source. The 18 that remain differ by one or two arcs, or only in which contour comes first.
 
 `tests/tree.rs` carries the real trees of three glyphs that used to fail, plus the sub-nodes they decompose into, so a regression names the operation that broke rather than the glyph.
 
