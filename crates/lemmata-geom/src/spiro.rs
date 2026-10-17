@@ -89,10 +89,10 @@ pub struct SpiroArc {
     pub arc_length: f64,
     pub rot: f64,
     pub bend: f64,
-    derive_x0: f64,
-    derive_y0: f64,
-    derive_x1: f64,
-    derive_y1: f64,
+    pub derive_x0: f64,
+    pub derive_y0: f64,
+    pub derive_x1: f64,
+    pub derive_y1: f64,
 }
 
 impl SpiroArc {
