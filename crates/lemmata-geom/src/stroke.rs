@@ -20,6 +20,7 @@ use kurbo::{BezPath, Point, Vec2};
 use linesweeper::BinaryOp;
 
 use crate::boolean::boolean;
+use crate::fit::{CurveArc, fit_contour};
 
 /// Fit tolerance for the cubic conversion, from `curve-util.mjs`.
 const GEOMETRY_PRECISION: f64 = 0.25;
@@ -27,10 +28,6 @@ const GEOMETRY_PRECISION: f64 = 0.25;
 const OCCURRENT_PRECISION: f64 = 1.0 / 16.0;
 /// Finite-difference step for offset curve derivatives.
 const FINITE_DIFFERENCE_DELTA: f64 = 1.0 / 65536.0;
-/// Probes per fit attempt.
-const PROBE_STOPS: usize = 4;
-/// Recursion cap in the fitter.
-const MAX_FIT_DEPTH: usize = 8;
 
 /// A cubic Bezier, in the shape order the upstream tools use.
 #[derive(Clone, Copy, Debug)]
@@ -65,6 +62,16 @@ impl Bez3 {
             w0 * (self.b.x - self.a.x) + w1 * (self.c.x - self.b.x) + w2 * (self.d.x - self.c.x),
             w0 * (self.b.y - self.a.y) + w1 * (self.c.y - self.b.y) + w2 * (self.d.y - self.c.y),
         )
+    }
+}
+
+impl CurveArc for Bez3 {
+    fn eval(&self, t: f64) -> Point {
+        Bez3::eval(self, t)
+    }
+
+    fn derivative(&self, t: f64) -> Vec2 {
+        Bez3::derivative(self, t)
     }
 }
 
@@ -187,6 +194,16 @@ impl Curve {
     }
 }
 
+impl CurveArc for Curve {
+    fn eval(&self, t: f64) -> Point {
+        Curve::eval(self, t)
+    }
+
+    fn derivative(&self, t: f64) -> Vec2 {
+        Curve::derivative(self, t)
+    }
+}
+
 /// Offsets one contour both ways and fits the result to cubics.
 ///
 /// Returns the left and right fitted contours, matching the two shapes
@@ -288,73 +305,6 @@ fn offset_contour(contour: &[Bez3], distance: f64, contrast: f64) -> Vec<Curve> 
     offset_arcs
 }
 
-fn fit_contour(arcs: &[Curve], err: f64) -> Vec<Bez3> {
-    let mut segments: Vec<Bez3> = Vec::new();
-    for arc in arcs {
-        fit_arc(arc, err, &mut segments, 0.0, 1.0, 0);
-    }
-    if let (Some(first), Some(last)) = (segments.first().copied(), segments.last().copied())
-        && !points_close(last.d, first.a, 1e-6)
-    {
-        segments.push(straight_bez3(last.d, first.a));
-    }
-    segments
-}
-
-fn fit_arc(arc: &Curve, err: f64, sink: &mut Vec<Bez3>, t0: f64, t1: f64, depth: usize) {
-    let test = slice_from_arc(arc, t0, t1);
-    if depth >= MAX_FIT_DEPTH {
-        sink_add(sink, test);
-        return;
-    }
-
-    let mut needs_subdivide = false;
-    for k in 1..PROBE_STOPS {
-        let fraction = k as f64 / PROBE_STOPS as f64;
-        let on_slice = test.eval(fraction);
-        let on_arc = arc.eval(mix(t0, t1, fraction));
-        if !points_close(on_slice, on_arc, err) {
-            needs_subdivide = true;
-            break;
-        }
-    }
-
-    if needs_subdivide {
-        let mid = mix(t0, t1, 0.5);
-        fit_arc(arc, err, sink, t0, mid, depth + 1);
-        fit_arc(arc, err, sink, mid, t1, depth + 1);
-    } else {
-        sink_add(sink, test);
-    }
-}
-
-fn slice_from_arc(arc: &Curve, t0: f64, t1: f64) -> Bez3 {
-    let scalar = t1 - t0;
-    let z0 = arc.eval(t0);
-    let z1 = arc.eval(t1);
-    let d0 = arc.derivative(t0);
-    let d1 = arc.derivative(t1);
-    Bez3::new(
-        z0,
-        Point::new(z0.x + (scalar / 3.0) * d0.x, z0.y + (scalar / 3.0) * d0.y),
-        Point::new(z1.x - (scalar / 3.0) * d1.x, z1.y - (scalar / 3.0) * d1.y),
-        z1,
-    )
-}
-
-fn sink_add(segments: &mut Vec<Bez3>, segment: Bez3) {
-    if let Some(previous) = segments.last()
-        && !points_close(previous.d, segment.a, 1e-6)
-    {
-        segments.push(straight_bez3(previous.d, segment.a));
-    }
-    segments.push(segment);
-}
-
-fn straight_bez3(a: Point, b: Point) -> Bez3 {
-    Bez3::new(a, mix_point(a, b, 1.0 / 3.0), mix_point(a, b, 2.0 / 3.0), b)
-}
-
 fn contour_to_path(contour: &[Bez3]) -> BezPath {
     let mut path = BezPath::new();
     if let Some(first) = contour.first() {
@@ -410,14 +360,4 @@ impl CurveEval for OffsetCurve {
 
 fn mix(a: f64, b: f64, t: f64) -> f64 {
     a + (b - a) * t
-}
-
-fn mix_point(a: Point, b: Point, t: f64) -> Point {
-    Point::new(mix(a.x, b.x, t), mix(a.y, b.y, t))
-}
-
-fn points_close(a: Point, b: Point, tolerance: f64) -> bool {
-    let dx = a.x - b.x;
-    let dy = a.y - b.y;
-    dx * dx + dy * dy < tolerance * tolerance
 }
