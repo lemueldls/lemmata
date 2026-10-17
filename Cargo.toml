@@ -21,6 +21,7 @@ picante = "=3.0.0-rc.5"
 read-fonts = "0.45.1"
 rediff = "=0.50.0-rc.7"
 skrifa = "0.48.0"
+write-fonts = "0.54.1"
 vox = "=0.10.0-rc.7"
 vox-schema = "=0.10.0-rc.7"
 

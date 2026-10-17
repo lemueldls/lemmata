@@ -9,3 +9,6 @@ publish = false
 workspace = true
 
 [dependencies]
+write-fonts.workspace = true
+kurbo.workspace = true
+lemmata-geom = { path = "../lemmata-geom" }

@@ -9,6 +9,8 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+pub mod font;
+
 /// Hit and miss counters for one table.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Stats {
