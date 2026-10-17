@@ -19,7 +19,7 @@
     clippy::unreadable_literal
 )]
 
-use kurbo::{BezPath, Point};
+use kurbo::{BezPath, Point, Vec2};
 
 /// Largest number of pieces an arc is split into when cubic approximation
 /// misses the bend threshold.
@@ -154,10 +154,10 @@ impl SpiroArc {
 
     /// Tangent direction at parameter `at`.
     #[must_use]
-    pub fn derivative(&self, at: f64) -> Point {
+    pub fn derivative(&self, at: f64) -> Vec2 {
         let t = at - 0.5;
         let theta = self.rot + ks_theta(t, t, &self.ks);
-        Point::new(self.arc_length * theta.cos(), self.arc_length * theta.sin())
+        Vec2::new(self.arc_length * theta.cos(), self.arc_length * theta.sin())
     }
 
     fn eval_impl(&self, t: f64, k_sub: [f64; 4]) -> Point {

@@ -3,12 +3,11 @@
 //! This is typo-geom's `convertArcToBez3`: build a Hermite-style cubic over a
 //! parameter range, probe it against the arc, and split until it fits. Stroke
 //! expansion and the spiro outline both use it, on different arc types.
+//!
+//! Like typo-geom, a combined arc is not fitted as one curve. Callers expand it
+//! into its segments and fit each one.
 
-#![allow(
-    clippy::cast_precision_loss,
-    clippy::suboptimal_flops,
-    clippy::too_many_arguments
-)]
+#![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
 
 use kurbo::{Point, Vec2};
 
@@ -29,28 +28,34 @@ const MAX_FIT_DEPTH: usize = 8;
 pub fn fit_contour<A: CurveArc>(arcs: &[A], err: f64) -> Vec<Bez3> {
     let mut segments: Vec<Bez3> = Vec::new();
     for arc in arcs {
-        fit_arc(arc, err, &mut segments, 0.0, 1.0, 0);
+        fit_arc_into(arc, err, &mut segments);
     }
-    if let (Some(first), Some(last)) = (segments.first().copied(), segments.last().copied())
-        && !points_close(last.d, first.a, 1e-6)
-    {
-        segments.push(straight_bez3(last.d, first.a));
-    }
+    close_contour(&mut segments);
     segments
 }
 
-/// Appends a fitted segment, inserting a straight connector if it does not meet
-/// the previous segment.
-pub fn push_segment(segments: &mut Vec<Bez3>, segment: Bez3) {
-    if let Some(previous) = segments.last()
-        && !points_close(previous.d, segment.a, 1e-6)
-    {
-        segments.push(straight_bez3(previous.d, segment.a));
-    }
-    segments.push(segment);
+/// Fits one arc, appending its cubics and any connector they need.
+pub fn fit_arc_into<A: CurveArc>(arc: &A, err: f64, sink: &mut Vec<Bez3>) {
+    fit_recursive(arc, err, sink, 0.0, 1.0, 0);
 }
 
-fn fit_arc<A: CurveArc>(arc: &A, err: f64, sink: &mut Vec<Bez3>, t0: f64, t1: f64, depth: usize) {
+/// Connects the last cubic back to the first if they do not meet.
+pub fn close_contour(segments: &mut Vec<Bez3>) {
+    if let (Some(first), Some(last)) = (segments.first().copied(), segments.last().copied())
+        && !points_close(last.d, first.a, 1e-6)
+    {
+        push_segment(segments, straight_bez3(last.d, first.a));
+    }
+}
+
+fn fit_recursive<A: CurveArc>(
+    arc: &A,
+    err: f64,
+    sink: &mut Vec<Bez3>,
+    t0: f64,
+    t1: f64,
+    depth: usize,
+) {
     let test = slice_from_arc(arc, t0, t1);
     if depth >= MAX_FIT_DEPTH {
         push_segment(sink, test);
@@ -70,11 +75,20 @@ fn fit_arc<A: CurveArc>(arc: &A, err: f64, sink: &mut Vec<Bez3>, t0: f64, t1: f6
 
     if needs_subdivide {
         let mid = mix(t0, t1, 0.5);
-        fit_arc(arc, err, sink, t0, mid, depth + 1);
-        fit_arc(arc, err, sink, mid, t1, depth + 1);
+        fit_recursive(arc, err, sink, t0, mid, depth + 1);
+        fit_recursive(arc, err, sink, mid, t1, depth + 1);
     } else {
         push_segment(sink, test);
     }
+}
+
+fn push_segment(segments: &mut Vec<Bez3>, segment: Bez3) {
+    if let Some(previous) = segments.last()
+        && !points_close(previous.d, segment.a, 1e-6)
+    {
+        segments.push(straight_bez3(previous.d, segment.a));
+    }
+    segments.push(segment);
 }
 
 fn slice_from_arc<A: CurveArc>(arc: &A, t0: f64, t1: f64) -> Bez3 {
