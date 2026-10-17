@@ -168,7 +168,16 @@ fn captured_glyphs_reproduce_their_contours() {
             worst_name = name;
         }
         if deviation > 1.0 {
-            over_budget.push(format!("{name} {deviation:.2}"));
+            // Point counts separate a quadify decision from a placement
+            // difference, which is worth knowing when this fails.
+            over_budget.push(format!(
+                "{name} {deviation:.2} (points {} vs {})",
+                ours.iter().map(Vec::len).sum::<usize>(),
+                theirs
+                    .iter()
+                    .map(|contour| contour.as_array().unwrap().len())
+                    .sum::<usize>()
+            ));
         }
     }
 

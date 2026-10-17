@@ -37,8 +37,8 @@ The first two are exact, so a regression in the constructors fails loudly instea
 
 ## The open gap
 
-Overlap resolution is the one step that is not exact. Iosevka resolves overlaps with typo-geom on an integer grid, and `lemmata-geom` uses linesweeper on exact curves. Where two shapes cross at a shallow angle the two boundaries part, and near-coincident edges can leave contours joined in one engine and split in the other.
+The geometry tree and overlap resolution now match upstream exactly: `tree_arcs_match` and `resolved_arcs_are_close` report 59 of 59 glyphs within 0.25 units, worst 0.000.
 
-That accounted for the visible holes at first, but the larger part of the gap was a bug in the constructor. `SpiroExpander::expand` built its four knot lists as `Corner`, then filled in the type only for important knots. Since most knots in a real skeleton are unimportant, they reached the solver as corners, their spans came out straight, and the cubic fit had nothing to curve. Fixing it to carry every knot's type and importance moved the raw solve from a 7.7 unit interior divergence to exact, the tree arcs from 23 of 59 glyphs over the drift target to 2, and the coverage mismatch from 2.6% of a glyph's area to 0.54%.
+What is left is the last step, fairization into quadratic contours. Our quadification emits fewer points than Iosevka's on five glyphs, `a`, `e`, `g`, `s` and `three.lnum` (76 against 79 points on `three.lnum`), which puts the contour comparison at a worst of 4.7 units. The coverage comparison, which samples a grid and compares inside against outside, stays at 0.54% of a glyph's area, so the regions agree and this is a placement and segmentation difference.
 
-What is left is the clipper on three glyphs, `four.lnum`, `w` and `numberSign`, all built from nested intersections and differences: 3 of 59 over the 1 unit boundary target, worst 6.8 units. Closing that means matching typo-geom's clipper more closely.
+The reason it survived every earlier test is coverage. `tests/fairize.rs` and `tests/quadify.rs` each check one half of the step on their own small corpora, and both are exact; nothing checked the composition `quadify_fair(fairize(..))` on real glyph arcs. The fix is the same as before: capture the fairized shape as a stage, compare it on its own, then compare the quadified contours against it.

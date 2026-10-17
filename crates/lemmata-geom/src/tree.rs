@@ -114,7 +114,7 @@ impl Geometry {
                 pen_profile,
                 closed,
                 knots,
-            } => union_all_contours(paths_to_shape(&pen_spiro_paths(
+            } => union_all_contours(&paths_to_shape(&pen_spiro_paths(
                 *gizmo,
                 pen_profile.len(),
                 *closed,
@@ -135,7 +135,7 @@ impl Geometry {
             }
             Self::RemoveHoles { gizmo, geom } => {
                 let inner = transformed(*gizmo, geom).to_bez_arcs();
-                let arcs = union_all_contours(resolve_overlaps(&inner));
+                let arcs = union_all_contours(&resolve_overlaps(&inner));
                 transform_shape(&arcs, *gizmo)
             }
             Self::Simplify { gizmo, geom } => simplify_arcs(*gizmo, geom),
@@ -266,8 +266,8 @@ fn di_spiro_arcs(gizmo: Affine, contrast: f64, closed: bool, knots: &[BiKnot]) -
 
 /// Unions every contour into one region, filling holes. That is what
 /// `RemoveHolesGeometry` does after resolving overlaps.
-fn union_all_contours(shape: Vec<Vec<Bez3>>) -> Vec<Vec<Bez3>> {
-    let mut contours = shape.into_iter();
+fn union_all_contours(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
+    let mut contours = crate::boolean::drop_degenerate(shape).into_iter();
     let Some(first) = contours.next() else {
         return Vec::new();
     };
@@ -283,13 +283,14 @@ fn union_all_contours(shape: Vec<Vec<Bez3>>) -> Vec<Vec<Bez3>> {
 }
 
 fn resolve_overlaps(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
+    let shape = crate::boolean::drop_degenerate(shape);
     let mut path = BezPath::new();
-    for contour in shape_to_paths(shape) {
+    for contour in shape_to_paths(&shape) {
         path.extend(contour.iter());
     }
     match remove_overlap(&path) {
-        Ok(contours) => paths_to_shape(&contours),
-        Err(_) => shape.to_vec(),
+        Ok(contours) => crate::boolean::clean_shape(&paths_to_shape(&contours)),
+        Err(_) => shape,
     }
 }
 

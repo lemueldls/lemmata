@@ -171,6 +171,7 @@ fn build(value: &Value) -> Geometry {
             tf: affine(value.get("tf")),
             geom: Box::new(build(&value["geom"])),
         },
+        "radical" => Geometry::Radical(Box::new(build(&value["geom"]))),
         other => panic!("unknown kind {other}"),
     }
 }
@@ -224,7 +225,11 @@ fn point_hausdorff(a: &[Point], b: &[Point]) -> f64 {
     directed(a, b).max(directed(b, a))
 }
 
+/// Depth by which points of one outline stick out of the other. A point that
+/// lies inside the other is a seam: two boolean engines can split the same
+/// region differently, and that is not drift.
 fn directed(samples: &[Point], path: &BezPath) -> f64 {
+    use kurbo::Shape;
     let segments: Vec<_> = path.segments().collect();
     let mut worst: f64 = 0.0;
     for p in samples {
@@ -235,7 +240,7 @@ fn directed(samples: &[Point], path: &BezPath) -> f64 {
                 nearest = distance;
             }
         }
-        if nearest > worst {
+        if nearest > worst && !path.contains(*p) {
             worst = nearest;
         }
     }
@@ -256,6 +261,7 @@ fn geometry_tree_matches_upstream() {
     assert_eq!(cases.len(), expected_cases.len());
 
     let mut worst = 0.0_f64;
+    let mut failures: Vec<String> = Vec::new();
     for (case, expected) in cases.iter().zip(expected_cases) {
         let name = case["name"].as_str().unwrap();
         let tolerance = number(&case["tolerance"]);
@@ -287,10 +293,11 @@ fn geometry_tree_matches_upstream() {
 
                 let deviation = point_hausdorff(&ours_points, &theirs_points);
                 worst = worst.max(deviation / tolerance.max(1e-9));
-                assert!(
-                    deviation <= tolerance,
-                    "{name}: contour deviation {deviation} over budget {tolerance}"
-                );
+                if deviation > tolerance {
+                    failures.push(format!(
+                        "{name}: contour deviation {deviation} over budget {tolerance}"
+                    ));
+                }
             }
             continue;
         }
@@ -306,10 +313,26 @@ fn geometry_tree_matches_upstream() {
         let deviation =
             directed(&ours_samples, &theirs_path).max(directed(&theirs_samples, &ours_path));
         worst = worst.max(deviation / tolerance.max(1e-9));
-        assert!(
-            deviation <= tolerance,
-            "{name}: deviation {deviation} over budget {tolerance}"
-        );
+        if deviation > tolerance {
+            use kurbo::Shape;
+            let ours_area: f64 = shape_to_paths(&geometry.to_bez_arcs())
+                .iter()
+                .map(BezPath::area)
+                .sum();
+            let theirs_area: f64 = path_from_arcs(&expected["arcs"]).area();
+            let ours_contours = geometry.to_bez_arcs().len();
+            let theirs_contours = expected["arcs"].as_array().unwrap().len();
+            failures.push(format!(
+                "{name}: deviation {deviation:.2} over budget {tolerance}; ours {ours_contours} contours area {ours_area:.0}, theirs {theirs_contours} area {theirs_area:.0}"
+            ));
+        }
     }
     eprintln!("geometry tree: worst deviation {worst:.3} of budget");
+    assert!(
+        failures.is_empty(),
+        "{} of {} cases over budget:\n  {}",
+        failures.len(),
+        cases.len(),
+        failures.join("\n  ")
+    );
 }

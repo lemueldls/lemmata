@@ -345,8 +345,12 @@ pub fn paths_to_shape(paths: &[BezPath]) -> Vec<Vec<Bez3>> {
 /// Applies a boolean operation to two shapes of cubics.
 #[must_use]
 pub fn boolean_shapes(a: &[Vec<Bez3>], b: &[Vec<Bez3>], op: BinaryOp) -> Vec<Vec<Bez3>> {
-    let a_paths = shape_to_paths(a);
-    let b_paths = shape_to_paths(b);
+    // A zero-area operand contributes nothing, and the sweep can turn one into
+    // a zero-width seam in the result.
+    let a = crate::boolean::drop_degenerate(a);
+    let b = crate::boolean::drop_degenerate(b);
+    let a_paths = shape_to_paths(&a);
+    let b_paths = shape_to_paths(&b);
     let mut a_path = BezPath::new();
     for path in &a_paths {
         a_path.extend(path.iter());
@@ -356,10 +360,10 @@ pub fn boolean_shapes(a: &[Vec<Bez3>], b: &[Vec<Bez3>], op: BinaryOp) -> Vec<Vec
         b_path.extend(path.iter());
     }
     if let Ok(contours) = boolean(&a_path, &b_path, op) {
-        paths_to_shape(&contours)
+        crate::boolean::clean_shape(&paths_to_shape(&contours))
     } else {
-        let mut fallback = a.to_vec();
-        fallback.extend_from_slice(b);
+        let mut fallback = a;
+        fallback.extend_from_slice(&b);
         fallback
     }
 }

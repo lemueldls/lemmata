@@ -83,6 +83,8 @@ function build(spec) {
       );
     case "transform":
       return new index.TransformedGeometry(transform(spec.tf), build(spec.geom));
+    case "radical":
+      return new index.RadicalGeometry(build(spec.geom));
     default:
       throw new Error(`unknown kind ${spec.kind}`);
   }

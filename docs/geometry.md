@@ -79,6 +79,10 @@ One upstream quirk is reproduced on purpose: when a cubic's extrema quadratic is
 
 One thing beyond resolution has to match: contour orientation. typo-geom's clipper leaves outer contours clockwise; linesweeper leaves them counter-clockwise. Downstream, `SimplifyGeometry` and `RemoveHolesGeometry` union contours from different constructors under the non-zero rule, where two contours of opposite orientation cancel over their overlap instead of merging. Getting that wrong leaves wedges missing at stroke joints. `boolean.rs` therefore reverses every contour it returns, and `SpiroPenGeometry` unions its strips the way upstream does rather than concatenating them.
 
+Two kinds of degenerate input and output have to be dropped as well, because typo-geom never emits them: it only places arcs it can find in its segment table, and it drops collinear polygon edges. A zero-area operand contributes nothing to a boolean, and feeding one to the sweep leaves a zero-width seam in the result. A sweep can also return a zero-length arc, or a collinear arc that runs out along a line and back. Neither changes the filled region, but both show up in the boundary, which is what the drift comparison measures. `drop_degenerate` and `clean_shape` handle them.
+
+`tests/tree.rs` carries the real trees of three glyphs that used to fail, plus the sub-nodes they decompose into, so a regression names the operation that broke rather than the glyph.
+
 ## Not ported yet
 
 Nothing in the geometry package is left unported. `ReferenceGeometry` would need the glyph objects upstream keeps outside the package, and the `hash` methods serve upstream's geometry cache rather than font output.

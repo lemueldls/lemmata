@@ -7,6 +7,8 @@
 use kurbo::BezPath;
 use linesweeper::{BinaryOp, Error as SweepError, FillRule, binary_op};
 
+use crate::stroke::Bez3;
+
 #[derive(Debug)]
 pub enum Error {
     Infinity,
@@ -22,6 +24,100 @@ impl From<SweepError> for Error {
             SweepError::NonClosedPath(_) => Self::NonClosed,
         }
     }
+}
+
+/// Drops contours that enclose no area.
+///
+/// A zero-area operand contributes nothing to a boolean, and feeding one to the
+/// sweep can leave a zero-width seam in the result where the other engine drops
+/// it. Glyph definitions produce them: a difference whose right side collapses,
+/// for instance.
+#[must_use]
+pub fn drop_degenerate(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
+    use kurbo::Shape;
+    shape
+        .iter()
+        .filter(|contour| {
+            if contour.len() < 2 {
+                return false;
+            }
+            let paths = crate::stroke::shape_to_paths(std::slice::from_ref(*contour));
+            let area: f64 = paths.iter().map(BezPath::area).sum();
+            area.abs() > DEGENERATE_AREA
+        })
+        .cloned()
+        .collect()
+}
+
+/// Contours below this area, in square font units, count as degenerate.
+const DEGENERATE_AREA: f64 = 1e-6;
+
+/// Two points within this distance count as the same point.
+const POINT_EPSILON: f64 = 1e-9;
+
+/// Removes the degenerate arcs a sweep can leave behind.
+///
+/// Two kinds turn up. A zero-length arc has all four control points in one
+/// place, and a collinear excursion runs out along a line and back without
+/// enclosing anything. Neither changes the filled region, but both show up in
+/// the boundary, and typo-geom's rebuild never emits them because it only
+/// places arcs it can find in its segment table.
+#[must_use]
+pub fn clean_shape(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
+    shape
+        .iter()
+        .map(|contour| {
+            let mut cleaned: Vec<Bez3> = Vec::with_capacity(contour.len());
+            for arc in contour {
+                if close(arc.a, arc.b) && close(arc.a, arc.c) && close(arc.a, arc.d) {
+                    continue;
+                }
+                let arc = if is_collinear_excursion(arc) {
+                    straight(arc.a, arc.d)
+                } else {
+                    *arc
+                };
+                // A zero-length arc can also appear as a repeated point with
+                // stray controls; drop it once it has no extent left.
+                if let Some(previous) = cleaned.last()
+                    && close(previous.d, arc.a)
+                    && close(arc.a, arc.d)
+                {
+                    continue;
+                }
+                cleaned.push(arc);
+            }
+            cleaned
+        })
+        .filter(|contour| contour.len() > 1)
+        .collect()
+}
+
+fn close(a: kurbo::Point, b: kurbo::Point) -> bool {
+    (a - b).hypot() <= POINT_EPSILON
+}
+
+/// True when every control point sits on the line through the endpoints but the
+/// curve leaves the span between them on the way.
+fn is_collinear_excursion(arc: &Bez3) -> bool {
+    let along = arc.d - arc.a;
+    let length = along.hypot();
+    if length <= POINT_EPSILON {
+        return false;
+    }
+    let direction = along / length;
+    let project = |p: kurbo::Point| (p - arc.a).dot(direction);
+    let on_line = |p: kurbo::Point| ((p - arc.a) - direction * project(p)).hypot() <= POINT_EPSILON;
+    if !(on_line(arc.b) && on_line(arc.c)) {
+        return false;
+    }
+    let span = [project(arc.b), project(arc.c)];
+    span.iter()
+        .any(|value| *value < -POINT_EPSILON || *value > length + POINT_EPSILON)
+}
+
+fn straight(a: kurbo::Point, d: kurbo::Point) -> Bez3 {
+    Bez3::new(a, a + (d - a) / 3.0, a + (d - a) * (2.0 / 3.0), d)
 }
 
 /// Applies a boolean operation to two shapes, both filled by the non-zero rule.
