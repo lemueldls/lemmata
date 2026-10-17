@@ -1,0 +1,560 @@
+{
+  "cases": [
+    {
+      "name": "plain-g4-with-widths",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 100,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 200,
+          "y": 300,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 60
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 300,
+          "af": {
+            "kind": "widths.lhs",
+            "w": 80
+          }
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "width-inheritance",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths",
+            "l": 40,
+            "r": 90
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 200,
+          "y": 0
+        },
+        {
+          "kind": "g4",
+          "x": 200,
+          "y": 200,
+          "af": {
+            "kind": "widths.center",
+            "w": 50
+          }
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "default-widths-before-first-knot",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 100,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "name": "directed-pairs",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "g4.up.start",
+          "x": 200,
+          "y": 300
+        },
+        {
+          "kind": "g4.right.start",
+          "x": 400,
+          "y": 300
+        },
+        {
+          "kind": "g4.rd.mid",
+          "x": 400,
+          "y": 100
+        },
+        {
+          "kind": "g4.left.end",
+          "x": 200,
+          "y": 0
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "diagonal-directions",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0
+        },
+        {
+          "kind": "g4.ru.mid",
+          "x": 100,
+          "y": 100
+        },
+        {
+          "kind": "g4.ld.mid",
+          "x": 200,
+          "y": 0
+        },
+        {
+          "kind": "g4.left.start",
+          "x": 300,
+          "y": 100
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "mixed-knot-types",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "corner",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "flat",
+          "x": 100,
+          "y": 0
+        },
+        {
+          "kind": "curl",
+          "x": 200,
+          "y": 100
+        },
+        {
+          "kind": "g2",
+          "x": 200,
+          "y": 200
+        },
+        {
+          "kind": "corner",
+          "x": 0,
+          "y": 200
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "heading-amendment",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 200,
+          "y": 200,
+          "af": {
+            "kind": "heading",
+            "x": 1,
+            "y": 1
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 400,
+          "y": 200,
+          "af": {
+            "kind": "widths.rhs.heading",
+            "w": 60,
+            "x": -1,
+            "y": 0
+          }
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "importance-and-contrast",
+      "stroke": 70,
+      "contrast": 1.1,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 100,
+          "y": 200,
+          "af": {
+            "kind": "unimportant"
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 200,
+          "y": 200
+        },
+        {
+          "kind": "g4",
+          "x": 300,
+          "y": 0,
+          "af": {
+            "kind": "disable-contrast"
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 400,
+          "y": 0,
+          "af": {
+            "kind": "important"
+          }
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "virtual-knot-contributes-nothing",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "virt",
+          "x": 100,
+          "y": 100
+        },
+        {
+          "kind": "g4",
+          "x": 200,
+          "y": 200
+        },
+        {
+          "kind": "virt",
+          "x": 300,
+          "y": 300
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "open-sequence-with-end",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.center",
+            "w": 70
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 200,
+          "y": 300
+        },
+        {
+          "kind": "g4",
+          "x": 400,
+          "y": 0
+        },
+        {
+          "kind": "end"
+        }
+      ]
+    },
+    {
+      "name": "archv-between-knots",
+      "stroke": 70,
+      "contrast": 1.0,
+      "superness": 1.0,
+      "controls": [
+        {
+          "kind": "corner",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "archv"
+        },
+        {
+          "kind": "corner",
+          "x": 400,
+          "y": 400
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "arcvh-with-samples",
+      "stroke": 70,
+      "contrast": 1.0,
+      "superness": 1.3,
+      "controls": [
+        {
+          "kind": "corner",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "arcvh",
+          "samples": 4
+        },
+        {
+          "kind": "corner",
+          "x": 300,
+          "y": 500
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "also-thru-simple-mix",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "corner",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "alsoThru",
+          "rx": 0.5,
+          "ry": 0.5
+        },
+        {
+          "kind": "corner",
+          "x": 200,
+          "y": 200
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "also-thru-them",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "corner",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "alsoThruThem",
+          "rs": [
+            [
+              0.25,
+              0.25,
+              0.25
+            ],
+            [
+              0.5,
+              0.5,
+              0.5
+            ],
+            [
+              0.75,
+              0.75,
+              0.75
+            ]
+          ],
+          "ty": "g2"
+        },
+        {
+          "kind": "corner",
+          "x": 400,
+          "y": 400
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "decor-keeps-knots",
+      "stroke": 70,
+      "contrast": 1.0,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 70
+          }
+        },
+        {
+          "kind": "decor",
+          "items": [
+            {
+              "kind": "g2",
+              "x": 100,
+              "y": 100
+            }
+          ]
+        },
+        {
+          "kind": "g4",
+          "x": 200,
+          "y": 0
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "name": "unimportant-then-important",
+      "stroke": 70,
+      "contrast": 0.8,
+      "controls": [
+        {
+          "kind": "g4",
+          "x": 0,
+          "y": 0,
+          "af": {
+            "kind": "widths.rhs",
+            "w": 90
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 150,
+          "y": 150,
+          "af": {
+            "kind": "unimportant"
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 300,
+          "y": 150,
+          "af": {
+            "kind": "important"
+          }
+        },
+        {
+          "kind": "g4",
+          "x": 450,
+          "y": 0
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    }
+  ]
+}

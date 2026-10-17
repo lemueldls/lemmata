@@ -4,4 +4,6 @@
 
 Build outputs do not belong in the repository. Copy the TTFs to `target/reference/` so `cargo test -p lemmata-oracle` picks them up.
 
+`spiro-kit-oracle/` runs upstream's spiro control layer and knot builders over `corpus/spiro-kit.json`, so the Rust port of that layer can be compared against it.
+
 `glyph-capture/` patches the scratch tree instead of importing from it, because per-glyph geometry is not reachable any other way. It writes a glyph set's geometry trees and converted contours for `lemmata-glyphs` and `lemmata-cli` to read.

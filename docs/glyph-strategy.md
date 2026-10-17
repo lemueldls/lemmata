@@ -67,6 +67,14 @@ The second number is about twenty times the first, which is the correction this 
 
 What the pilot did not measure is how fast an automated loop converges on one file with the oracle as its gate. That number, not the line counts, decides whether the definitions are portable by hand or only by machine.
 
+## Port progress
+
+The control layer is ported. `lemmata-glyphs::control` carries the controls, the flattener and the collector; `lemmata-glyphs::spiro_kit` carries the knot builders, the directed pairs, the amendments, the interpolators and the sink helpers. That is `spiro-control.mjs` and the builders in `spiro-kit.mjs`, about 900 of the 3,470 lines.
+
+`reference/spiro-kit-oracle` runs upstream's own layer over `corpus/spiro-kit.json` and writes `golden/spiro-kit.json`; `crates/lemmata-glyphs/tests/spiro_kit.rs` builds the same sequences and compares. Sixteen cases and 69 knots, with every type, width, importance and normal exact and coordinates within 1e-9. The tolerance is for the arc interpolators, which go through `cos`, `sin` and `pow`: V8's implementations differ from Rust's by around 3e-14, so bit-exactness is not available there without matching V8's libm.
+
+What remains of the layer: `letter-model.mjs` (`DivFrame`, `Sw`, `adviceStroke2`), the `glyph` package (`GlyphProc`, `union`, `difference`, `include`, the block executor), `util`, and `aesthetics`. Roughly 2,500 lines.
+
 ## How the measurement was taken
 
 The scratch build's `packages/geometry/src/index.mjs` was wrapped with counters and JSON capture, the build cache was removed, and `npm run build -- ttf-unhinted::RefA` was run with `LEMMATA_DUMP` set. The same run produced the captured skeletons that `crates/lemmata-geom/tests/glyph_spiro.rs` replays. The instrumented tree is disposable and lives outside the repository.

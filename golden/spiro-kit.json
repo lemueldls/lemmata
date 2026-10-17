@@ -1,0 +1,744 @@
+{
+  "oracle": "spiro-kit",
+  "cases": [
+    {
+      "name": "plain-g4-with-widths",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 100,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 300,
+          "d1": 0,
+          "d2": 60,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 300,
+          "d1": 80,
+          "d2": 0,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "width-inheritance",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 40,
+          "d2": 90,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 0,
+          "d1": 40,
+          "d2": 90,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 200,
+          "d1": 25,
+          "d2": 25,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "default-widths-before-first-knot",
+      "closed": false,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 100,
+          "y": 100,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "directed-pairs",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 300,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 300.125,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 400,
+          "y": 300,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 400.125,
+          "y": 300,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 399.9375,
+          "y": 100.0625,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 400.0625,
+          "y": 99.9375,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200.125,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "diagonal-directions",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 0,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 99.9375,
+          "y": 99.9375,
+          "d1": 0,
+          "d2": 0,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 100.0625,
+          "y": 100.0625,
+          "d1": 0,
+          "d2": 0,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200.0625,
+          "y": 0.0625,
+          "d1": 0,
+          "d2": 0,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 199.9375,
+          "y": -0.0625,
+          "d1": 0,
+          "d2": 0,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 300,
+          "y": 100,
+          "d1": 0,
+          "d2": 0,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 299.875,
+          "y": 100,
+          "d1": 0,
+          "d2": 0,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "mixed-knot-types",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "corner",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "left",
+          "x": 100,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "right",
+          "x": 200,
+          "y": 100,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 200,
+          "y": 200,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "corner",
+          "x": 0,
+          "y": 200,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "heading-amendment",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 200,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": {
+            "x": 1,
+            "y": 1
+          }
+        },
+        {
+          "type": "g4",
+          "x": 400,
+          "y": 200,
+          "d1": 0,
+          "d2": 60,
+          "unimportant": 0,
+          "proposedNormal": {
+            "x": -1,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "importance-and-contrast",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 100,
+          "y": 200,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 200,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 300,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 400,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "virtual-knot-contributes-nothing",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 200,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "open-sequence-with-end",
+      "closed": false,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 35,
+          "d2": 35,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 300,
+          "d1": 35,
+          "d2": 35,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 400,
+          "y": 0,
+          "d1": 35,
+          "d2": 35,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "archv-between-knots",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "corner",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 58.5786437626905,
+          "y": 58.578643762690504,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 123.46331352698203,
+          "y": 123.46331352698203,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 199.99999999999994,
+          "y": 199.99999999999994,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 276.536686473018,
+          "y": 276.53668647301794,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 341.4213562373095,
+          "y": 341.4213562373095,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "corner",
+          "x": 400,
+          "y": 400,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "arcvh-with-samples",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "corner",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 59.55567333962709,
+          "y": 172.12618139928364,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 123.98093099930601,
+          "y": 293.3651150011566,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 196.72429116042977,
+          "y": 400.74054443395477,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "corner",
+          "x": 300,
+          "y": 500,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "also-thru-simple-mix",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "corner",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 100,
+          "y": 100,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "corner",
+          "x": 200,
+          "y": 200,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "also-thru-them",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "corner",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 100,
+          "y": 100,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 200,
+          "y": 200,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 300,
+          "y": 300,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "corner",
+          "x": 400,
+          "y": 400,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "decor-keeps-knots",
+      "closed": true,
+      "contrast": 1,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g2",
+          "x": 100,
+          "y": 100,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 200,
+          "y": 0,
+          "d1": 0,
+          "d2": 70,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    },
+    {
+      "name": "unimportant-then-important",
+      "closed": true,
+      "contrast": 0.8,
+      "knots": [
+        {
+          "type": "g4",
+          "x": 0,
+          "y": 0,
+          "d1": 0,
+          "d2": 90,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 150,
+          "y": 150,
+          "d1": 0,
+          "d2": 90,
+          "unimportant": 1,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 300,
+          "y": 150,
+          "d1": 0,
+          "d2": 90,
+          "unimportant": 0,
+          "proposedNormal": null
+        },
+        {
+          "type": "g4",
+          "x": 450,
+          "y": 0,
+          "d1": 0,
+          "d2": 90,
+          "unimportant": 0,
+          "proposedNormal": null
+        }
+      ]
+    }
+  ]
+}

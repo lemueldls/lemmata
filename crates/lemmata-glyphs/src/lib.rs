@@ -1,10 +1,20 @@
-//! Glyph data captured from a pinned Iosevka build.
+//! Glyph data captured from a pinned Iosevka build, and the layer glyph
+//! definitions are written in.
 //!
 //! The capture writes, for each glyph, its name, unicodes, advance width, glyph
 //! gizmo and the geometry tree its definitions produced. Feeding the tree back
 //! through [`lemmata_geom::Geometry`] reproduces the outline with our own
 //! geometry code, which is how the seam is meant to work: upstream's glyph
 //! definitions, our primitives.
+//!
+//! [`control`] and [`spiro_kit`] are the first slice of the layer the
+//! definitions themselves are written in: control knots, knot pairs, the
+//! flattener that resolves interpolators, the collector that turns controls
+//! into bi-knots, and the knot builders. `tests/spiro_kit.rs` compares all of it
+//! against upstream's, on the corpus in `corpus/spiro-kit.json`.
+
+pub mod control;
+pub mod spiro_kit;
 
 use kurbo::{Affine, Vec2};
 use lemmata_geom::{Bez3, BiKnot, Geometry, KnotType, MonoKnot, PenKnot};
