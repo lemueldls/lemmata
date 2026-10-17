@@ -1,0 +1,18 @@
+# Finds every block, with its body captured as a list, so the last expression
+# in the body can be located.
+#
+# This is a finder rather than a lint with a fix. Inserting the blank line needs
+# the block's indentation, and a rewrite template cannot know it, so the edit is
+# applied by reading the ranges out of `--json=stream`. AGENTS.md has the
+# command.
+#
+# `$$$BODY` captures the statements and the tail expression, in order, so its
+# last entry is the tail expression and its length is how much sits above it.
+id: blank-line-before-tail-expression
+language: rust
+severity: hint
+message: The last expression of a block
+rule:
+  pattern:
+    context: 'fn f() { $$$BODY }'
+    selector: block

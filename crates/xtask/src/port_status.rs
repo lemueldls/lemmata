@@ -32,6 +32,7 @@ fn module_path(ptl: &Path) -> PathBuf {
         .replace('-', "_")
         .replace(".ptl", ".rs");
     path.set_file_name(name);
+
     path
 }
 
@@ -54,6 +55,7 @@ fn collect(
     };
     let mut entries: Vec<_> = entries.filter_map(Result::ok).collect();
     entries.sort_by_key(fs::DirEntry::file_name);
+
     for entry in entries {
         let path = entry.path();
         let name = entry.file_name().to_string_lossy().to_string();
@@ -73,6 +75,7 @@ fn collect(
         slot.1 += 1;
         slot.3 += line_count(&path);
         let module = workspace.join(PORTED).join(module_path(&child));
+
         if module.exists() {
             slot.0 += 1;
             slot.2 += line_count(&module);
@@ -100,5 +103,6 @@ pub fn run() -> bool {
     }
     println!();
     println!("ported {ported} of {files} files ({ported_lines} of {lines} lines)");
+
     ported == files
 }

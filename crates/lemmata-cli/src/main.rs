@@ -86,5 +86,6 @@ fn build(args: &[String]) -> Result<(), String> {
         glyphs.len() + 1,
         bytes.len()
     );
+
     Ok(())
 }

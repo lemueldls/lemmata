@@ -107,6 +107,7 @@ fn build(value: &Value) -> Geometry {
                         knot.proposed_normal =
                             Some(Vec2::new(number(&normal["x"]), number(&normal["y"])));
                     }
+
                     knot
                 })
                 .collect(),
@@ -187,6 +188,7 @@ fn path_from_arcs(contours: &Value) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -201,6 +203,7 @@ fn sample_shape(shape: &[Vec<Bez3>]) -> (Vec<Point>, BezPath) {
         }
         combined.extend(path.iter());
     }
+
     (samples, combined)
 }
 
@@ -216,10 +219,12 @@ fn point_hausdorff(a: &[Point], b: &[Point]) -> f64 {
                     nearest = distance;
                 }
             }
+
             if nearest > worst {
                 worst = nearest;
             }
         }
+
         worst
     };
     directed(a, b).max(directed(b, a))
@@ -240,10 +245,12 @@ fn directed(samples: &[Point], path: &BezPath) -> f64 {
                 nearest = distance;
             }
         }
+
         if nearest > worst && !path.contains(*p) {
             worst = nearest;
         }
     }
+
     worst
 }
 
@@ -293,6 +300,7 @@ fn geometry_tree_matches_upstream() {
 
                 let deviation = point_hausdorff(&ours_points, &theirs_points);
                 worst = worst.max(deviation / tolerance.max(1e-9));
+
                 if deviation > tolerance {
                     failures.push(format!(
                         "{name}: contour deviation {deviation} over budget {tolerance}"
@@ -313,6 +321,7 @@ fn geometry_tree_matches_upstream() {
         let deviation =
             directed(&ours_samples, &theirs_path).max(directed(&theirs_samples, &ours_path));
         worst = worst.max(deviation / tolerance.max(1e-9));
+
         if deviation > tolerance {
             use kurbo::Shape;
             let ours_area: f64 = shape_to_paths(&geometry.to_bez_arcs())

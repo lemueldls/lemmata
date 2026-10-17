@@ -50,6 +50,7 @@ impl Bez3 {
     pub fn eval(&self, t: f64) -> Point {
         let u = 1.0 - t;
         let (w0, w1, w2, w3) = (u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t);
+
         Point::new(
             w0 * self.a.x + w1 * self.b.x + w2 * self.c.x + w3 * self.d.x,
             w0 * self.a.y + w1 * self.b.y + w2 * self.c.y + w3 * self.d.y,
@@ -60,6 +61,7 @@ impl Bez3 {
     pub fn derivative(&self, t: f64) -> Vec2 {
         let u = 1.0 - t;
         let (w0, w1, w2) = (3.0 * u * u, 6.0 * u * t, 3.0 * t * t);
+
         Vec2::new(
             w0 * (self.b.x - self.a.x) + w1 * (self.c.x - self.b.x) + w2 * (self.d.x - self.c.x),
             w0 * (self.b.y - self.a.y) + w1 * (self.c.y - self.b.y) + w2 * (self.d.y - self.c.y),
@@ -90,6 +92,7 @@ impl<A: CurveArc> CurveArc for OffsetCurve<A> {
         let c = self.bone.eval(t);
         let d = self.bone.derivative(t);
         let abs_d = d.hypot();
+
         Point::new(
             c.x - (d.y / abs_d) * self.offset * self.contrast,
             c.y + (d.x / abs_d) * self.offset,
@@ -135,6 +138,7 @@ impl RoundCapCurve {
         }
         let r0 = (center0.y - point0.y).hypot((center0.x - point0.x) / contrast);
         let r1 = (center1.y - point1.y).hypot((center1.x - point1.x) / contrast);
+
         Self {
             contrast,
             center0,
@@ -153,6 +157,7 @@ impl CurveArc for RoundCapCurve {
         let center_y = mix(self.center0.y, self.center1.y, t);
         let r = mix(self.r0, self.r1, t);
         let theta = mix(self.theta0, self.theta1, t);
+
         Point::new(
             center_x + r * theta.cos() * self.contrast,
             center_y + r * theta.sin(),
@@ -168,6 +173,7 @@ impl CurveArc for RoundCapCurve {
                     - (self.theta1 - self.theta0) * r * theta.sin());
         let dy = self.center1.y - self.center0.y
             + ((self.r1 - self.r0) * theta.sin() + (self.theta1 - self.theta0) * r * theta.cos());
+
         Vec2::new(dx, dy)
     }
 }
@@ -210,6 +216,7 @@ pub fn stroke_offsets<A: CurveArc>(
 ) -> (Vec<Vec<Bez3>>, Vec<Vec<Bez3>>) {
     let left = offset_contour(contour, -radius, contrast);
     let right = offset_contour(contour, radius, contrast);
+
     (
         vec![fit_contour(&left, GEOMETRY_PRECISION)],
         vec![fit_contour(&right, GEOMETRY_PRECISION)],
@@ -299,6 +306,7 @@ fn offset_contour<A: CurveArc>(contour: &[A], distance: f64, contrast: f64) -> V
             *arc = Curve::Reverted(Box::new(arc.clone()));
         }
     }
+
     offset_arcs
 }
 
@@ -316,6 +324,7 @@ pub fn shape_to_paths(shape: &[Vec<Bez3>]) -> Vec<BezPath> {
                 }
                 path.close_path();
             }
+
             path
         })
         .collect()
@@ -333,6 +342,7 @@ pub fn paths_to_shape(paths: &[BezPath]) -> Vec<Vec<Bez3>> {
                     PathSeg::Quad(quad) => {
                         let c1 = quad.p0 + (quad.p1 - quad.p0) * (2.0 / 3.0);
                         let c2 = quad.p2 + (quad.p1 - quad.p2) * (2.0 / 3.0);
+
                         Bez3::new(quad.p0, c1, c2, quad.p2)
                     }
                     PathSeg::Cubic(cubic) => Bez3::new(cubic.p0, cubic.p1, cubic.p2, cubic.p3),
@@ -359,9 +369,11 @@ pub fn boolean_shapes(a: &[Vec<Bez3>], b: &[Vec<Bez3>], op: BinaryOp) -> Vec<Vec
     for path in &b_paths {
         b_path.extend(path.iter());
     }
+
     if let Ok(contours) = boolean(&a_path, &b_path, op) {
         let mut input = a;
         input.extend_from_slice(&b);
+
         crate::boolean::annex(
             &crate::boolean::clean_shape(&paths_to_shape(&contours)),
             &input,
@@ -371,6 +383,7 @@ pub fn boolean_shapes(a: &[Vec<Bez3>], b: &[Vec<Bez3>], op: BinaryOp) -> Vec<Vec
         // degenerate arcs they may carry.
         let mut fallback = a;
         fallback.extend_from_slice(&b);
+
         crate::boolean::clean_shape(&fallback)
     }
 }
@@ -380,6 +393,7 @@ fn derivative_from_finite_difference(curve: &impl CurveArc, t: f64) -> Vec2 {
     let forward1 = curve.eval(t + FINITE_DIFFERENCE_DELTA);
     let backward1 = curve.eval(t - FINITE_DIFFERENCE_DELTA);
     let backward2 = curve.eval(t - 2.0 * FINITE_DIFFERENCE_DELTA);
+
     Vec2::new(
         (backward2.x - 8.0 * backward1.x + 8.0 * forward1.x - forward2.x)
             / (12.0 * FINITE_DIFFERENCE_DELTA),

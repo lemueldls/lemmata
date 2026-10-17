@@ -37,6 +37,7 @@ fn contour_path(points: &[QuadifyPoint]) -> BezPath {
     while index < points.len() {
         let point = &points[index];
         let quadratic = point.kind == QuadifyKind::Quadratic;
+
         if quadratic && index + 1 < points.len() {
             let end = &points[index + 1];
             path.quad_to(Point::new(point.x, point.y), Point::new(end.x, end.y));
@@ -47,6 +48,7 @@ fn contour_path(points: &[QuadifyPoint]) -> BezPath {
         }
     }
     path.close_path();
+
     path
 }
 
@@ -64,6 +66,7 @@ fn reference_contour_path(contour: &Value) -> BezPath {
     while index < points.len() {
         let point = &points[index];
         let quadratic = point["quadratic"].as_bool().unwrap();
+
         if quadratic && index + 1 < points.len() {
             let end = &points[index + 1];
             path.quad_to(
@@ -80,6 +83,7 @@ fn reference_contour_path(contour: &Value) -> BezPath {
         }
     }
     path.close_path();
+
     path
 }
 
@@ -90,6 +94,7 @@ fn sample_path(path: &BezPath) -> Vec<Point> {
             samples.push(segment.eval(index as f64 / SAMPLES_PER_SEGMENT as f64));
         }
     }
+
     samples
 }
 
@@ -105,10 +110,12 @@ fn boundary_drift(samples: &[Point], other: &BezPath) -> f64 {
                 nearest = distance;
             }
         }
+
         if nearest > worst && !other.contains(*p) {
             worst = nearest;
         }
     }
+
     worst
 }
 
@@ -158,6 +165,7 @@ fn captured_glyphs_reproduce_their_contours() {
             worst = deviation;
             worst_name = name;
         }
+
         if deviation > TOLERANCE {
             // Point counts separate a quadify decision from a placement
             // difference, which is worth knowing when this fails.
@@ -199,11 +207,13 @@ fn coverage_mismatch(ours: &BezPath, theirs: &BezPath, bounds: kurbo::Rect) -> f
             let x = bounds.x0 + (col as f64 + 0.5) / GRID as f64 * bounds.width();
             let point = Point::new(x, y);
             total += 1;
+
             if ours.contains(point) != theirs.contains(point) {
                 mismatches += 1;
             }
         }
     }
+
     mismatches as f64 / total as f64
 }
 
@@ -237,6 +247,7 @@ fn captured_glyphs_cover_the_same_region() {
             theirs.extend(reference_contour_path(contour).iter());
         }
         let fraction = coverage_mismatch(&ours, &theirs, ours.bounding_box());
+
         if fraction > worst.0 {
             worst = (fraction, glyph.name.clone());
         }

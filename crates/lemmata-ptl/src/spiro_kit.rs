@@ -142,6 +142,7 @@ impl Kit {
             Position::Mid => (-0.5 * self.tiny, 0.5 * self.tiny),
             Position::End => (-self.tiny, 0.0),
         };
+
         Item::Control(Control::Pair(crate::control::UserCloseKnotPair {
             center: crate::control::UserControlKnot {
                 ty: center,
@@ -329,6 +330,7 @@ impl Kit {
         flattener.flatten();
         let mut collector = Collector::new(self.contrast);
         flattener.pipe(&mut collector);
+
         collector
     }
 

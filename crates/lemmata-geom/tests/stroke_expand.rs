@@ -71,6 +71,7 @@ fn path_points(path: &BezPath) -> Vec<Point> {
             PathEl::QuadTo(..) | PathEl::ClosePath => {}
         }
     }
+
     points
 }
 
@@ -86,6 +87,7 @@ fn golden_points(shape: &Value) -> Vec<Point> {
             points.push(point(&arc["d"]));
         }
     }
+
     points
 }
 
@@ -124,10 +126,12 @@ fn directed(samples: &[Point], path: &BezPath) -> f64 {
                 nearest = distance;
             }
         }
+
         if nearest > worst {
             worst = nearest;
         }
     }
+
     worst
 }
 

@@ -86,10 +86,12 @@ impl PenExpander {
             if self.traces[i].len() != self.traces[next].len() {
                 continue;
             }
+
             for j in 0..self.traces[i].len() {
                 make_profiled_stroke(&mut contours, &self.traces[i][j], &self.traces[next][j]);
             }
         }
+
         contours
     }
 
@@ -215,9 +217,11 @@ pub fn pen_spiro_paths(
         } else {
             let mut fallback = accumulated;
             fallback.push(contour.clone());
+
             fallback
         };
     }
+
     accumulated
 }
 
@@ -247,10 +251,12 @@ fn subdivide_knot_pair(forward: &SpiroArc, backward: &SpiroArc) -> (Vec<SpiroArc
             .iter()
             .chain(&backward_parts)
             .all(|part| part.bend <= GEOMETRY_PRECISION);
+
         if flat {
             break;
         }
     }
+
     (forward_parts, backward_parts)
 }
 
@@ -265,6 +271,7 @@ fn uniform_subdivide(arc: &SpiroArc, stops: usize) -> Vec<SpiroArc> {
         stops -= 1;
     }
     sink.push(current);
+
     sink
 }
 

@@ -111,6 +111,7 @@ impl SpiroArc {
         let derive_x1 = arc_length * theta_right.cos();
         let derive_y1 = arc_length * theta_right.sin();
         let bend = ks_bend(&ks);
+
         Self {
             ks,
             x0,
@@ -149,6 +150,7 @@ impl SpiroArc {
     pub fn eval(&self, at: f64) -> Point {
         let t = at - 0.5;
         let k_sub = divide_ks(-0.5, t, &self.ks);
+
         self.eval_impl(t, k_sub)
     }
 
@@ -157,6 +159,7 @@ impl SpiroArc {
     pub fn derivative(&self, at: f64) -> Vec2 {
         let t = at - 0.5;
         let theta = self.rot + ks_theta(t, t, &self.ks);
+
         Vec2::new(self.arc_length * theta.cos(), self.arc_length * theta.sin())
     }
 
@@ -165,6 +168,7 @@ impl SpiroArc {
         let cth = (t + 0.5) * self.arc_length * th_sub.cos();
         let sth = (t + 0.5) * self.arc_length * th_sub.sin();
         let xy_sub = integrate_spiro(&k_sub);
+
         Point::new(
             self.x0 + cth * xy_sub[0] - sth * xy_sub[1],
             self.y0 + cth * xy_sub[1] + sth * xy_sub[0],
@@ -179,6 +183,7 @@ impl SpiroArc {
         let k_sub = divide_ks(-0.5, t, &self.ks);
         let k_sub_rear = divide_ks(t, 0.5, &self.ks);
         let mid = self.eval_impl(t, k_sub);
+
         (
             Self::new(k_sub, self.x0, self.y0, mid.x, mid.y),
             Self::new(k_sub_rear, mid.x, mid.y, self.x1, self.y1),
@@ -210,6 +215,7 @@ pub fn spiro_path(knots: &[Knot], closed: bool, delta: f64) -> BezPath {
             path.move_to(Point::new(x0, y0));
         }
         let arc = SpiroArc::new(segments[i].ks, x0, y0, x1, y1);
+
         if arc.bend <= ARC_STRAIGHT_EPSILON {
             path.line_to(Point::new(x1, y1));
         } else {
@@ -219,6 +225,7 @@ pub fn spiro_path(knots: &[Knot], closed: bool, delta: f64) -> BezPath {
             }
         }
     }
+
     path
 }
 
@@ -241,12 +248,14 @@ pub fn spiro_arcs(knots: &[Knot], closed: bool) -> Vec<SpiroArc> {
         let (x1, y1) = (segments[i + 1].x, segments[i + 1].y);
         arcs.push(SpiroArc::new(segments[i].ks, x0, y0, x1, y1));
     }
+
     arcs
 }
 
 fn solve(knots: &[Knot], closed: bool) -> Vec<SpiroSeg> {
     let n = knots.len();
     let mut owned = knots.to_vec();
+
     if closed {
         run_spiro(&owned, n)
     } else {
@@ -257,6 +266,7 @@ fn solve(knots: &[Knot], closed: bool) -> Vec<SpiroSeg> {
         let segments = run_spiro(&owned, n);
         owned[n - 1].ty = old_end;
         owned[0].ty = old_start;
+
         segments
     }
 }
@@ -271,6 +281,7 @@ fn run_spiro(src: &[Knot], n: usize) -> Vec<SpiroSeg> {
     if n_seg > 1 {
         solve_spiro(&mut segments, n_seg);
     }
+
     segments
 }
 
@@ -279,6 +290,7 @@ fn count_vec(s: &[SpiroSeg], nseg: usize) -> usize {
     for i in 0..nseg {
         n += compute_jinc(s[i].ty, s[i + 1].ty);
     }
+
     n
 }
 
@@ -306,6 +318,7 @@ fn uniform_subdivide(arc: &SpiroArc, stops: usize) -> Vec<SpiroArc> {
         stops -= 1;
     }
     sink.push(current);
+
     sink
 }
 
@@ -351,6 +364,7 @@ fn setup_path(src: &[Knot], n: usize) -> Vec<SpiroSeg> {
         }
         i_last = i;
     }
+
     r
 }
 
@@ -377,6 +391,7 @@ fn compute_ends(ks: &[f64; 4], ends: &mut [[f64; 4]; 2], seg_ch: f64) -> f64 {
     let k2_odd = l3 * 0.5 * ks[3];
     ends[0][3] = k2_even - k2_odd;
     ends[1][3] = k2_even + k2_odd;
+
     l
 }
 
@@ -388,11 +403,13 @@ fn compute_pderivs(
 ) {
     let delta = 1.0 / RECIP_D;
     compute_ends(&s.ks, ends, s.seg_ch);
+
     for i in 0..jinc {
         let mut try_ks = s.ks;
         try_ks[i] += delta;
         let mut try_ends = [[0.0; 4]; 2];
         compute_ends(&try_ks, &mut try_ends, s.seg_ch);
+
         for k in 0..2 {
             for j in 0..4 {
                 derivs[j][k][i] = RECIP_D * (try_ends[k][j] - ends[k][j]);
@@ -446,10 +463,12 @@ fn add_mat_line(
         joff = 2 + (j_i + 3 - jj_i + nmat_i) % nmat_i;
     }
     v[jj] += x;
+
     for k in 0..jinc {
         let index = joff + k as i64;
         // The JavaScript band row is a plain array, so an out-of-band write
         // lands on a slot that no reader looks at. Dropping it matches that.
+
         if (0..11).contains(&index) {
             m[jj].a[index as usize] += y * derivs[k];
         }
@@ -590,6 +609,7 @@ fn spiro_iter(
             norm += dk * dk;
         }
     }
+
     norm
 }
 
@@ -600,12 +620,14 @@ fn bandec11(m: &mut [BandMat], perm: &mut [usize], n: usize) {
             m[i].a[j] = m[i].a[j + 5 - i];
             j += 1;
         }
+
         while j < 11 {
             m[i].a[j] = 0.0;
             j += 1;
         }
     }
     let mut l = 5;
+
     for k in 0..n {
         let mut pivot = k;
         let mut pivot_val = m[k].a[0];
@@ -629,6 +651,7 @@ fn bandec11(m: &mut [BandMat], perm: &mut [usize], n: usize) {
         }
         let pivot_scale = 1.0 / pivot_val;
         let pivot_row = m[k].a;
+
         for i in (k + 1)..l {
             let x = m[i].a[0] * pivot_scale;
             m[k].al[i - k - 1] = x;
@@ -650,17 +673,20 @@ fn banbks11(m: &[BandMat], perm: &[usize], v: &mut [f64], n: usize) {
         if l < n {
             l += 1;
         }
+
         for i in (k + 1)..l {
             v[i] -= m[k].al[i - k - 1] * v[k];
         }
     }
     let mut l = 1;
+
     for i in (0..n).rev() {
         let mut x = v[i];
         for k in 1..l {
             x -= m[i].a[k] * v[k + i];
         }
         v[i] = x / m[i].a[0];
+
         if l < 11 {
             l += 1;
         }
@@ -682,6 +708,7 @@ fn solve_spiro(s: &mut [SpiroSeg], nseg: usize) {
     let mut m = vec![BandMat::default(); n_alloc];
     let mut v = vec![0.0; n_alloc];
     let mut perm = vec![0usize; n_alloc];
+
     for _ in 0..10 {
         let norm = spiro_iter(s, &mut m, &mut perm, &mut v, nseg);
         if norm < 1e-12 {
@@ -775,6 +802,7 @@ fn integrate_spiro(ks: &[f64; 4]) -> [f64; 2] {
         y += cth * v + sth * u;
         s += ds;
     }
+
     [x * ds, y * ds]
 }
 
@@ -793,6 +821,7 @@ fn ks_theta(s0: f64, s1: f64, ks: &[f64; 4]) -> f64 {
 fn divide_ks(s0: f64, s1: f64, ks: &[f64; 4]) -> [f64; 4] {
     let s = (s0 + s1) / 2.0;
     let t = s1 - s0;
+
     [
         t * (ks[0] + s * ks[1] + 0.5 * s * s * ks[2] + (1.0 / 6.0) * s * s * s * ks[3]),
         t * t * (ks[1] + s * ks[2] + 0.5 * s * s * ks[3]),
@@ -835,6 +864,7 @@ mod tests {
         let elements: Vec<PathEl> = path.elements().to_vec();
         assert_eq!(elements.len(), 5);
         assert!(matches!(elements[0], PathEl::MoveTo(p) if p == kurbo::Point::new(0.0, 0.0)));
+
         for element in &elements[1..] {
             assert!(matches!(element, PathEl::LineTo(_)));
         }

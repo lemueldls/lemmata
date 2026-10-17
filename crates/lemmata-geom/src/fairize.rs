@@ -145,6 +145,7 @@ impl CombinedArc {
         let (j, t_relative) = self.locate(t);
         let base = self.segments[j].eval(t_relative);
         let adjustment = self.end_adjustments[j];
+
         Point::new(
             base.x + t_relative * adjustment.x,
             base.y + t_relative * adjustment.y,
@@ -157,6 +158,7 @@ impl CombinedArc {
         let scale = self.scale_at(j);
         let d = self.segments[j].derivative(t_relative);
         let adjustment = self.end_adjustments[j];
+
         Vec2::new((d.x + adjustment.x) * scale, (d.y + adjustment.y) * scale)
     }
 
@@ -167,6 +169,7 @@ impl CombinedArc {
         } else {
             1.0
         };
+
         1.0 / (t_next - t_before)
     }
 
@@ -184,6 +187,7 @@ impl CombinedArc {
         } else if t >= t_next {
             t_relative = 1.0;
         }
+
         (index, t_relative)
     }
 
@@ -202,6 +206,7 @@ impl CombinedArc {
                 return FairArc::Combined(self);
             }
         }
+
         FairArc::Straight { a: z0, b: z1 }
     }
 }
@@ -224,6 +229,7 @@ pub fn fairize(shape: &[Vec<Bez3>]) -> Vec<Vec<FairArc>> {
             .collect();
         results.push(fairize_contour(slices));
     }
+
     results
 }
 
@@ -250,6 +256,7 @@ fn fairize_contour(mut contour: Vec<Slice>) -> Vec<FairArc> {
         }
         front = end;
     }
+
     results
 }
 
@@ -263,6 +270,7 @@ fn filter_degenerates(contour: &mut Vec<Slice>) {
         let straight = bez3_is_straight(&slice.cubic);
         let degenerate =
             straight && is_close_point(slice.cubic.d, slice.cubic.a, GEOMETRIC_EPSILON);
+
         if !degenerate {
             let cubic = if straight {
                 force_straight(&slice.cubic)
@@ -292,6 +300,7 @@ fn mark_corners_and_split(contour: &mut [Slice]) -> Vec<Slice> {
     for slice in contour.iter() {
         split_at_extrema(slice, &mut sink);
     }
+
     sink
 }
 
@@ -335,6 +344,7 @@ fn canonical_start(mut contour: Vec<Slice>) -> Vec<Slice> {
                 None => true,
                 Some(current) => a.y < current.y || (a.y == current.y && a.x < current.x),
             };
+
             if better {
                 start = Some(a);
                 start_index = j;
@@ -344,6 +354,7 @@ fn canonical_start(mut contour: Vec<Slice>) -> Vec<Slice> {
     if start.is_some() {
         contour.rotate_left(start_index);
     }
+
     contour
 }
 
@@ -454,6 +465,7 @@ impl RootSink {
             self.roots[index] = x.clamp(0.0, 1.0);
         }
         self.root_count += 1;
+
         true
     }
 
@@ -486,9 +498,11 @@ fn solve_quadratic(a: f64, b: f64, c: f64, sink: &mut RootSink) {
                 d = discriminant(a, b, c);
             }
         }
+
         if d >= -MACHINE_EPSILON {
             let q = if d < 0.0 { 0.0 } else { d.sqrt() };
             let r = b + if b < 0.0 { -q } else { q };
+
             if r == 0.0 {
                 x1 = c / a;
                 x2 = -x1;
@@ -502,6 +516,7 @@ fn solve_quadratic(a: f64, b: f64, c: f64, sink: &mut RootSink) {
     if x1.is_finite() {
         sink.add_root(x1);
     }
+
     if x2.is_finite() {
         sink.add_root(x2);
     }
@@ -520,6 +535,7 @@ fn discriminant(a: f64, b: f64, c: f64) -> f64 {
         let dq = ad.0 * cd.0 - q + ad.0 * cd.1 + ad.1 * cd.0 + ad.1 * cd.1;
         d = p - q + (dp - dq);
     }
+
     d
 }
 
@@ -528,6 +544,7 @@ fn split_f64(v: f64) -> (f64, f64) {
     let y = v - x;
     let hi = y + x;
     let lo = v - hi;
+
     (hi, lo)
 }
 
@@ -560,6 +577,7 @@ fn segment_search(stops: &[f64], t: f64) -> usize {
             l = m + 1;
         }
     }
+
     r - 1
 }
 
@@ -583,6 +601,7 @@ fn bez3_is_straight(cubic: &Bez3) -> bool {
         let s2 = v.dot(h2) / div;
         return (0.0..=1.0).contains(&s1) && (-1.0..=0.0).contains(&s2);
     }
+
     false
 }
 
@@ -603,6 +622,7 @@ fn split_ratio(cubic: &Bez3, t1: f64, t2: f64) -> Bez3 {
     if t2 < 1.0 {
         v = split_at(&v, (t2 - t1) / (1.0 - t1)).0;
     }
+
     v
 }
 
@@ -613,6 +633,7 @@ fn split_at(cubic: &Bez3, t: f64) -> (Bez3, Bez3) {
     let p6 = mix_point(p3, p4, t);
     let p7 = mix_point(p4, p5, t);
     let p8 = mix_point(p6, p7, t);
+
     (
         Bez3::new(cubic.a, p3, p6, p8),
         Bez3::new(p8, p7, p5, cubic.d),
@@ -633,6 +654,7 @@ fn length_integrand(cubic: &Bez3, t: f64) -> f64 {
     let ay = 9.0 * (cubic.b.y - cubic.c.y) + 3.0 * (cubic.d.y - cubic.a.y);
     let by = 6.0 * (cubic.a.y + cubic.c.y) - 12.0 * cubic.b.y;
     let cy = 3.0 * (cubic.b.y - cubic.a.y);
+
     ((ax * t + bx) * t + cx).hypot((ay * t + by) * t + cy)
 }
 
@@ -667,6 +689,7 @@ fn gauss_legendre_16(f: impl Fn(f64) -> f64, a: f64, b: f64) -> f64 {
         let offset = half * ABSCISSAS[i];
         sum += WEIGHTS[i] * (f(center + offset) + f(center - offset));
     }
+
     half * sum
 }
 
@@ -677,6 +700,7 @@ fn number_close(x: f64, y: f64) -> bool {
 fn is_close_point(a: Point, b: Point, tolerance: f64) -> bool {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
+
     dx * dx + dy * dy <= tolerance * tolerance
 }
 
@@ -691,6 +715,7 @@ fn point_line_dist(a: Point, b: Point, p: Point) -> f64 {
 fn signed_distance(px: f64, py: f64, vx: f64, vy: f64, x: f64, y: f64) -> f64 {
     let dx = vx - px;
     let dy = vy - py;
+
     if number_close(dx, 0.0) {
         if dy >= 0.0 { px - x } else { x - px }
     } else if number_close(dy, 0.0) {

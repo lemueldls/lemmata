@@ -45,6 +45,7 @@ fn path_from_ours(contours: &[Vec<Bez3>]) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -65,6 +66,7 @@ fn path_from_json(contours: &Value) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -75,6 +77,7 @@ fn sample(path: &BezPath) -> Vec<Point> {
             out.push(segment.eval(index as f64 / SAMPLES_PER_SEGMENT as f64));
         }
     }
+
     out
 }
 
@@ -91,10 +94,12 @@ fn boundary_drift(samples: &[Point], other: &BezPath) -> f64 {
                 nearest = distance;
             }
         }
+
         if nearest > worst && !other.contains(*p) {
             worst = nearest;
         }
     }
+
     worst
 }
 
@@ -120,6 +125,7 @@ fn expansions_match() {
         lemmata_capture::collect_di_spiro(&glyph.geometry, &mut found);
         let expansions = expected["expansions"].as_array().unwrap();
         assert_eq!(found.len(), expansions.len(), "{}: node count", glyph.name);
+
         for (node, expected_node) in found.iter().zip(expansions) {
             let Geometry::DiSpiro {
                 gizmo,
@@ -132,6 +138,7 @@ fn expansions_match() {
             };
             let result = lemmata_geom::di_spiro_expand(*gizmo, *contrast, *closed, knots);
             nodes += 1;
+
             for (side, ours) in [
                 ("lhs", &result.lhs_untransformed),
                 ("rhs", &result.rhs_untransformed),
@@ -143,6 +150,7 @@ fn expansions_match() {
                     "{}: {side} knot count",
                     glyph.name
                 );
+
                 for (knot, expected_knot) in ours.iter().zip(theirs) {
                     let ex = expected_knot[0].as_f64().unwrap();
                     let ey = expected_knot[1].as_f64().unwrap();
@@ -199,6 +207,7 @@ fn raw_solve_arcs_match() {
         let mut found = Vec::new();
         lemmata_capture::collect_di_spiro(&glyph.geometry, &mut found);
         let expansions = expected["expansions"].as_array().unwrap();
+
         for (node, expected_node) in found.iter().zip(expansions) {
             if expected_node["raw"].is_null() {
                 continue;
@@ -227,6 +236,7 @@ fn raw_solve_arcs_match() {
                 vec![("open", corner_ends(lhs, rhs))]
             };
             nodes += 1;
+
             for (key, knots) in lists {
                 let plain: Vec<lemmata_geom::Knot> = knots
                     .iter()
@@ -240,6 +250,7 @@ fn raw_solve_arcs_match() {
                     "{} {key}: raw arc count",
                     glyph.name
                 );
+
                 for (arc, expected_arc) in ours.iter().zip(theirs) {
                     let samples = expected_arc.as_array().unwrap();
                     for (index, fraction) in [0.0, 0.25, 0.5, 0.75, 1.0].into_iter().enumerate() {
@@ -272,6 +283,7 @@ fn reverse_side(mut rhs: Vec<MonoKnot>) -> Vec<MonoKnot> {
         };
     }
     rhs.reverse();
+
     rhs
 }
 
@@ -287,6 +299,7 @@ fn corner_ends(mut lhs: Vec<MonoKnot>, mut rhs: Vec<MonoKnot>) -> Vec<MonoKnot> 
         let last = rhs.len() - 1;
         rhs[last].ty = lemmata_geom::KnotType::Corner;
     }
+
     lhs.into_iter().chain(rhs).collect()
 }
 
@@ -314,6 +327,7 @@ fn tree_arcs_match() {
         if deviation > worst.0 {
             worst = (deviation, glyph.name.clone());
         }
+
         if deviation > 1.0 {
             over += 1;
             eprintln!("{}: tree drift {deviation:.2}", glyph.name);
@@ -372,6 +386,7 @@ fn resolved_arcs_are_close() {
         if deviation > worst.0 {
             worst = (deviation, glyph.name.clone());
         }
+
         if deviation > 1.0 {
             over += 1;
             eprintln!("{}: resolved drift {deviation:.2}", glyph.name);
@@ -471,6 +486,7 @@ fn fairize_stage_matches() {
         if deviation > worst.0 {
             worst = (deviation, glyph.name.clone());
         }
+
         if deviation > 1.0 {
             over += 1;
             eprintln!("  {}: fairize {deviation:.2}", glyph.name);
@@ -503,6 +519,7 @@ fn path_from_fair(contours: &[Vec<lemmata_geom::FairArc>]) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -533,6 +550,7 @@ fn path_from_fair_json(contours: &Value) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -566,6 +584,7 @@ fn quadify_on_captured_fairize_matches() {
                 glyph_worst = glyph_worst.max(1.0);
                 continue;
             }
+
             for (point, expected_point) in contour.iter().zip(expected_points) {
                 glyph_worst = glyph_worst.max(
                     (point.x - expected_point["x"].as_f64().unwrap())
@@ -578,6 +597,7 @@ fn quadify_on_captured_fairize_matches() {
         if glyph_worst > worst.0 {
             worst = (glyph_worst, glyph.name.clone());
         }
+
         if glyph_worst > 1.0 {
             over += 1;
             eprintln!("{}: quadify {glyph_worst:.2}, {delta:+} points", glyph.name);

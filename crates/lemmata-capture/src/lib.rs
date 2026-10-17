@@ -48,6 +48,7 @@ pub fn read_side_data(suffix: &str) -> Value {
     } else {
         format!("{}.{suffix}.json", path.display())
     };
+
     serde_json::from_str(
         &fs::read_to_string(&name).unwrap_or_else(|error| panic!("reading {name}: {error}")),
     )
@@ -138,6 +139,7 @@ pub fn metrics_from_capture() -> Option<Metrics> {
         win_metric_ascender_pad: number("winMetricAscenderPad"),
         win_metric_descender_pad: number("winMetricDescenderPad"),
     };
+
     Some(Metrics::calculate(&para))
 }
 
@@ -182,6 +184,7 @@ pub fn load(data: &[u8]) -> Result<Vec<Glyph>, String> {
             geometry,
         });
     }
+
     Ok(glyphs)
 }
 
@@ -239,6 +242,7 @@ impl<'a> Reader<'a> {
         }
         let slice = &self.data[self.position..end];
         self.position = end;
+
         Ok(slice)
     }
 
@@ -261,6 +265,7 @@ impl<'a> Reader<'a> {
     fn string(&mut self) -> Result<String, String> {
         let length = self.u32()? as usize;
         let bytes = self.take(length)?;
+
         String::from_utf8(bytes.to_vec()).map_err(|error| error.to_string())
     }
 
@@ -271,6 +276,7 @@ impl<'a> Reader<'a> {
         let yy = self.f64()?;
         let tx = self.f64()?;
         let ty = self.f64()?;
+
         Ok(Affine::new([xx, yx, xy, yy, tx, ty]))
     }
 
@@ -295,6 +301,7 @@ impl<'a> Reader<'a> {
                     }
                     contours.push(contour);
                 }
+
                 Ok(Geometry::Contours(contours))
             }
             2 => {
@@ -309,6 +316,7 @@ impl<'a> Reader<'a> {
                     let unimportant = self.u8()? != 0;
                     knots.push(MonoKnot::new(ty, x, y, unimportant));
                 }
+
                 Ok(Geometry::Spiro {
                     gizmo,
                     knots,
@@ -339,6 +347,7 @@ impl<'a> Reader<'a> {
                     knot.proposed_normal = proposed_normal;
                     knots.push(knot);
                 }
+
                 Ok(Geometry::DiSpiro {
                     gizmo,
                     contrast,
@@ -366,12 +375,14 @@ impl<'a> Reader<'a> {
                         for _ in 0..count {
                             points.push(Vec2::new(self.f64()?, self.f64()?));
                         }
+
                         Some(points)
                     } else {
                         None
                     };
                     knots.push(PenKnot::new(ty, x, y, profile));
                 }
+
                 Ok(Geometry::SpiroPen {
                     gizmo,
                     pen_profile,
@@ -385,6 +396,7 @@ impl<'a> Reader<'a> {
                 let contrast = self.f64()?;
                 let inside = self.u8()? != 0;
                 let geom = Box::new(self.node(depth + 1)?);
+
                 Ok(Geometry::Stroke {
                     gizmo,
                     radius,
@@ -396,11 +408,13 @@ impl<'a> Reader<'a> {
             6 => {
                 let gizmo = self.transform()?;
                 let geom = Box::new(self.node(depth + 1)?);
+
                 Ok(Geometry::RemoveHoles { gizmo, geom })
             }
             7 => {
                 let gizmo = self.transform()?;
                 let geom = Box::new(self.node(depth + 1)?);
+
                 Ok(Geometry::Simplify { gizmo, geom })
             }
             8 => {
@@ -409,6 +423,7 @@ impl<'a> Reader<'a> {
                 for _ in 0..part_count {
                     parts.push(self.node(depth + 1)?);
                 }
+
                 Ok(Geometry::Combine(parts))
             }
             9 => {
@@ -418,6 +433,7 @@ impl<'a> Reader<'a> {
                 for _ in 0..operand_count {
                     operands.push(self.node(depth + 1)?);
                 }
+
                 Ok(Geometry::Boolean {
                     op: match operator.as_str() {
                         "intersection" => BinaryOp::Intersection,
@@ -431,6 +447,7 @@ impl<'a> Reader<'a> {
             10 => {
                 let tf = self.transform()?;
                 let geom = Box::new(self.node(depth + 1)?);
+
                 Ok(Geometry::Transformed { tf, geom })
             }
             11 => Ok(Geometry::Tagged(Box::new(self.node(depth + 1)?))),

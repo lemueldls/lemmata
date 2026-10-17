@@ -138,12 +138,14 @@ impl Waveform {
             Self::Square => {
                 let value = mod_(x - 1.0, 4.0);
                 let value = if value == 0.0 { 2.0 } else { value };
+
                 js_sign(value - 2.0)
             }
             Self::Triangle => (mod_(x - 1.0, 4.0) - 2.0).abs() - 1.0,
             Self::Sawtooth => {
                 let value = mod_(x - 1.0, 2.0);
                 let value = if value == 0.0 { 1.0 } else { value };
+
                 value - 1.0
             }
         }

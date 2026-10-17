@@ -226,6 +226,7 @@ impl WeightControl {
     pub fn new(stroke: f64, width: f64, sb: f64, hv_contrast: f64) -> Self {
         let base_fill_rate = (0.95_f64).min((2.0 * stroke * hv_contrast) / (width - sb * 2.0));
         let factor = base_fill_rate.atanh() / base_fill_rate;
+
         Self {
             stroke,
             width,
@@ -250,6 +251,7 @@ impl WeightControl {
         let non_adjusted = (crowdedness * contrast * self.stroke) / avail_space;
         let adjusted = self.sigmoid(non_adjusted);
         let scalar = (mul * (adjusted / non_adjusted)).min(1.0);
+
         self.stroke * scalar
     }
 

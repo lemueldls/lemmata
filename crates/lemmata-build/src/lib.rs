@@ -50,6 +50,7 @@ impl<K: Eq + Hash, V> Memo<K, V> {
         }
         self.stats.misses += 1;
         let value = self.entries.entry(key).or_insert_with(compute);
+
         (value, true)
     }
 
@@ -146,6 +147,7 @@ impl ContentHasher {
 pub fn content_hash(bytes: &[u8]) -> u64 {
     let mut hasher = ContentHasher::new();
     hasher.write_bytes(bytes);
+
     hasher.finish()
 }
 

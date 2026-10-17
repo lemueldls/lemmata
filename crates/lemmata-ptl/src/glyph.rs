@@ -88,6 +88,7 @@ impl Glyph {
             self.base_anchors.extend(other.base_anchors.iter().cloned());
             self.mark_anchors.extend(other.mark_anchors.iter().cloned());
         }
+
         if copy_width && other.advance_width >= 0.0 {
             self.advance_width = other.advance_width;
         }
@@ -228,6 +229,7 @@ impl Component for GlyphProc {
                         .map(|operand| {
                             let mut temp = operand.clone();
                             temp.gizmo = forward;
+
                             Geometry::Transformed {
                                 tf: backward,
                                 geom: Box::new(temp.geometry),

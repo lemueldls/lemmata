@@ -51,6 +51,7 @@ fn contour_path(points: &[QuadifyPoint]) -> BezPath {
         }
     }
     path.close_path();
+
     path
 }
 
@@ -83,6 +84,7 @@ fn reference_contour_path(contour: &Value) -> BezPath {
         }
     }
     path.close_path();
+
     path
 }
 
@@ -93,6 +95,7 @@ fn sample(path: &BezPath) -> Vec<Point> {
             out.push(segment.eval(f64::from(index) / 16.0));
         }
     }
+
     out
 }
 
@@ -105,10 +108,12 @@ fn boundary_drift(samples: &[Point], other: &BezPath) -> f64 {
         for segment in &segments {
             nearest = nearest.min(segment.nearest(*p, 1e-3).distance_sq.sqrt());
         }
+
         if nearest > worst && !other.contains(*p) {
             worst = nearest;
         }
     }
+
     worst
 }
 
@@ -128,6 +133,7 @@ fn coverage(path: &BezPath, bounds: Rect, pixels: (usize, usize)) -> Vec<f64> {
                     let y = bounds.y1
                         - (row as f64 + (sub_row as f64 + 0.5) * step) / height as f64
                             * bounds.height();
+
                     if path.contains(Point::new(x, y)) {
                         inside += 1;
                     }
@@ -136,6 +142,7 @@ fn coverage(path: &BezPath, bounds: Rect, pixels: (usize, usize)) -> Vec<f64> {
             out[row * width + column] = inside as f64 / (SAMPLES * SAMPLES) as f64;
         }
     }
+
     out
 }
 
@@ -219,6 +226,7 @@ fn write_rendering_svg() {
             for (a, b) in our_map.iter().zip(&their_map) {
                 let difference = (a - b).abs();
                 total += difference;
+
                 if difference >= MARK {
                     marked += 1;
                 }
@@ -239,6 +247,7 @@ fn write_rendering_svg() {
     let out = workspace_path("target/lemmata-rendering.svg");
     fs::write(&out, svg).expect("write svg");
     eprintln!("wrote {}", out.display());
+
     for panel in &panels {
         eprintln!(
             "  {} at {:.0}px: {} pixels, {:.2}% coverage summed, {} pixels differ by {:.0}% or more",
@@ -316,6 +325,7 @@ fn render(panels: &[Panel]) -> String {
                     );
                 }
                 let difference = (ours - theirs).abs();
+
                 if difference >= MARK {
                     let _ = write!(
                         svg,
@@ -329,5 +339,6 @@ fn render(panels: &[Panel]) -> String {
         y += panel.pixels.1 as f64 + 36.0;
     }
     svg.push_str("</svg>\n");
+
     svg
 }

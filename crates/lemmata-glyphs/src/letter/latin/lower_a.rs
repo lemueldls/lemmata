@@ -64,6 +64,7 @@ impl DoubleStorey<'_> {
     pub fn smooth_a(&self) -> f64 {
         let sw = self.sw();
         let ad = self.metrics.arch_depth * self.metrics.stroke_width_blend(0.9, 0.81, Some(sw));
+
         lemmata_ptl::shapes::arch_depth_a_clamped(
             self.metrics.xh,
             0.0,
@@ -79,6 +80,7 @@ impl DoubleStorey<'_> {
     pub fn smooth_b(&self) -> f64 {
         let sw = self.sw();
         let ad = self.metrics.arch_depth * self.metrics.stroke_width_blend(0.9, 0.81, Some(sw));
+
         arch_depth_b_clamped(
             self.metrics.xh,
             0.0,
@@ -204,6 +206,7 @@ impl DoubleStorey<'_> {
             y0,
             self.kit.heading(downward(metrics.hv_contrast)),
         ));
+
         self.kit.dispiro(items)
     }
 
@@ -318,6 +321,7 @@ impl DoubleStorey<'_> {
         }
 
         let _ = rise;
+
         self.kit.dispiro(items)
     }
 
@@ -392,6 +396,7 @@ impl DoubleStorey<'_> {
             &params,
         ));
         items.extend(end);
+
         self.kit.dispiro(items)
     }
 
@@ -404,6 +409,7 @@ impl DoubleStorey<'_> {
         let flip = kurbo::Affine::translate((mid_x, mid_y))
             * kurbo::Affine::scale_non_uniform(-1.0, -1.0)
             * kurbo::Affine::translate((-mid_x, -mid_y));
+
         lemmata_geom::Geometry::Transformed {
             tf: flip,
             geom: Box::new(shape.geometry(kurbo::Affine::IDENTITY)),
@@ -426,6 +432,7 @@ impl DoubleStorey<'_> {
             self.kit
                 .knot(KnotType::Right, x, y_up, self.kit.heading(heading)),
         ];
+
         self.kit.dispiro(items).geometry(kurbo::Affine::IDENTITY)
     }
 
@@ -438,6 +445,7 @@ impl DoubleStorey<'_> {
         let ada = self.df.arch_depth_a_of(metrics.small_arch_depth, Some(sw));
         let adb = self.df.arch_depth_b_of(metrics.small_arch_depth, Some(sw));
         let fine = metrics.shoulder_fine * (sw / metrics.stroke);
+
         vec![
             self.obar_right_shape(&OBarRing {
                 top,
@@ -467,6 +475,7 @@ impl DoubleStorey<'_> {
     pub fn serifed(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
         let mut operands = self.serifless(hook_style, stroke);
         operands.push(self.bottom_right_serif());
+
         operands
     }
 
@@ -514,6 +523,7 @@ impl DoubleStorey<'_> {
                 Vec::new(),
             ),
         ];
+
         self.kit.dispiro(items)
     }
 }

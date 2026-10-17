@@ -33,6 +33,7 @@ fn reference_fonts() -> Vec<PathBuf> {
         .filter(|path| path.extension().is_some_and(|ext| ext == "ttf"))
         .collect();
     fonts.sort();
+
     fonts
 }
 
@@ -53,6 +54,7 @@ fn extraction_is_deterministic() {
         let first = outlines(&data).expect("first pass");
         let second = outlines(&data).expect("second pass");
         assert_eq!(first.len(), second.len(), "{}", path.display());
+
         for (a, b) in first.iter().zip(&second) {
             assert_eq!(a.glyph_id, b.glyph_id);
             let flat_a: Vec<f64> = a

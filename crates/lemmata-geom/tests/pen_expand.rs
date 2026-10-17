@@ -74,6 +74,7 @@ fn path_points(path: &BezPath) -> Vec<Point> {
             PathEl::QuadTo(..) | PathEl::ClosePath => {}
         }
     }
+
     points
 }
 
@@ -94,10 +95,12 @@ fn directed(a: &[Point], b: &[Point]) -> f64 {
                 nearest = distance;
             }
         }
+
         if nearest > worst {
             worst = nearest;
         }
     }
+
     worst
 }
 
@@ -137,6 +140,7 @@ fn pen_expansion_matches_upstream() {
             let ours = path_points(strip);
             let theirs = expected_strip.as_array().unwrap();
             assert_eq!(ours.len(), theirs.len(), "{name}: strip point count");
+
             for (index, (a, b)) in ours.iter().zip(theirs).enumerate() {
                 let expected = Point::new(number(&b["x"]), number(&b["y"]));
                 let deviation = (a.x - expected.x).abs().max((a.y - expected.y).abs());

@@ -46,6 +46,7 @@ pub fn drop_degenerate(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
             }
             let paths = crate::stroke::shape_to_paths(std::slice::from_ref(*contour));
             let area: f64 = paths.iter().map(BezPath::area).sum();
+
             area.abs() > DEGENERATE_AREA
         })
         .cloned()
@@ -106,6 +107,7 @@ pub fn clean_shape(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
                 }
                 cleaned.push(arc);
             }
+
             cleaned
         })
         .filter(|contour| contour.len() > 1)
@@ -132,6 +134,7 @@ fn closed_area(arc: &Bez3) -> f64 {
         previous = point;
     }
     area += previous.x * first.y - first.x * previous.y;
+
     area / 2.0
 }
 
@@ -154,6 +157,7 @@ fn is_collinear_excursion(arc: &Bez3) -> bool {
         return false;
     }
     let span = [project(arc.b), project(arc.c)];
+
     span.iter()
         .any(|value| *value < -POINT_EPSILON || *value > length + POINT_EPSILON)
 }
@@ -200,6 +204,7 @@ pub fn annex(shape: &[Vec<Bez3>], input: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
     if sources.is_empty() {
         return shape.to_vec();
     }
+
     shape
         .iter()
         .map(|contour| {
@@ -249,6 +254,7 @@ pub fn annex(shape: &[Vec<Bez3>], input: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
             if merged.len() > 1 {
                 let last_origin = merged_origins[merged.len() - 1];
                 let first_origin = merged_origins[0];
+
                 if last_origin.source == first_origin.source
                     && last_origin.source != usize::MAX
                     && (last_origin.t1 - first_origin.t0).abs() <= PARAMETER_EPSILON
@@ -259,6 +265,7 @@ pub fn annex(shape: &[Vec<Bez3>], input: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
                         first_origin.t1,
                     );
                     let pieces = [merged[merged.len() - 1], merged[0]];
+
                     if reproduces(&combined, &pieces) {
                         merged[0] = combined;
                         merged_origins[0] = Origin {
@@ -270,6 +277,7 @@ pub fn annex(shape: &[Vec<Bez3>], input: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
                     }
                 }
             }
+
             merged
         })
         .collect()
@@ -293,6 +301,7 @@ fn locate(arc: &Bez3, sources: &[Bez3]) -> Option<Origin> {
             let expected = source.eval(t0 + (t1 - t0) * fraction);
             worst = worst.max((expected - arc.eval(fraction)).hypot());
         }
+
         if worst <= SOURCE_TOLERANCE && best.as_ref().is_none_or(|(distance, _)| worst < *distance)
         {
             best = Some((
@@ -305,6 +314,7 @@ fn locate(arc: &Bez3, sources: &[Bez3]) -> Option<Origin> {
             ));
         }
     }
+
     best.map(|(_, origin)| origin)
 }
 
@@ -313,6 +323,7 @@ fn nearest_parameter(source: &Bez3, point: kurbo::Point) -> Option<f64> {
     use kurbo::{CubicBez, ParamCurveNearest};
     let curve = CubicBez::new(source.a, source.b, source.c, source.d);
     let nearest = curve.nearest(point, 1e-9);
+
     (nearest.distance_sq.sqrt() <= SOURCE_TOLERANCE).then_some(nearest.t)
 }
 
@@ -331,6 +342,7 @@ fn reproduces(merged: &Bez3, pieces: &[Bez3]) -> bool {
             }
         }
     }
+
     true
 }
 

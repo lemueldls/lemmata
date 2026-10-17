@@ -31,6 +31,7 @@ pub fn fit_contour<A: CurveArc>(arcs: &[A], err: f64) -> Vec<Bez3> {
         fit_arc_into(arc, err, &mut segments);
     }
     close_contour(&mut segments);
+
     segments
 }
 
@@ -67,6 +68,7 @@ fn fit_recursive<A: CurveArc>(
         let fraction = k as f64 / PROBE_STOPS as f64;
         let on_slice = test.eval(fraction);
         let on_arc = arc.eval(mix(t0, t1, fraction));
+
         if !points_close(on_slice, on_arc, err) {
             needs_subdivide = true;
             break;
@@ -102,6 +104,7 @@ pub fn slice_from_arc<A: CurveArc>(arc: &A, t0: f64, t1: f64) -> Bez3 {
     let z1 = arc.eval(t1);
     let d0 = arc.derivative(t0);
     let d1 = arc.derivative(t1);
+
     Bez3::new(
         z0,
         Point::new(z0.x + (scalar / 3.0) * d0.x, z0.y + (scalar / 3.0) * d0.y),
@@ -117,6 +120,7 @@ pub(crate) fn straight_bez3(a: Point, b: Point) -> Bez3 {
 fn points_close(a: Point, b: Point, tolerance: f64) -> bool {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
+
     dx * dx + dy * dy < tolerance * tolerance
 }
 

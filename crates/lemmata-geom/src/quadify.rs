@@ -147,6 +147,7 @@ pub fn quadify(shape: &[Vec<Bez3>]) -> Vec<Vec<QuadifyPoint>> {
         };
         sink.move_to(first.a.x, first.a.y);
         let mut current = first.a;
+
         for arc in contour {
             if !points_close(arc.a, current, GEOMETRY_PRECISION) {
                 sink.line_to(arc.a.x, arc.a.y);
@@ -156,6 +157,7 @@ pub fn quadify(shape: &[Vec<Bez3>]) -> Vec<Vec<QuadifyPoint>> {
         }
     }
     sink.end_shape();
+
     sink.into_contours()
 }
 
@@ -174,6 +176,7 @@ pub fn auto_quadify<A: CurveArc>(arc: &A, allow_error: f64, max_segments: usize)
         }
         results = Some(off_points);
     }
+
     results.unwrap_or_default()
 }
 
@@ -197,6 +200,7 @@ fn quadify_curve<A: CurveArc>(arc: &A, segments: usize) -> Vec<Point> {
         z_before = z_after;
         d_before = d_after;
     }
+
     knots
 }
 
@@ -225,6 +229,7 @@ fn error_fits_in<A: CurveArc>(arc: &A, off_points: &[Point], square_error: f64) 
                 return false;
             }
             let limit = 4.0 * (n * n) as f64 * square_error;
+
             if square_distance_vec(d_before, d_before_qu) > limit {
                 return false;
             }
@@ -233,6 +238,7 @@ fn error_fits_in<A: CurveArc>(arc: &A, off_points: &[Point], square_error: f64) 
         z_before = z_after;
         d_before = d_after;
     }
+
     true
 }
 
@@ -246,6 +252,7 @@ fn align_hv_knots(contour: Vec<QuadifyPoint>) -> Vec<QuadifyPoint> {
         let next = (i + 1) % len;
         let current = result[i];
         let following = result[next];
+
         if current.kind == QuadifyKind::Quadratic && following.kind == QuadifyKind::Corner {
             align_x.try_align(&result, i, next);
             align_y.try_align(&result, i, next);
@@ -257,6 +264,7 @@ fn align_hv_knots(contour: Vec<QuadifyPoint>) -> Vec<QuadifyPoint> {
 
     align_x.apply(&mut result);
     align_y.apply(&mut result);
+
     result
 }
 
@@ -264,6 +272,7 @@ fn drop_duplicate_first_last(contour: &mut Vec<QuadifyPoint>) {
     while contour.len() > 1 {
         let first = contour[0];
         let last = contour[contour.len() - 1];
+
         if first.kind == QuadifyKind::Corner
             && last.kind == QuadifyKind::Corner
             && occurrent(first, last)
@@ -301,6 +310,7 @@ fn cleanup_occurrent_knots2(contour: &[QuadifyPoint]) -> Vec<QuadifyPoint> {
         if occurrent(contour[pre], contour[i]) && contour[post].kind == QuadifyKind::Quadratic {
             insert_after[i] = true;
         }
+
         if occurrent(contour[i], contour[post]) && contour[pre].kind == QuadifyKind::Quadratic {
             insert_after[pre] = true;
         }
@@ -318,6 +328,7 @@ fn cleanup_occurrent_knots2(contour: &[QuadifyPoint]) -> Vec<QuadifyPoint> {
             ));
         }
     }
+
     result
 }
 
@@ -328,6 +339,7 @@ fn remove_colinear_corners(contour: &mut Vec<QuadifyPoint>) {
             let previous = contour[(i + contour.len() - 1) % contour.len()];
             let current = contour[i];
             let next = contour[(i + 1) % contour.len()];
+
             if previous.kind == QuadifyKind::Corner
                 && next.kind == QuadifyKind::Corner
                 && (points_hv_colinear(previous, current, next)
@@ -338,6 +350,7 @@ fn remove_colinear_corners(contour: &mut Vec<QuadifyPoint>) {
                 break;
             }
         }
+
         if !found {
             break;
         }
@@ -352,6 +365,7 @@ fn remove_colinear_arc(contour: &mut Vec<QuadifyPoint>) {
     for rear in 1..=contour.len() {
         let z_front = contour[front];
         let z_rear = contour[rear % contour.len()];
+
         if z_rear.kind == QuadifyKind::Corner {
             let mut all_colinear = true;
             for middle in &middle_points {
@@ -394,6 +408,7 @@ fn rotate_to_optimized_start(contour: &mut Vec<QuadifyPoint>, contours: &[Vec<Qu
             continue;
         }
         let cost = estimate_byte_cost_of_delta(point, last_x, last_y);
+
         if cost < min_cost
             || (cost == min_cost && point.y < min_y)
             || (cost == min_cost && point.y == min_y && point.x < min_x)
@@ -426,6 +441,7 @@ fn estimate_byte_cost_of_delta(point: QuadifyPoint, last_x: f64, last_y: f64) ->
     } else {
         2
     };
+
     cost_x + cost_y
 }
 
@@ -451,6 +467,7 @@ impl CoordinateAligner {
             up.push(up.len());
             rank.push((value - js_round(value)).abs());
         }
+
         Self { up, rank, axis }
     }
 
@@ -465,6 +482,7 @@ impl CoordinateAligner {
     fn try_align(&mut self, contour: &[QuadifyPoint], i: usize, j: usize) {
         let a = lens(contour[i], self.axis);
         let b = lens(contour[j], self.axis);
+
         if (a - b).abs() < OCCURRENT_PRECISION {
             self.align(i, j);
         }
@@ -531,6 +549,7 @@ fn points_colinear(previous: QuadifyPoint, current: QuadifyPoint, next: QuadifyP
     let dx = next.x - previous.x;
     let dy = next.y - previous.y;
     let t = (current.y - previous.y) * dx - (current.x - previous.x) * dy;
+
     t * t < GEOMETRY_PRECISION * GEOMETRY_PRECISION * (dx * dx + dy * dy)
 }
 
@@ -553,17 +572,20 @@ fn js_round(value: f64) -> f64 {
 fn points_close(a: Point, b: Point, tolerance: f64) -> bool {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
+
     dx * dx + dy * dy < tolerance * tolerance
 }
 
 fn square_distance(a: Point, b: Point) -> f64 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
+
     dx * dx + dy * dy
 }
 
 fn square_distance_vec(a: kurbo::Vec2, b: (f64, f64)) -> f64 {
     let dx = a.x - b.0;
     let dy = a.y - b.1;
+
     dx * dx + dy * dy
 }

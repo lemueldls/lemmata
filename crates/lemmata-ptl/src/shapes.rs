@@ -94,6 +94,7 @@ pub fn determine_mix_r(w: f64, v: f64, u: f64, sw: f64, swash: bool, superness: 
     if swash {
         let idepth = w - sw;
         let iwidth = u * r - sw;
+
         if iwidth > 0.0 && idepth > 0.0 && iwidth / idepth >= 2.0 {
             let adjust = (1.0 - (iwidth / idepth - 2.0) * 0.0125).clamp(0.975, 1.0);
             r *= adjust;
@@ -104,6 +105,7 @@ pub fn determine_mix_r(w: f64, v: f64, u: f64, sw: f64, swash: bool, superness: 
     if r < 0.5 {
         r = 0.5;
     }
+
     r
 }
 
@@ -113,6 +115,7 @@ fn super_sin(angle: f64, superness: f64) -> f64 {
         return 0.0;
     }
     let s = (angle * std::f64::consts::PI / 180.0).sin();
+
     crate::util::js_sign(s) * s.abs().powf(2.0 / superness)
 }
 
@@ -122,6 +125,7 @@ fn super_cos(angle: f64, superness: f64) -> f64 {
         return 1.0;
     }
     let c = (angle * std::f64::consts::PI / 180.0).cos();
+
     crate::util::js_sign(c) * c.abs().powf(2.0 / superness)
 }
 
@@ -138,6 +142,7 @@ fn mix_r(w: f64, ang_w: Option<f64>, v: f64, ang_v: Option<f64>, u: f64, superne
         return chr_w / (chr_v + chr_w);
     }
     let r = 1.0 / ((1.0 - (1.0 - v / w).powf(superness)).powf(1.0 / superness) + 1.0);
+
     0.5 + (r - 0.5) * (v + w) / (u * 2.0)
 }
 
@@ -237,6 +242,7 @@ pub fn ysmooth_mid_r(
     let sm_of_sma = ada + delta;
     let sm_of_smb = adb - delta;
     let y = mix(bot, top, sm_of_sma / (sm_of_sma + sm_of_smb));
+
     y - delta * ((top - bot) / (ada + adb)).min(1.0)
 }
 
@@ -259,6 +265,7 @@ pub fn ysmooth_mid_l(
     let sm_of_sma = ada + delta;
     let sm_of_smb = adb - delta;
     let y = mix(bot, top, sm_of_smb / (sm_of_sma + sm_of_smb));
+
     y + delta * ((top - bot) / (ada + adb)).min(1.0)
 }
 
@@ -275,6 +282,7 @@ pub fn arch_depth_a_clamped(
     let height = (top - bot).abs();
     let ada = ada.unwrap_or(arch_depth_a);
     let adb = adb.unwrap_or(arch_depth_b);
+
     if ada + adb < height {
         ada
     } else {
@@ -302,6 +310,7 @@ pub fn arch_depth_b_clamped(
     let height = (top - bot).abs();
     let ada = ada.unwrap_or(arch_depth_a);
     let adb = adb.unwrap_or(arch_depth_b);
+
     if ada + adb < height {
         adb
     } else {
@@ -400,6 +409,7 @@ pub fn arch(
     if args.angle_post.is_none() {
         items.push(kit.archv(None, None));
     }
+
     items
 }
 
@@ -575,6 +585,7 @@ fn hook_shape(
         items.push(key_knot);
         items.extend(after_segment);
     }
+
     HookOut {
         items,
         terminal: finish,

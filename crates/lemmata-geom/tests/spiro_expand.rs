@@ -101,6 +101,7 @@ fn compare_side(name: &str, index: usize, path: &BezPath, strands: &[Value]) -> 
     for (strand_index, strand) in strands.iter().enumerate() {
         let order = strand["order"].as_u64().unwrap();
         let context = format!("{name} side {index} strand {strand_index}");
+
         match order {
             1 => match elements.next() {
                 Some(PathEl::LineTo(p)) => {
@@ -154,6 +155,7 @@ fn compare_side(name: &str, index: usize, path: &BezPath, strands: &[Value]) -> 
         worst <= STRAND_TOLERANCE,
         "{name} side {index}: strand deviation {worst} over budget"
     );
+
     worst
 }
 
@@ -196,6 +198,7 @@ fn contrast_expansion_matches_upstream() {
                     knot.proposed_normal =
                         Some(Vec2::new(number(&normal["x"]), number(&normal["y"])));
                 }
+
                 knot
             })
             .collect();
@@ -217,6 +220,7 @@ fn contrast_expansion_matches_upstream() {
         let paths = di_spiro_paths(gizmo, contrast, closed, &knots, DELTA);
         let sides = expected["sides"].as_array().unwrap();
         assert_eq!(paths.len(), sides.len(), "{name}: side count");
+
         for (index, (path, strands)) in paths.iter().zip(sides).enumerate() {
             worst = worst.max(compare_side(name, index, path, strands.as_array().unwrap()));
         }

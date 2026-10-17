@@ -152,6 +152,7 @@ fn metrics_match_upstream() {
         if deviation > worst.0 {
             worst = (deviation, name.to_string());
         }
+
         if deviation > TOLERANCE {
             mismatches.push(format!("{name}: ours {actual}, theirs {theirs}"));
         }

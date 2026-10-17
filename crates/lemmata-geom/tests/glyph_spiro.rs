@@ -50,6 +50,7 @@ fn flatten(path: &BezPath) -> Vec<Point> {
         PathEl::MoveTo(p) | PathEl::LineTo(p) => points.push(p),
         PathEl::QuadTo(..) | PathEl::CurveTo(..) | PathEl::ClosePath => {}
     });
+
     points
 }
 
@@ -64,10 +65,12 @@ fn directed(a: &[Point], b: &[Point]) -> f64 {
                 nearest = distance;
             }
         }
+
         if nearest > worst {
             worst = nearest;
         }
     }
+
     worst
 }
 
@@ -87,6 +90,7 @@ fn shape_from_capture(contours: &[Value]) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 

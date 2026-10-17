@@ -113,6 +113,7 @@ impl GlyphData {
             entry.2 = entry.2.max(point.x);
             entry.3 = entry.3.max(point.y);
         }
+
         bounds.map(|(x_min, y_min, x_max, y_max)| {
             (
                 x_min.floor() as i16,
@@ -350,6 +351,7 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
         .add_table(&loca)
         .map_err(|error| format!("loca: {error}"))?
         .build();
+
     Ok(bytes)
 }
 
@@ -385,6 +387,7 @@ fn glyph_path(contours: &[Vec<QuadifyPoint>]) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -421,6 +424,7 @@ fn build_name_table(names: &Names, metrics: &Metrics) -> Name {
         )
     });
     let _ = metrics;
+
     Name {
         name_record,
         lang_tag_record: None,

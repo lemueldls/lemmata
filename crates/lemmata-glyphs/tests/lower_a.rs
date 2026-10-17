@@ -161,6 +161,7 @@ fn lower_a_matches_capture() {
                 "{name} {index}: knot count"
             );
             knot_count += ours.knots.len();
+
             for (knot, expected_knot) in ours.knots.iter().zip(&expected.knots) {
                 let deviation = (knot.x - expected_knot.x)
                     .abs()
@@ -189,6 +190,7 @@ fn lower_a_matches_capture() {
                 );
                 // A heading decides the normal the solver starts from, so it
                 // has to match, not just the knot's position.
+
                 match (&knot.proposed_normal, &expected_knot.proposed_normal) {
                     (Some(a), Some(b)) => assert!(
                         (a.x - b.x).abs().max((a.y - b.y).abs()) <= 1e-9,
@@ -226,6 +228,7 @@ fn lower_a_matches_capture() {
                 ours.closed,
                 &ours.knots,
             );
+
             for (side, side_knots) in [
                 ("lhs", &result.lhs_untransformed),
                 ("rhs", &result.rhs_untransformed),
@@ -236,6 +239,7 @@ fn lower_a_matches_capture() {
                     theirs.len(),
                     "{name} {index}: {side} knot count"
                 );
+
                 for (knot, expected_knot) in side_knots.iter().zip(theirs) {
                     let deviation = (knot.x - expected_knot[0].as_f64().unwrap())
                         .abs()
@@ -270,6 +274,7 @@ fn lower_a_matches_capture() {
             .flatten()
             .map(|point| (point.x, point.y)),
         );
+
         for (side, (our, their)) in [
             ("left", (our_box.0, their_box.0)),
             ("bottom", (our_box.1, their_box.1)),

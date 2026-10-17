@@ -13,6 +13,7 @@ pub fn polyline(path: &BezPath, tolerance: f64) -> Vec<Point> {
         PathEl::MoveTo(p) | PathEl::LineTo(p) => points.push(p),
         PathEl::QuadTo(..) | PathEl::CurveTo(..) | PathEl::ClosePath => {}
     });
+
     points
 }
 

@@ -135,6 +135,7 @@ fn spiro_outline_matches_upstream() {
                 expected_arcs.len(),
                 "{name} contour {index}: arc count"
             );
+
             for (arc_index, (arc, expected_arc)) in contour.iter().zip(expected_arcs).enumerate() {
                 let context = format!("{name} contour {index} arc {arc_index}");
                 let expected: Bez3 = Bez3::new(

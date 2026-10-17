@@ -19,10 +19,12 @@ pub fn directed_deviation(a: &[Point], b: &[Point]) -> f64 {
                 nearest = distance;
             }
         }
+
         if nearest > worst {
             worst = nearest;
         }
     }
+
     worst
 }
 

@@ -131,11 +131,13 @@ impl Geometry {
                 let arcs = resolve_overlaps(&inner);
                 let fairized = fairize(&arcs);
                 let out = stroke_arcs(&fairized, *radius, *contrast, *inside);
+
                 transform_shape(&out, *gizmo)
             }
             Self::RemoveHoles { gizmo, geom } => {
                 let inner = transformed(*gizmo, geom).to_bez_arcs();
                 let arcs = union_all_contours(&resolve_overlaps(&inner));
+
                 transform_shape(&arcs, *gizmo)
             }
             Self::Simplify { gizmo, geom } => simplify_arcs(*gizmo, geom),
@@ -150,6 +152,7 @@ impl Geometry {
                         boolean_shapes(&result, &arcs, *op)
                     };
                 }
+
                 result
             }
             Self::Transformed { tf, geom } => transform_shape(&geom.to_bez_arcs(), *tf),
@@ -163,6 +166,7 @@ impl Geometry {
     pub fn to_contours(&self) -> Vec<Vec<QuadifyPoint>> {
         let arcs = self.to_bez_arcs();
         let fairized = fairize(&arcs);
+
         quadify_fair(&fairized)
     }
 
@@ -181,6 +185,7 @@ impl Geometry {
                         }
                     }
                 }
+
                 complexity
             }
             Self::Spiro { knots, .. } => {
@@ -190,6 +195,7 @@ impl Geometry {
                         complexity |= BROKEN;
                     }
                 }
+
                 complexity
             }
             Self::DiSpiro { .. } | Self::SpiroPen { .. } => NON_EMPTY | NON_SIMPLE,
@@ -232,6 +238,7 @@ fn simplify_arcs(gizmo: Affine, geom: &Geometry) -> Vec<Vec<Bez3>> {
     if needs_transform {
         arcs = transform_shape(&arcs, gizmo);
     }
+
     arcs
 }
 
@@ -247,6 +254,7 @@ fn di_spiro_arcs(gizmo: Affine, contrast: f64, closed: bool, knots: &[BiKnot]) -
     if closed {
         let mut arcs = outline::spiro_to_bez_arcs(&lhs, true, gizmo);
         arcs.extend(outline::spiro_to_bez_arcs(&rhs, true, gizmo));
+
         arcs
     } else {
         if !lhs.is_empty() {
@@ -260,6 +268,7 @@ fn di_spiro_arcs(gizmo: Affine, contrast: f64, closed: bool, knots: &[BiKnot]) -
             rhs[last].ty = KnotType::Corner;
         }
         let all: Vec<MonoKnot> = lhs.into_iter().chain(rhs).collect();
+
         outline::spiro_to_bez_arcs(&all, true, gizmo)
     }
 }
@@ -279,6 +288,7 @@ fn union_all_contours(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
             BinaryOp::Union,
         );
     }
+
     accumulated
 }
 
@@ -288,6 +298,7 @@ fn resolve_overlaps(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
     for contour in shape_to_paths(&shape) {
         path.extend(contour.iter());
     }
+
     match remove_overlap(&path) {
         Ok(contours) => crate::boolean::annex(
             &crate::boolean::clean_shape(&paths_to_shape(&contours)),
@@ -333,6 +344,7 @@ pub fn quadify_fair(shape: &[Vec<FairArc>]) -> Vec<Vec<QuadifyPoint>> {
         let start = first.eval(0.0);
         let mut current = start;
         sink.move_to(start.x, start.y);
+
         for arc in contour {
             let a = arc.eval(0.0);
             let d = arc.eval(1.0);
@@ -340,6 +352,7 @@ pub fn quadify_fair(shape: &[Vec<FairArc>]) -> Vec<Vec<QuadifyPoint>> {
                 sink.line_to(a.x, a.y);
                 current = a;
             }
+
             if matches!(arc, FairArc::Straight { .. }) {
                 if !points_close(d, current, GEOMETRY_PRECISION) {
                     sink.line_to(d.x, d.y);
@@ -352,11 +365,13 @@ pub fn quadify_fair(shape: &[Vec<FairArc>]) -> Vec<Vec<QuadifyPoint>> {
         }
     }
     sink.end_shape();
+
     sink.into_contours()
 }
 
 fn points_close(a: kurbo::Point, b: kurbo::Point, tolerance: f64) -> bool {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
+
     dx * dx + dy * dy < tolerance * tolerance
 }

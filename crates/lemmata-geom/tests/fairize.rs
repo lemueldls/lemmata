@@ -77,6 +77,7 @@ fn fairize_matches_upstream() {
                 expected_arcs.len(),
                 "{name} contour {index}: arc count"
             );
+
             for (arc_index, (arc, expected_arc)) in arcs.iter().zip(expected_arcs).enumerate() {
                 let context = format!("{name} contour {index} arc {arc_index}");
                 match arc {
@@ -101,6 +102,7 @@ fn fairize_matches_upstream() {
                             expected_segments.len(),
                             "{context}: segment count"
                         );
+
                         for (segment, expected_segment) in
                             combined.segments().iter().zip(expected_segments)
                         {

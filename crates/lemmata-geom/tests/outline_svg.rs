@@ -42,6 +42,7 @@ fn contour_path(points: &[QuadifyPoint]) -> BezPath {
         }
     }
     path.close_path();
+
     path
 }
 
@@ -74,6 +75,7 @@ fn reference_contour_path(contour: &Value) -> BezPath {
         }
     }
     path.close_path();
+
     path
 }
 
@@ -101,6 +103,7 @@ fn data(path: &BezPath) -> String {
             PathEl::ClosePath => out.push('Z'),
         }
     }
+
     out
 }
 
@@ -111,6 +114,7 @@ fn sample(path: &BezPath) -> Vec<Point> {
             out.push(segment.eval(index as f64 / SAMPLES_PER_SEGMENT as f64));
         }
     }
+
     out
 }
 
@@ -124,10 +128,12 @@ fn boundary_drift(samples: &[Point], other: &BezPath) -> f64 {
         for segment in &segments {
             nearest = nearest.min(segment.nearest(*p, 1e-3).distance_sq.sqrt());
         }
+
         if nearest > worst && !other.contains(*p) {
             worst = nearest;
         }
     }
+
     worst
 }
 
@@ -316,5 +322,6 @@ fn render(compared: &[Compared]) -> String {
     }
 
     svg.push_str("</svg>\n");
+
     svg
 }

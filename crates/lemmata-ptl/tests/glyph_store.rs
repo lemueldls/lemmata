@@ -91,6 +91,7 @@ fn path_from_geometry(geometry: &Geometry) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -108,6 +109,7 @@ fn path_from_json(contours: &Value) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -118,6 +120,7 @@ fn sample(path: &BezPath) -> Vec<Point> {
             out.push(segment.eval(index as f64 / SAMPLES_PER_SEGMENT as f64));
         }
     }
+
     out
 }
 
@@ -129,10 +132,12 @@ fn directed(samples: &[Point], path: &BezPath) -> f64 {
         for segment in &segments {
             nearest = nearest.min(segment.nearest(*p, 1e-3).distance_sq.sqrt());
         }
+
         if nearest > worst && !path.contains(*p) {
             worst = nearest;
         }
     }
+
     worst
 }
 
@@ -200,6 +205,7 @@ fn store_matches_upstream() {
             !expected["error"].is_null(),
             "{label}: whether the save failed"
         );
+
         if let Ok(saved) = result {
             let filed = &expected["saved"];
             match (saved, filed) {

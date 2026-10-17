@@ -74,6 +74,7 @@ impl GlyphStore {
         let index = self.glyphs.len();
         self.glyphs.push(glyph);
         self.names.insert(name.to_string(), index);
+
         index
     }
 
@@ -82,6 +83,7 @@ impl GlyphStore {
     pub fn add_anonymous(&mut self, glyph: Glyph) -> usize {
         let index = self.glyphs.len();
         self.glyphs.push(glyph);
+
         index
     }
 
@@ -106,6 +108,7 @@ impl GlyphStore {
     pub fn encode_glyph(&mut self, code: u32, index: usize) {
         self.encodings.insert(code, index);
         let codes = self.codes_of.entry(index).or_default();
+
         if !codes.contains(&code) {
             codes.push(code);
         }
@@ -162,10 +165,12 @@ impl GlyphStore {
                 continue;
             }
             let new_index = filtered.add_glyph(name, glyph.clone());
+
             for code in self.codes_of.get(&index).into_iter().flatten() {
                 filtered.encode_glyph(*code, new_index);
             }
         }
+
         filtered
     }
 }
@@ -274,10 +279,12 @@ impl GlyphSaveSink {
                 if unicode != 0 {
                     self.store.encode_glyph(unicode, index);
                 }
+
                 index
             }
             None => self.store.add_anonymous(glyph),
         };
+
         Ok(Some(index))
     }
 }

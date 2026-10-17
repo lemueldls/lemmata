@@ -79,6 +79,7 @@ fn build(kit: &Kit, spec: &Value) -> Item {
     let x = || spec.get("x").map(number).unwrap_or(0.0);
     let y = || spec.get("y").map(number).unwrap_or(0.0);
     let kind = spec["kind"].as_str().expect("kind");
+
     match kind {
         "virt" => kit.virt(x(), y(), af),
         "close" => kit.close(),
@@ -107,6 +108,7 @@ fn build(kit: &Kit, spec: &Value) -> Item {
             let ty = kit
                 .simple(spec["ty"].as_str().unwrap())
                 .expect("interpolator knot type");
+
             kit.also_thru_them(rs, af, ty)
         }
         "decor" => kit.decor(
@@ -123,6 +125,7 @@ fn build(kit: &Kit, spec: &Value) -> Item {
                 return kit.knot(ty, x(), y(), af);
             }
             let parts: Vec<&str> = kind.split('.').collect();
+
             match parts.as_slice() {
                 [family_name, direction_name, position_name] => {
                     let position = match *position_name {
@@ -213,6 +216,7 @@ fn control_layer_matches_upstream() {
             expected_knots.len(),
             "{name}: knot count"
         );
+
         for (index, (knot, expected_knot)) in collector.knots.iter().zip(expected_knots).enumerate()
         {
             let context = format!("{name} knot {index}");
@@ -242,6 +246,7 @@ fn control_layer_matches_upstream() {
                 knot.unimportant, expected_unimportant,
                 "{context}: importance"
             );
+
             match (&knot.proposed_normal, &expected_knot["proposedNormal"]) {
                 (Some(normal), Value::Object(_)) => {
                     worst =

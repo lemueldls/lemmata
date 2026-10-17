@@ -65,6 +65,7 @@ fn quadify_matches_upstream() {
                 expected_points.len(),
                 "{name} contour {index}: point count"
             );
+
             for (point_index, (a, b)) in contour.iter().zip(expected_points).enumerate() {
                 let expected_quadratic = b["quadratic"].as_bool().unwrap();
                 let is_quadratic = a.kind == QuadifyKind::Quadratic;

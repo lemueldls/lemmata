@@ -29,6 +29,7 @@ fn dispatch(name: &str, args: &[Value]) -> Option<Vec<f64>> {
     let n = |index: usize| args[index].as_f64().expect("number");
     let b = |index: usize| args[index].as_bool().expect("boolean");
     let single = |value: f64| Some(vec![value]);
+
     match name {
         "mix" => single(mix(n(0), n(1), n(2))),
         "barMixL" => single(bar_mix_l(n(0), n(1), n(2), n(3))),
@@ -84,6 +85,7 @@ fn util_matches_upstream() {
             other => panic!("{name}: unexpected result {other}"),
         };
         compared += 1;
+
         match (ours, theirs) {
             (Some(ours), Some(theirs)) => {
                 assert_eq!(ours.len(), theirs.len(), "{name}: value count");

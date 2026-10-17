@@ -159,6 +159,7 @@ impl SpiroExpander {
                 knot.unimportant,
             ));
         }
+
         middles
     }
 
@@ -199,6 +200,7 @@ impl SpiroExpander {
         }
 
         self.interpolate_unimportant_knots(&mut lhs_t, &mut rhs_t, &mut lhs_u, &mut rhs_u);
+
         ExpandResult {
             lhs: lhs_t,
             rhs: rhs_t,
@@ -250,6 +252,7 @@ impl SpiroExpander {
         } else {
             len - j_before + j_after
         };
+
         for offset in 1..count {
             let j = (j_before + offset) % len;
             let knot_before = &self.knots_u[j_before];
@@ -306,6 +309,7 @@ pub fn di_spiro_expand(
             break;
         }
     }
+
     expander.expand()
 }
 
@@ -350,12 +354,14 @@ pub fn di_spiro_paths(
             .chain(rhs.iter())
             .map(MonoKnot::to_knot)
             .collect();
+
         vec![spiro_path(&all, true, delta)]
     };
 
     for path in &mut paths {
         path.apply_affine(gizmo);
     }
+
     paths
 }
 
@@ -396,6 +402,7 @@ fn rectify_normals(stage: &[MonoKnot], knots_t: &mut [BiKnot], closed: bool) -> 
     if processed == 0 {
         return 0.0;
     }
+
     total_delta / processed as f64
 }
 
@@ -418,6 +425,7 @@ fn start_tangent(arc: &SpiroArc) -> Vec2 {
     if is_tangent_valid(fallback) {
         return fallback;
     }
+
     chord_tangent(arc)
 }
 
@@ -430,6 +438,7 @@ fn end_tangent(arc: &SpiroArc) -> Vec2 {
     if is_tangent_valid(fallback) {
         return fallback;
     }
+
     chord_tangent(arc)
 }
 
@@ -445,6 +454,7 @@ fn chord_tangent(arc: &SpiroArc) -> Vec2 {
     } else {
         1.0
     };
+
     Vec2::new(length, 0.0)
 }
 
@@ -452,6 +462,7 @@ fn derivative_forward(arc: &SpiroArc, t: f64) -> Vec2 {
     let center = arc.eval(t);
     let forward1 = arc.eval(t + FINITE_DIFFERENCE_DELTA);
     let forward2 = arc.eval(t + 2.0 * FINITE_DIFFERENCE_DELTA);
+
     Vec2::new(
         (-3.0 * center.x + 4.0 * forward1.x - forward2.x) / (2.0 * FINITE_DIFFERENCE_DELTA),
         (-3.0 * center.y + 4.0 * forward1.y - forward2.y) / (2.0 * FINITE_DIFFERENCE_DELTA),
@@ -462,6 +473,7 @@ fn derivative_backward(arc: &SpiroArc, t: f64) -> Vec2 {
     let center = arc.eval(t);
     let backward1 = arc.eval(t - FINITE_DIFFERENCE_DELTA);
     let backward2 = arc.eval(t - 2.0 * FINITE_DIFFERENCE_DELTA);
+
     Vec2::new(
         (3.0 * center.x - 4.0 * backward1.x + backward2.x) / (2.0 * FINITE_DIFFERENCE_DELTA),
         (3.0 * center.y - 4.0 * backward1.y + backward2.y) / (2.0 * FINITE_DIFFERENCE_DELTA),

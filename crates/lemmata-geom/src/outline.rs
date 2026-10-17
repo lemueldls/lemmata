@@ -67,6 +67,7 @@ pub fn spiro_to_bez_arcs(knots: &[MonoKnot], closed: bool, gizmo: Affine) -> Vec
     for segment in &mut segments {
         *segment = transform_bez3(gizmo, *segment);
     }
+
     vec![segments]
 }
 
@@ -84,6 +85,7 @@ fn simplify(knots: &[MonoKnot], arcs: Vec<SpiroArc>) -> Vec<Run> {
         }
     }
     flush(&mut runs, &mut ongoing);
+
     runs
 }
 

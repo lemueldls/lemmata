@@ -53,6 +53,7 @@ fn build_frames(metrics: &Metrics) -> Vec<(String, DivFrame)> {
         "restCompact(0.1,slice(3,2))".to_string(),
         base.rest_compact(0.1, &sub, None),
     ));
+
     frames
 }
 
@@ -113,10 +114,12 @@ fn frames_match_upstream() {
             if deviation > worst.0 {
                 worst = (deviation, format!("{label} {name}"));
             }
+
             if deviation > TOLERANCE {
                 mismatches.push(format!("{label} {name}: ours {actual}, theirs {theirs}"));
             }
         }
+
         for (name, actual) in [
             ("adviceStroke", frame.advice_stroke(2.0, 1.0)),
             ("adviceThinnerStroke", frame.advice_thinner_stroke(2.0, 1.0)),
@@ -135,6 +138,7 @@ fn frames_match_upstream() {
             if deviation > worst.0 {
                 worst = (deviation, format!("{label} {name}"));
             }
+
             if deviation > TOLERANCE {
                 mismatches.push(format!("{label} {name}: ours {actual}, theirs {theirs}"));
             }

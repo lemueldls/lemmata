@@ -49,6 +49,7 @@ pub fn outline(data: &[u8], glyph_id: GlyphId) -> Result<GlyphOutline, Error> {
         DrawSettings::unhinted(Size::unscaled(), LocationRef::default()),
         &mut pen,
     )?;
+
     Ok(GlyphOutline {
         glyph_id,
         contours: pen.finish(),
@@ -75,6 +76,7 @@ pub fn outlines(data: &[u8]) -> Result<Vec<GlyphOutline>, Error> {
             });
         }
     }
+
     Ok(result)
 }
 

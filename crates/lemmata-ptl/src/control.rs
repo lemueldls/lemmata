@@ -179,6 +179,7 @@ impl Control {
         };
         let knot =
             |ty: KnotType, x: f64, y: f64, af: Af| Self::Knot(UserControlKnot { ty, x, y, af });
+
         match interpolator {
             Interpolator::SimpleMix {
                 ty,
@@ -202,6 +203,7 @@ impl Control {
             } => {
                 let total = (after.x - before.x).hypot(after.y - before.y);
                 let r = (distance / total).clamp(0.0, 1.0);
+
                 vec![knot(
                     *ty,
                     mix(before.x, after.x, r) + dx,
@@ -218,6 +220,7 @@ impl Control {
             } => {
                 let total = (after.x - before.x).hypot(after.y - before.y);
                 let r = (1.0 - distance / total).clamp(0.0, 1.0);
+
                 vec![knot(
                     *ty,
                     mix(before.x, after.x, r) + dx,
@@ -241,6 +244,7 @@ impl Control {
                     let theta = ((j + 1) as f64 / (*steps + 2) as f64) * std::f64::consts::PI / 2.0;
                     let c = theta.cos().powf(2.0 / superness);
                     let s = theta.sin().powf(2.0 / superness);
+
                     knot(
                         KnotType::G2,
                         mix(before.x, after.x, s),
@@ -254,6 +258,7 @@ impl Control {
                     let theta = ((j + 1) as f64 / (*steps + 2) as f64) * std::f64::consts::PI / 2.0;
                     let c = theta.cos().powf(2.0 / superness);
                     let s = theta.sin().powf(2.0 / superness);
+
                     knot(
                         KnotType::G2,
                         mix(before.x, after.x, 1.0 - c),
@@ -366,11 +371,13 @@ impl Flattener {
                 .kernel()
                 .cloned()
                 .unwrap_or_else(|| before.clone());
+
             for item in control.resolve_interpolation(&before, &after) {
                 remaining += push_dependency(&mut sink, &item);
             }
         }
         self.controls = sink;
+
         remaining
     }
 
@@ -412,6 +419,7 @@ impl Flattener {
                 next[index] = next[prev[index]];
             }
         }
+
         Dependencies { deps, next, prev }
     }
 
@@ -420,6 +428,7 @@ impl Flattener {
     pub fn knots(&self) -> Vec<BiKnot> {
         let mut collector = Collector::new(0.0);
         self.pipe(&mut collector);
+
         collector.knots
     }
 }
@@ -433,6 +442,7 @@ struct Dependencies {
 fn push_dependency(sink: &mut Vec<Control>, control: &Control) -> usize {
     let dependent = control.dependency(RES_DEP_STAGE_INTERPOLATION) != 0;
     sink.push(control.clone());
+
     usize::from(dependent)
 }
 

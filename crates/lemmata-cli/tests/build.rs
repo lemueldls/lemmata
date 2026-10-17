@@ -48,6 +48,7 @@ fn build_font() -> Option<(Vec<u8>, Vec<Glyph>)> {
     let glyphs = glyph_data(&captured);
     let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default())
         .expect("build the font");
+
     Some((bytes, captured))
 }
 
@@ -56,6 +57,7 @@ fn font_bbox(font: &FontRef, glyph_id: read_fonts::types::GlyphId) -> Option<(i1
     let loca = font.loca(None).expect("loca");
     let glyf = font.glyf().expect("glyf");
     let glyph = loca.get_glyf(glyph_id, &glyf).expect("read glyph")?;
+
     Some((glyph.x_min(), glyph.y_min(), glyph.x_max(), glyph.y_max()))
 }
 
@@ -126,6 +128,7 @@ fn built_font_round_trips() {
         .get_glyf(glyph_id, &glyf)
         .expect("read 'a'")
         .expect("'a' has an outline");
+
     match glyph {
         ReadGlyph::Simple(simple) => assert!(simple.number_of_contours() > 0),
         ReadGlyph::Composite(_) => panic!("'a' should be a simple glyph"),
@@ -257,6 +260,7 @@ fn output_family_is_not_an_iosevka_name() {
         .and_then(|record| record.string(string_data).ok())
         .map(|value| value.to_string())
         .expect("family name");
+
     for reserved in [
         "Iosevka",
         "Iosevka Aile",

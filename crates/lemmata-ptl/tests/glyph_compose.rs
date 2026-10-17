@@ -99,6 +99,7 @@ fn geometry(value: &Value) -> Geometry {
                         knot.proposed_normal =
                             Some(kurbo::Vec2::new(number(&normal["x"]), number(&normal["y"])));
                     }
+
                     knot
                 })
                 .collect(),
@@ -174,6 +175,7 @@ fn glyph(value: &Value) -> Glyph {
         None => Glyph::new(),
     };
     glyph.include(&GlyphProc::new(operations(value)), false, false);
+
     glyph
 }
 
@@ -193,6 +195,7 @@ fn path_from_geometry(geometry: &Geometry) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -210,6 +213,7 @@ fn path_from_json(contours: &Value) -> BezPath {
         }
         path.close_path();
     }
+
     path
 }
 
@@ -220,6 +224,7 @@ fn sample(path: &BezPath) -> Vec<Point> {
             out.push(segment.eval(index as f64 / SAMPLES_PER_SEGMENT as f64));
         }
     }
+
     out
 }
 
@@ -231,10 +236,12 @@ fn directed(samples: &[Point], path: &BezPath) -> f64 {
         for segment in &segments {
             nearest = nearest.min(segment.nearest(*p, 1e-3).distance_sq.sqrt());
         }
+
         if nearest > worst && !path.contains(*p) {
             worst = nearest;
         }
     }
+
     worst
 }
 

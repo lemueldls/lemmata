@@ -62,6 +62,7 @@ impl DivFrame {
             * sb_mul.unwrap_or_else(|| {
                 (0.0_f64).max(1.0_f64.min((width / h_pack - mvs) / (2.0 * metrics.sb)))
             });
+
         Self::with_params(metrics, width, sb, h_pack, mvs, 0.0)
     }
 
@@ -97,6 +98,7 @@ impl DivFrame {
         frame.small_arch_depth = frame.arch_depth_of(frame.metrics.small_arch_depth, None);
         frame.small_arch_depth_a = frame.arch_depth_a_of(frame.metrics.small_arch_depth, None);
         frame.small_arch_depth_b = frame.arch_depth_b_of(frame.metrics.small_arch_depth, None);
+
         frame
     }
 
@@ -161,6 +163,7 @@ impl DivFrame {
     pub fn slice(&self, hpk: Option<f64>, keeps: Option<f64>, o: Option<f64>) -> Self {
         let hpk = hpk.unwrap_or(self.h_pack);
         let keeps = keeps.unwrap_or(2.0);
+
         self.slice_fine(
             hpk,
             keeps,
@@ -175,6 +178,7 @@ impl DivFrame {
         let one_stroke = self.metrics.hv_contrast * self.mvs;
         let total_gap = self.right_sb() - self.left_sb() - hpk * one_stroke - 2.0 * o;
         let width = 2.0 * self.sb + 2.0 * o + total_gap * p_gap + extra_gap + one_stroke * keeps;
+
         Self::with_params(self.metrics.clone(), width, self.sb, keeps, self.mvs, o)
     }
 
