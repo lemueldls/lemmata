@@ -75,7 +75,9 @@ The control layer is ported. `lemmata-glyphs::control` carries the controls, the
 
 The metrics layer is ported too. `lemmata-glyphs::metrics` carries `calculateMetrics` from `meta/aesthetics.ptl` and the stroke-width advice from `weight-control.mjs`: the frame, the stroke width, the arch depths, the overshoots, the balance offsets, the ess ratios, and the weight-control sigmoid. The capture writes the plan parameters the build used and the metrics it derived from them, and `tests/metrics.rs` compares all 105 fields. The worst deviation is 1.4e-14, from `tan`, `atanh` and `tanh` differing between V8 and Rust in the last bits.
 
-What remains of the layer: `letter-model.mjs`'s `DivFrame`, the `glyph` package (`GlyphProc`, `union`, `difference`, `include`, the block executor), and `util`. Roughly 1,900 lines. The definitions also pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), which are part of the 60,020 and amortize across glyphs.
+The per-glyph frame is ported as well. `lemmata-glyphs::letter_model` carries `DivFrame`: the division, the sidebearings, the middle, the stroke width, the arch depths, and the slicing and advice methods. The capture dumps eleven frames at several divisions plus the values they derive, and `tests/letter_model.rs` compares 275 of them. The worst deviation is 2.8e-14.
+
+What remains of the layer: the `glyph` package (`GlyphProc`, `union`, `difference`, `include`, the block executor) and `util`. Roughly 1,600 lines. The definitions also pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), which are part of the 60,020 and amortize across glyphs.
 
 ## How the measurement was taken
 

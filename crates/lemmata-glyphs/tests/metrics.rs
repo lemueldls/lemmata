@@ -7,106 +7,17 @@
 #![allow(clippy::cast_precision_loss)]
 
 use std::fs;
-use std::path::{Path, PathBuf};
 
-use lemmata_glyphs::metrics::{Metrics, Para};
+mod util;
+
+use lemmata_glyphs::metrics::Metrics;
 use serde_json::Value;
+
+use util::dump_path;
 
 /// Metrics go through `tan`, `atanh` and `tanh`, whose implementations differ
 /// between V8 and Rust in the last bits.
 const TOLERANCE: f64 = 1e-9;
-
-fn workspace_path(relative: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join(relative)
-}
-
-fn dump_path() -> PathBuf {
-    std::env::var_os("LEMMATA_GLYPH_DUMP")
-        .map_or_else(|| workspace_path("target/glyphs.bin"), PathBuf::from)
-}
-
-fn number(value: &Value, key: &str) -> Option<f64> {
-    value.get(key).and_then(Value::as_f64)
-}
-
-fn para_from(value: &Value) -> Para {
-    let required = |key: &str| number(value, key).unwrap_or_else(|| panic!("para.{key}"));
-    Para {
-        width: required("width"),
-        sb: required("sb"),
-        cap: required("cap"),
-        x_height: required("xHeight"),
-        ascender: required("ascender"),
-        descender: number(value, "descender"),
-        symbol_mid: required("symbolMid"),
-        paren_size: required("parenSize"),
-        oper_size: required("operSize"),
-        tack_size: required("tackSize"),
-        plus_size: required("plusSize"),
-        pict_size: required("pictSize"),
-        bgop_size: required("bgopSize"),
-        bgtk_size: required("bgtkSize"),
-        contrast: number(value, "contrast"),
-        slope_angle: required("slopeAngle"),
-        is_quasi_proportional: value
-            .get("isQuasiProportional")
-            .and_then(Value::as_bool)
-            .unwrap_or(false),
-        spacing: i32::try_from(value.get("spacing").and_then(Value::as_i64).unwrap_or(0))
-            .unwrap_or(0),
-        overshoot: required("overshoot"),
-        overshootx: required("overshootx"),
-        oxhook: required("oxhook"),
-        hook: required("hook"),
-        ahook: required("ahook"),
-        shook: required("shook"),
-        rhook: required("rhook"),
-        jhook: required("jhook"),
-        hookx: required("hookx"),
-        tail_x: required("tailX"),
-        tail_y: required("tailY"),
-        diag_tail_angle: required("diagTailAngle"),
-        diag_tail_depth: required("diagTailDepth"),
-        arch_depth: required("archDepth"),
-        small_arch_depth: required("smallArchDepth"),
-        stroke: required("stroke"),
-        dot_size: number(value, "dotSize"),
-        period_size: number(value, "periodSize"),
-        jut: required("jut"),
-        long_jut: required("longjut"),
-        vjut: required("vjut"),
-        long_vjut: number(value, "longvjut"),
-        accent_stack_offset: required("accentStackOffset"),
-        accent_width: required("accentWidth"),
-        accent_clearance: required("accentClearance"),
-        accent_height: required("accentHeight"),
-        cthin: number(value, "cthin"),
-        cthinb: number(value, "cthinb"),
-        slab: required("slab"),
-        jbalance: number(value, "jbalance"),
-        jbalance2: number(value, "jbalance2"),
-        tbalance: number(value, "tbalance"),
-        tbalance2: number(value, "tbalance2"),
-        rbalance: number(value, "rbalance"),
-        rbalance2: number(value, "rbalance2"),
-        fbalance: number(value, "fbalance"),
-        onebalance: number(value, "onebalance"),
-        ess_ratio: number(value, "essRatio"),
-        ess_ratio_upper: number(value, "essRatioUpper"),
-        ess_ratio_lower: number(value, "essRatioLower"),
-        ess_ratio_question: number(value, "essRatioQuestion"),
-        shoulder_fine_min: required("shoulderFineMin"),
-        ref_stroke: required("refStroke"),
-        canonical_stroke_width_min: required("canonicalStrokeWidthMin"),
-        canonical_stroke_width_max: required("canonicalStrokeWidthMax"),
-        leading: required("leading"),
-        descender_pad: number(value, "descenderPad"),
-        win_metric_ascender_pad: number(value, "winMetricAscenderPad"),
-        win_metric_descender_pad: number(value, "winMetricDescenderPad"),
-    }
-}
 
 /// Every metric, under the name upstream uses.
 fn fields(metrics: &Metrics) -> Vec<(&'static str, f64)> {
@@ -228,8 +139,7 @@ fn metrics_match_upstream() {
         return;
     };
     let value: Value = serde_json::from_str(&text).expect("parse metrics");
-    let para = para_from(&value["para"]);
-    let ours = Metrics::calculate(&para);
+    let ours = util::metrics_from_capture().expect("metrics");
     let expected = &value["metrics"];
 
     let mut worst = (0.0_f64, String::new());

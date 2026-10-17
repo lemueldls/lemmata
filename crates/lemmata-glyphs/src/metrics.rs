@@ -356,14 +356,8 @@ impl Metrics {
             )
         };
         let smooth_adjust = stroke_width_blend(80.0, 144.0, None);
-        let arch_depth_a_of = |arch_depth: f64, width_opt: Option<f64>| {
-            arch_depth - tan_slope * smooth_adjust * (width_opt.unwrap_or(width) / width)
-        };
-        let arch_depth_b_of = |arch_depth: f64, width_opt: Option<f64>| {
-            arch_depth + tan_slope * smooth_adjust * (width_opt.unwrap_or(width) / width)
-        };
-        let arch_depth_a = arch_depth_a_of(para.arch_depth, None);
-        let arch_depth_b = arch_depth_b_of(para.arch_depth, None);
+        let arch_depth_a = arch_depth_a_of(para.arch_depth, smooth_adjust, tan_slope, width, None);
+        let arch_depth_b = arch_depth_b_of(para.arch_depth, smooth_adjust, tan_slope, width, None);
 
         Self {
             upm,
@@ -461,8 +455,20 @@ impl Metrics {
             smooth_adjust,
             arch_depth_a,
             arch_depth_b,
-            small_arch_depth_a: arch_depth_a_of(para.small_arch_depth, None),
-            small_arch_depth_b: arch_depth_b_of(para.small_arch_depth, None),
+            small_arch_depth_a: arch_depth_a_of(
+                para.small_arch_depth,
+                smooth_adjust,
+                tan_slope,
+                width,
+                None,
+            ),
+            small_arch_depth_b: arch_depth_b_of(
+                para.small_arch_depth,
+                smooth_adjust,
+                tan_slope,
+                width,
+                None,
+            ),
             correction_o_mid_x: tan_slope * 0.9 * stroke_width_blend(1.3, 0.9, None),
             correction_o_mid_s: stroke * (tan_slope * 0.9 * stroke_width_blend(1.3, 0.9, None)),
             serif_shift_x: tan_slope * dp::SERIF_SHIFT_X,
@@ -472,6 +478,54 @@ impl Metrics {
             very_far: upm * 16.0,
             tiny: 1.0 / 128.0,
         }
+    }
+}
+
+/// `ArchDepthAOf`, as a free function so `calculate` can use it before the
+/// struct exists.
+fn arch_depth_a_of(
+    arch_depth: f64,
+    smooth_adjust: f64,
+    tan_slope: f64,
+    width: f64,
+    width_opt: Option<f64>,
+) -> f64 {
+    arch_depth - tan_slope * smooth_adjust * (width_opt.unwrap_or(width) / width)
+}
+
+fn arch_depth_b_of(
+    arch_depth: f64,
+    smooth_adjust: f64,
+    tan_slope: f64,
+    width: f64,
+    width_opt: Option<f64>,
+) -> f64 {
+    arch_depth + tan_slope * smooth_adjust * (width_opt.unwrap_or(width) / width)
+}
+
+impl Metrics {
+    /// `ArchDepthAOf`.
+    #[must_use]
+    pub fn arch_depth_a_of(&self, arch_depth: f64, width: Option<f64>) -> f64 {
+        arch_depth_a_of(
+            arch_depth,
+            self.smooth_adjust,
+            self.tan_slope,
+            self.width,
+            width,
+        )
+    }
+
+    /// `ArchDepthBOf`.
+    #[must_use]
+    pub fn arch_depth_b_of(&self, arch_depth: f64, width: Option<f64>) -> f64 {
+        arch_depth_b_of(
+            arch_depth,
+            self.smooth_adjust,
+            self.tan_slope,
+            self.width,
+            width,
+        )
     }
 }
 
