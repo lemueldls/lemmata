@@ -141,6 +141,83 @@ fn mix_r(w: f64, ang_w: Option<f64>, v: f64, ang_v: Option<f64>, u: f64, superne
     0.5 + (r - 0.5) * (v + w) / (u * 2.0)
 }
 
+/// What `flatside` takes: the stroke's x, the ring's bottom and top, the two
+/// arch depths, the overshoot and any amendment for the control knots.
+#[derive(Clone, Debug)]
+pub struct FlatSide {
+    pub x: f64,
+    pub d: f64,
+    pub u: f64,
+    pub ada: f64,
+    pub adb: f64,
+    pub ox: f64,
+    pub af: Af,
+}
+
+/// `flatside.ld`: the left side of a flat-sided ring.
+#[must_use]
+pub fn flatside_ld(kit: &Kit, side: &FlatSide) -> Vec<Item> {
+    let FlatSide {
+        x,
+        d,
+        u,
+        ada,
+        adb,
+        ox,
+        af,
+    } = side;
+    if u - d > ada + adb {
+        vec![
+            kit.knot(KnotType::Left, x + ox, u - ada, af.clone()),
+            kit.knot(KnotType::Right, x + ox, d + adb, af.clone()),
+        ]
+    } else {
+        vec![kit.knot(
+            KnotType::G4,
+            x + ox,
+            ysmooth_mid_l(*u, *d, Some(*ada), Some(*adb), *ada, *adb),
+            af.clone(),
+        )]
+    }
+}
+
+/// `flatside.ru`: the right side of a flat-sided ring.
+#[must_use]
+pub fn flatside_ru(kit: &Kit, side: &FlatSide) -> Vec<Item> {
+    let FlatSide {
+        x,
+        d,
+        u,
+        ada,
+        adb,
+        ox,
+        af,
+    } = side;
+    if u - d > ada + adb {
+        vec![
+            kit.knot(KnotType::Left, x - ox, d + ada, af.clone()),
+            kit.knot(KnotType::Right, x - ox, u - adb, af.clone()),
+        ]
+    } else {
+        vec![kit.knot(
+            KnotType::G4,
+            x - ox,
+            ysmooth_mid_r(*u, *d, Some(*ada), Some(*adb), *ada, *adb),
+            af.clone(),
+        )]
+    }
+}
+
+/// The knot an item carries, which an interpolator next to it resolves against.
+#[must_use]
+pub fn knot_of(item: &Item) -> UserControlKnot {
+    match item {
+        Item::Control(crate::control::Control::Knot(knot)) => knot.clone(),
+        Item::Control(crate::control::Control::Pair(pair)) => pair.center.clone(),
+        other => panic!("expected a knot, found {other:?}"),
+    }
+}
+
 /// `YSmoothMidR`.
 #[must_use]
 pub fn ysmooth_mid_r(

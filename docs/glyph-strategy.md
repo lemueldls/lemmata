@@ -102,7 +102,11 @@ The capture is the oracle for this layer. PTL functions cannot be imported into 
 
 Getting there turned up one trap worth recording: the four heading constants in `meta/aesthetics.ptl` point along the stroke, not along the axes. `Upward` is `(-HVContrast, 0)` and `Leftward` is `(0, -1)`. Reading them as the axis directions produces outlines that are right in position and wrong in every normal, which the bi-knot positions alone do not catch.
 
-What remains of this file: the single-storey bodies (`OBarLeft`/`OBarRight` and their variants, and the bar shapes), the other hook styles, and the glyphs derived from `a` (turned, script, retroflex, accented).
+`a.singleStoreySerifless` is ported too, which is `FullBarBody` with `SeriflessBar`: `OBarLeft.shape`, the half-turn that makes `OBarRight.shape`, and `VBar.r`. `OBarLeft.shape` is one `dispiro` built from two `flatside` sides and the two `Arch.lhs` calls between them. The test covers 3 variants and 132 knots, all exact.
+
+The test compares three things, because each catches something the others miss. The bi-knots catch the shape logic. The expansion catches anything the solver would see differently. The outline's bounding box catches a transform that lives in the tree rather than in the knots: `OBarRight.shape` is `OBarLeft.shape` rotated half a turn about the ring, so a missing or wrong flip leaves every knot in the right place.
+
+What remains of this file: the other `OBar` variants (`TopCut`, `FlatTop`, `EarlessCorner`, `EarlessRounded`), the other hook styles (`HOOK-SLAB-INWARD`, `HOOK-HALF`) and the arc kinds, the remaining bar shapes (serifed, tailed, double-serifed), `CrossingBody` for `a.crossing`, and the glyphs derived from `a` (turned, script, retroflex, accented).
 
 What remains: the dependency manager's block half and `relation.mjs`, which order glyphs and drive subsetted rebuilds rather than outlines. After that the definitions themselves, which pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), part of the 60,020 and amortized across glyphs.
 

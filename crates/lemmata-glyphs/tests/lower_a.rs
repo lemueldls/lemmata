@@ -1,9 +1,11 @@
-//! Compares the ported double-storey `a` variants against the build's own.
+//! Compares the ported lower-case `a` variants against the build's own.
 //!
 //! The capture carries each variant's geometry tree, which is the union of the
-//! `dispiro` sequences the variant's body builds. Comparing the bi-knots of
-//! those sequences catches a mistake in the shape logic before the solver or
-//! the boolean stage can hide it. Skips without a capture.
+//! `dispiro` sequences the variant's body builds. Three things are compared:
+//! the bi-knots of those sequences, the expansion the solver consumes, and the
+//! outline's bounding box. The knots catch a mistake in the shape logic before
+//! the solver or the boolean stage can hide it; the box catches a transform
+//! that lives in the tree rather than in the knots. Skips without a capture.
 
 #![allow(clippy::cast_precision_loss)]
 
@@ -11,6 +13,7 @@ mod util;
 
 use std::fs;
 
+use lemmata_geom::{BiKnot, Geometry};
 use lemmata_glyphs::letter_model::DivFrame;
 use lemmata_glyphs::lower_a::{DoubleStorey, HOOK_SLAB_NONE};
 use lemmata_glyphs::shapes::Design;
@@ -21,9 +24,56 @@ use util::{dump_path, metrics_from_capture};
 
 /// Knot positions and normals are exact between the two implementations.
 const TOLERANCE: f64 = 1e-6;
+/// The outline passes through overlap resolution, which the two boolean
+/// engines do not agree on exactly.
+const BOX_TOLERANCE: f64 = 1.0;
+
+/// A di-spiro node's knots, lifted out of whichever tree holds them so both
+/// sides can be compared the same way.
+struct OurNode {
+    contrast: f64,
+    closed: bool,
+    knots: Vec<BiKnot>,
+}
+
+fn node_of(geometry: &Geometry) -> OurNode {
+    let Geometry::DiSpiro {
+        contrast,
+        closed,
+        knots,
+        ..
+    } = geometry
+    else {
+        panic!("expected a di-spiro node");
+    };
+    OurNode {
+        contrast: *contrast,
+        closed: *closed,
+        knots: knots.clone(),
+    }
+}
+
+fn bounding_box(points: impl Iterator<Item = (f64, f64)>) -> (f64, f64, f64, f64) {
+    points.fold(
+        (
+            f64::INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::NEG_INFINITY,
+        ),
+        |acc, (x, y)| (acc.0.min(x), acc.1.min(y), acc.2.max(x), acc.3.max(y)),
+    )
+}
+
+fn entry<'a>(entries: &'a [Value], name: &str) -> &'a Value {
+    entries
+        .iter()
+        .find(|entry| entry["name"] == name)
+        .unwrap_or_else(|| panic!("{name} is not in the capture"))
+}
 
 #[test]
-fn double_storey_matches_capture() {
+fn lower_a_matches_capture() {
     let Some(metrics) = metrics_from_capture() else {
         eprintln!("skipping: no capture");
         return;
@@ -32,13 +82,21 @@ fn double_storey_matches_capture() {
         eprintln!("skipping: no capture");
         return;
     };
-    let Ok(expansions) = fs::read_to_string(format!("{}.expansions.json", dump_path().display()))
-    else {
-        eprintln!("skipping: no expansions");
-        return;
+    let read = |suffix: &str| -> Value {
+        let name = if suffix.is_empty() {
+            format!("{}.json", dump_path().display())
+        } else {
+            format!("{}.{suffix}.json", dump_path().display())
+        };
+        serde_json::from_str(
+            &fs::read_to_string(&name).unwrap_or_else(|error| panic!("reading {name}: {error}")),
+        )
+        .expect("parse side data")
     };
-    let expansions: Value = serde_json::from_str(&expansions).expect("parse expansions");
+    let expansions = read("expansions");
     let expansions = expansions.as_array().expect("array");
+    let contours = read("");
+    let contours = contours.as_array().expect("array");
 
     let glyphs = lemmata_glyphs::load(&data).expect("decode capture");
     let design = Design::default();
@@ -56,13 +114,32 @@ fn double_storey_matches_capture() {
         design: &design,
     };
 
-    let cases: Vec<(&str, Vec<Dispiro>)> = vec![
-        ("a", body.serifless(HOOK_SLAB_NONE, None)),
-        ("a.doubleStoreySerifed", body.serifed(HOOK_SLAB_NONE, None)),
+    // A case is the glyph's name and the geometry its body builds. Wrapping the
+    // operands in a combine mirrors how the definition unions them, so the walk
+    // reaches them in the capture's order.
+    let combine = |operands: Vec<Geometry>| Geometry::Combine(operands);
+    let from_dispiros = |dispiros: Vec<Dispiro>| {
+        combine(
+            dispiros
+                .iter()
+                .map(|dispiro| dispiro.geometry(kurbo::Affine::IDENTITY))
+                .collect(),
+        )
+    };
+    let cases: Vec<(&str, Geometry)> = vec![
+        ("a", from_dispiros(body.serifless(HOOK_SLAB_NONE, None))),
+        (
+            "a.doubleStoreySerifed",
+            from_dispiros(body.serifed(HOOK_SLAB_NONE, None)),
+        ),
+        (
+            "a.singleStoreySerifless",
+            combine(body.single_storey_serifless(metrics.xh)),
+        ),
     ];
 
     let mut worst = (0.0_f64, "none".to_string());
-    let mut knots = 0usize;
+    let mut knot_count = 0usize;
     for (name, ours) in &cases {
         let glyph = glyphs
             .iter()
@@ -70,27 +147,23 @@ fn double_storey_matches_capture() {
             .unwrap_or_else(|| panic!("{name} is not in the capture"));
         let mut captured = Vec::new();
         lemmata_glyphs::collect_di_spiro(&glyph.geometry, &mut captured);
-        assert_eq!(captured.len(), ours.len(), "{name}: dispiro count");
+        let mut our_nodes = Vec::new();
+        lemmata_glyphs::collect_di_spiro(ours, &mut our_nodes);
+        assert_eq!(captured.len(), our_nodes.len(), "{name}: dispiro count");
 
-        for (index, (dispiro, expected)) in ours.iter().zip(&captured).enumerate() {
-            let lemmata_geom::Geometry::DiSpiro {
-                contrast,
-                closed,
-                knots: expected_knots,
-                ..
-            } = expected
-            else {
-                unreachable!()
-            };
-            assert_eq!(dispiro.contrast, *contrast, "{name} {index}: contrast");
-            assert_eq!(dispiro.closed, *closed, "{name} {index}: closed");
+        // The bi-knots.
+        for (index, (node, expected)) in our_nodes.iter().zip(&captured).enumerate() {
+            let ours = node_of(node);
+            let expected = node_of(expected);
+            assert_eq!(ours.contrast, expected.contrast, "{name} {index}: contrast");
+            assert_eq!(ours.closed, expected.closed, "{name} {index}: closed");
             assert_eq!(
-                dispiro.knots.len(),
-                expected_knots.len(),
+                ours.knots.len(),
+                expected.knots.len(),
                 "{name} {index}: knot count"
             );
-            knots += dispiro.knots.len();
-            for (knot, expected_knot) in dispiro.knots.iter().zip(expected_knots) {
+            knot_count += ours.knots.len();
+            for (knot, expected_knot) in ours.knots.iter().zip(&expected.knots) {
                 let deviation = (knot.x - expected_knot.x)
                     .abs()
                     .max((knot.y - expected_knot.y).abs());
@@ -138,25 +211,22 @@ fn double_storey_matches_capture() {
             }
         }
 
-        // The expansion is what the solver consumes, so the port has to
-        // reproduce the build's sides too, not just the bi-knots.
-        let expected_expansions = expansions
-            .iter()
-            .find(|entry| entry["name"] == *name)
-            .expect("expansions entry")["expansions"]
+        // The expansion is what the solver consumes.
+        let expected_expansions = entry(expansions, name)["expansions"]
             .as_array()
             .expect("array");
         assert_eq!(
             expected_expansions.len(),
-            ours.len(),
+            our_nodes.len(),
             "{name}: expansion count"
         );
-        for (index, (dispiro, expected)) in ours.iter().zip(expected_expansions).enumerate() {
+        for (index, (node, expected)) in our_nodes.iter().zip(expected_expansions).enumerate() {
+            let ours = node_of(node);
             let result = lemmata_geom::di_spiro_expand(
                 kurbo::Affine::IDENTITY,
-                dispiro.contrast,
-                dispiro.closed,
-                &dispiro.knots,
+                ours.contrast,
+                ours.closed,
+                &ours.knots,
             );
             for (side, side_knots) in [
                 ("lhs", &result.lhs_untransformed),
@@ -181,11 +251,42 @@ fn double_storey_matches_capture() {
                 }
             }
         }
+
+        // A flip lives in the tree rather than in the knots, so the walk cannot
+        // see it. The outline's box can.
+        let their_box = bounding_box(
+            entry(contours, name)["contours"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|contour| contour.as_array().unwrap())
+                .map(|point| (point["x"].as_f64().unwrap(), point["y"].as_f64().unwrap())),
+        );
+        let our_box = bounding_box(
+            Geometry::Simplify {
+                gizmo: kurbo::Affine::IDENTITY,
+                geom: Box::new(ours.clone()),
+            }
+            .to_contours()
+            .into_iter()
+            .flatten()
+            .map(|point| (point.x, point.y)),
+        );
+        for (side, (our, their)) in [
+            ("left", (our_box.0, their_box.0)),
+            ("bottom", (our_box.1, their_box.1)),
+            ("right", (our_box.2, their_box.2)),
+            ("top", (our_box.3, their_box.3)),
+        ] {
+            assert!(
+                (our - their).abs() <= BOX_TOLERANCE,
+                "{name}: outline {side} is {our}, not {their}"
+            );
+        }
     }
     eprintln!(
-        "lower a: {} variants, {} knots, worst deviation {:.9} on {}",
+        "lower a: {} variants, {knot_count} knots, worst deviation {:.9} on {}",
         cases.len(),
-        knots,
         worst.0,
         worst.1
     );

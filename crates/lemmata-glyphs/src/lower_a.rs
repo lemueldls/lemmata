@@ -13,7 +13,7 @@
 // upstream's, where `ada` and `adb` are the two arch depths.
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
-use crate::control::Item;
+use crate::control::{Af, Item};
 use crate::letter_model::DivFrame;
 use crate::metrics::Metrics;
 use crate::shapes::{
@@ -23,6 +23,20 @@ use crate::shapes::{
 use crate::spiro_kit::{Dispiro, Kit};
 use kurbo::Vec2;
 use lemmata_geom::KnotType;
+
+/// What an `OBar` shape takes: the ring it sits in and the stroke it is drawn
+/// with.
+#[derive(Clone, Copy, Debug)]
+pub struct OBarRing {
+    pub top: f64,
+    pub bot: f64,
+    pub left: f64,
+    pub right: f64,
+    pub sw: f64,
+    pub fine: f64,
+    pub ada: f64,
+    pub adb: f64,
+}
 
 /// The hook styles `DoubleStorey` takes.
 pub const HOOK_SLAB_NONE: i32 = 0;
@@ -305,6 +319,138 @@ impl DoubleStorey<'_> {
 
         let _ = rise;
         self.kit.dispiro(items)
+    }
+
+    /// `OBarLeft.shape`: the flat-sided ring's left side.
+    #[must_use]
+    pub fn obar_left_shape(&self, ring: &OBarRing) -> Dispiro {
+        let metrics = self.metrics;
+        let params = self.arch_params();
+        let OBarRing {
+            top,
+            bot,
+            left,
+            right,
+            sw,
+            fine,
+            ada,
+            adb,
+        } = *ring;
+        let x = left + self.hsw_to_v(sw - fine);
+
+        let flat_side = |x: f64, ox: f64, af: Af| crate::shapes::FlatSide {
+            x,
+            d: bot,
+            u: top,
+            ada,
+            adb,
+            ox,
+            af,
+        };
+        let start = crate::shapes::flatside_ld(self.kit, &flat_side(x, 0.0, Vec::new()));
+        let middle =
+            crate::shapes::flatside_ru(self.kit, &flat_side(right, metrics.ox, Vec::new()));
+        let end = crate::shapes::flatside_ld(
+            self.kit,
+            &flat_side(x, 0.0, self.kit.widths_lhs(Some(fine))),
+        );
+
+        let arch_bottom = ArchArgs {
+            y: bot,
+            p: None,
+            sw,
+            compact: false,
+            o: metrics.o,
+            angle_pre: None,
+            angle_post: None,
+            sw_before: Some(fine),
+            sw_after: Some(sw),
+            lhs: true,
+        };
+        let arch_top = ArchArgs {
+            y: top,
+            sw_before: Some(sw),
+            sw_after: Some(fine),
+            ..arch_bottom
+        };
+
+        let mut items = vec![Item::Af(self.kit.widths_lhs(Some(fine)))];
+        items.extend(start.iter().cloned());
+        items.extend(arch(
+            self.kit,
+            &arch_bottom,
+            &crate::shapes::knot_of(start.last().expect("flatside item")),
+            &crate::shapes::knot_of(&middle[0]),
+            &params,
+        ));
+        items.extend(middle.iter().cloned());
+        items.extend(arch(
+            self.kit,
+            &arch_top,
+            &crate::shapes::knot_of(middle.last().expect("flatside item")),
+            &crate::shapes::knot_of(&end[0]),
+            &params,
+        ));
+        items.extend(end);
+        self.kit.dispiro(items)
+    }
+
+    /// `OBarRight.shape`: the left shape rotated half a turn about the ring.
+    #[must_use]
+    pub fn obar_right_shape(&self, ring: &OBarRing) -> lemmata_geom::Geometry {
+        let shape = self.obar_left_shape(ring);
+        let mid_x = crate::util::mix(ring.left, ring.right, 0.5);
+        let mid_y = crate::util::mix(ring.bot, ring.top, 0.5);
+        let flip = kurbo::Affine::translate((mid_x, mid_y))
+            * kurbo::Affine::scale_non_uniform(-1.0, -1.0)
+            * kurbo::Affine::translate((-mid_x, -mid_y));
+        lemmata_geom::Geometry::Transformed {
+            tf: flip,
+            geom: Box::new(shape.geometry(kurbo::Affine::IDENTITY)),
+        }
+    }
+
+    /// `VBar.r`.
+    #[must_use]
+    pub fn vbar_r(&self, x: f64, y_down: f64, y_up: f64, sw: f64) -> lemmata_geom::Geometry {
+        let heading = if y_down < y_up {
+            upward(self.metrics.hv_contrast)
+        } else {
+            downward(self.metrics.hv_contrast)
+        };
+        let x = x - self.hsw_to_v(0.5 * sw);
+        let items = vec![
+            Item::Af(self.kit.widths_center(Some(sw))),
+            self.kit
+                .knot(KnotType::Left, x, y_down, self.kit.heading(heading)),
+            self.kit
+                .knot(KnotType::Right, x, y_up, self.kit.heading(heading)),
+        ];
+        self.kit.dispiro(items).geometry(kurbo::Affine::IDENTITY)
+    }
+
+    /// `SingleStorey.FullBarBody` with `SeriflessBar`, which is
+    /// `singleStoreySerifless`.
+    #[must_use]
+    pub fn single_storey_serifless(&self, top: f64) -> Vec<lemmata_geom::Geometry> {
+        let metrics = self.metrics;
+        let sw = self.df.mvs;
+        let ada = self.df.arch_depth_a_of(metrics.small_arch_depth, Some(sw));
+        let adb = self.df.arch_depth_b_of(metrics.small_arch_depth, Some(sw));
+        let fine = metrics.shoulder_fine * (sw / metrics.stroke);
+        vec![
+            self.obar_right_shape(&OBarRing {
+                top,
+                bot: 0.0,
+                left: self.left_sb(),
+                right: self.right_sb(),
+                sw,
+                fine,
+                ada,
+                adb,
+            }),
+            self.vbar_r(self.right_sb(), 0.0, top, sw),
+        ]
     }
 
     /// `DoubleStorey.Serifless`: the union's two operands.
