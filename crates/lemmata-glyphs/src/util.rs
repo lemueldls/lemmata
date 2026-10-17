@@ -157,7 +157,8 @@ fn mod_(n: f64, d: f64) -> f64 {
 
 /// JavaScript's `Math.sign`, which returns zero for zero where Rust's `signum`
 /// returns one.
-fn js_sign(x: f64) -> f64 {
+#[must_use]
+pub fn js_sign(x: f64) -> f64 {
     if x > 0.0 {
         1.0
     } else if x < 0.0 {

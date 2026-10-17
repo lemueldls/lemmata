@@ -205,6 +205,10 @@ pub struct Metrics {
     pub geometry_stroke: f64,
     pub very_far: f64,
     pub tiny: f64,
+    /// Carried from the plan so shape code can call `stroke_width_blend`.
+    pub ref_stroke: f64,
+    pub canonical_stroke_width_min: f64,
+    pub canonical_stroke_width_max: f64,
 }
 
 /// The stroke-width advice from `weight-control.mjs`.
@@ -476,6 +480,9 @@ impl Metrics {
             operator_stroke: weight.advice_stroke(2.75, 1.0, 1.0),
             geometry_stroke: weight.advice_stroke(4.0, 1.0, 1.0),
             very_far: upm * 16.0,
+            ref_stroke: para.ref_stroke,
+            canonical_stroke_width_min: para.canonical_stroke_width_min,
+            canonical_stroke_width_max: para.canonical_stroke_width_max,
             tiny: 1.0 / 128.0,
         }
     }
@@ -513,6 +520,20 @@ impl Metrics {
             self.tan_slope,
             self.width,
             width,
+        )
+    }
+
+    /// `StrokeWidthBlend`: a value interpolated across the canonical stroke
+    /// range, scaled by the stroke relative to the reference.
+    #[must_use]
+    pub fn stroke_width_blend(&self, lo: f64, hi: f64, sw: Option<f64>) -> f64 {
+        let sw_ref = (sw.unwrap_or(self.stroke) / self.stroke) * self.ref_stroke;
+        crate::util::linreg(
+            self.canonical_stroke_width_min,
+            lo,
+            self.canonical_stroke_width_max,
+            hi,
+            sw_ref,
         )
     }
 

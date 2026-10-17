@@ -21,7 +21,9 @@
 pub mod control;
 pub mod glyph;
 pub mod letter_model;
+pub mod lower_a;
 pub mod metrics;
+pub mod shapes;
 pub mod spiro_kit;
 pub mod store;
 pub mod util;
@@ -78,6 +80,33 @@ pub fn contours(glyph: &Glyph) -> Vec<Vec<lemmata_geom::QuadifyPoint>> {
         geom: Box::new(glyph.geometry.clone()),
     }
     .to_contours()
+}
+
+/// Pre-order walk collecting the di-spiro nodes of a geometry tree.
+///
+/// The capture stores each glyph as one tree, and the shapes a definition
+/// builds are the di-spiro nodes in it, in the order the walk reaches them.
+pub fn collect_di_spiro<'a>(geometry: &'a Geometry, out: &mut Vec<&'a Geometry>) {
+    match geometry {
+        Geometry::DiSpiro { .. } => out.push(geometry),
+        Geometry::Combine(parts) => {
+            for part in parts {
+                collect_di_spiro(part, out);
+            }
+        }
+        Geometry::Boolean { operands, .. } => {
+            for operand in operands {
+                collect_di_spiro(operand, out);
+            }
+        }
+        Geometry::Transformed { geom, .. }
+        | Geometry::RemoveHoles { geom, .. }
+        | Geometry::Simplify { geom, .. }
+        | Geometry::Stroke { geom, .. }
+        | Geometry::Tagged(geom)
+        | Geometry::Radical(geom) => collect_di_spiro(geom, out),
+        _ => {}
+    }
 }
 
 struct Reader<'a> {

@@ -53,30 +53,6 @@ fn read_reference(suffix: &str) -> Value {
     .expect("parse reference")
 }
 
-/// Pre-order walk collecting di-spiro nodes, matching the capture's order.
-fn collect_di_spiro<'a>(geom: &'a Geometry, out: &mut Vec<&'a Geometry>) {
-    match geom {
-        Geometry::DiSpiro { .. } => out.push(geom),
-        Geometry::Combine(parts) => {
-            for part in parts {
-                collect_di_spiro(part, out);
-            }
-        }
-        Geometry::Boolean { operands, .. } => {
-            for operand in operands {
-                collect_di_spiro(operand, out);
-            }
-        }
-        Geometry::Transformed { geom, .. }
-        | Geometry::RemoveHoles { geom, .. }
-        | Geometry::Simplify { geom, .. }
-        | Geometry::Stroke { geom, .. }
-        | Geometry::Tagged(geom)
-        | Geometry::Radical(geom) => collect_di_spiro(geom, out),
-        _ => {}
-    }
-}
-
 fn path_from_ours(contours: &[Vec<Bez3>]) -> BezPath {
     let mut path = BezPath::new();
     for contour in contours {
@@ -165,7 +141,7 @@ fn expansions_match() {
     let mut nodes = 0usize;
     for (glyph, expected) in glyphs.iter().zip(reference) {
         let mut found = Vec::new();
-        collect_di_spiro(&glyph.geometry, &mut found);
+        lemmata_glyphs::collect_di_spiro(&glyph.geometry, &mut found);
         let expansions = expected["expansions"].as_array().unwrap();
         assert_eq!(found.len(), expansions.len(), "{}: node count", glyph.name);
         for (node, expected_node) in found.iter().zip(expansions) {
@@ -245,7 +221,7 @@ fn raw_solve_arcs_match() {
     let mut nodes = 0usize;
     for (glyph, expected) in glyphs.iter().zip(reference) {
         let mut found = Vec::new();
-        collect_di_spiro(&glyph.geometry, &mut found);
+        lemmata_glyphs::collect_di_spiro(&glyph.geometry, &mut found);
         let expansions = expected["expansions"].as_array().unwrap();
         for (node, expected_node) in found.iter().zip(expansions) {
             if expected_node["raw"].is_null() {

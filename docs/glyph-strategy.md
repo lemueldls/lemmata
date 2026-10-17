@@ -83,6 +83,23 @@ The numeric vocabulary is ported as `lemmata-glyphs::util`: `mix`, `barMixL`, `l
 
 The collection path is ported as `lemmata-glyphs::store`: `GlyphStore` and the save sink. A definition saves through the sink, which names the glyph, derives a `uniXXXX` name from a bare code point, refuses a duplicate, takes the advance width and the global transform from the metrics, and files the result. `reference/glyph-oracle/store-oracle.mjs` runs nine saves through upstream's own sink and store and `tests/glyph_store.rs` replays them, including a save the build filter skips, a forced save and a duplicate name. Exact.
 
+## The first definition
+
+`a.doubleStoreySerifless` is ported. It is `DoubleStorey.Serifless`, which RefA-Regular's `a` uses: `union(HookAndBar, Arc)`. The port is `lemmata-glyphs::shapes` (the helpers a definition calls) and `lemmata-glyphs::lower_a` (the two bodies and the variant's stroke advice), 791 lines, plus `tests/lower_a.rs`.
+
+`shapes.rs` carries `determineMixR`, `HookShape` and the `Arch` namespace from `common/shapes.ptl`, and the clamped arch depths from `meta/aesthetics.ptl`. `lower_a.rs` carries `HookAndBar`, `Arc` and `Sw`.
+
+`tests/lower_a.rs` compares the bi-knots of both `dispiro` sequences against the ones the build produced: 2 operands, 49 knots, worst deviation 0. Every coordinate, knot type and importance matches, and the proposed normals match in shape. That is the whole shape path, so the solver, the boolean stage and the outline all follow from a match here.
+
+Two things the layer did not have and the port needed:
+
+- `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
+- `FunctionInterpolator`. Upstream's `HookStart` and `Arch.lhs`/`Arch.rhs` are interpolators that read the knots either side of them when the flattener runs. A definition writes those neighbours itself, one line above and one below, so the port passes them in directly and returns the resolved knots. The arc blends the arch emits stay interpolators for the flattener. This avoids teaching the flattener to let an interpolator move its neighbours, which upstream's `HookShape` does: it shifts the terminal knot it attaches to and gives it a heading. The port returns that knot and the caller substitutes it.
+
+The capture is the oracle for this layer. PTL functions cannot be imported into JavaScript the way the geometry and kit modules can, so the only way to run upstream's own code is a full build, and the capture already is one.
+
+What remains of this file: the single-storey bodies (`OBarRight` and its variants, and the bar shapes), the other hook styles, and the glyphs derived from `a` (turned, script, retroflex, accented).
+
 What remains: the dependency manager's block half and `relation.mjs`, which order glyphs and drive subsetted rebuilds rather than outlines. After that the definitions themselves, which pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), part of the 60,020 and amortized across glyphs.
 
 ## How the measurement was taken
