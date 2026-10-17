@@ -32,16 +32,24 @@ Worth knowing before tightening these numbers: Iosevka's exported Bezier drawing
 - our union's boundary stays within 2.12 font units of those strips,
 - against Iosevka's union the gap reaches 33 font units on one three-edge closed profile. That is two boolean engines disagreeing about near-tangential overlaps, not a difference in the strips, which match exactly. Overlap removal has its own tests in `boolean.rs`.
 
+## Stroke expansion
+
+`crates/lemmata-geom/src/stroke.rs` ports `stroke.mjs` with `OffsetCurve` and `RoundCapCurve` from `curve-util.mjs`, and the cubic fitter from typo-geom's `shape-to-bez3`. Each contour is offset to both sides, gaps between offset arcs become round caps, non-cubic arcs are fitted to cubics, and the sides are unioned. With `inside`, the result is intersected with the original shape. `boolean.rs` supplies the union and intersection.
+
+`tests/stroke_expand.rs` covers four contours in `corpus/stroke.json` (rectangle outside and inside, a circle, a triangle with sharp corners):
+
+- the fitted offsets match Iosevka to 1e-6,
+- the unioned and clipped shape matches to 4.2e-5 font units, measured as point-to-curve distance.
+
 ## Overlap removal
 
 `crates/lemmata-geom/src/boolean.rs` wraps linesweeper for union, intersection and self-overlap removal on kurbo paths. Iosevka uses typo-geom on an integer grid for the same job, so the two agree within that grid's resolution rather than exactly.
 
 ## Not ported yet
 
-- The stroke expander, `stroke.mjs` with `OffsetCurve` and `RoundCapCurve`, at 972 calls.
 - Quadratic conversion, `quadify.mjs`, for TrueType output.
 
-Each has a matching upstream module, and the differential harness used above extends to them.
+It is the last primitive before the geometry seam is complete.
 
 ## Captured fixtures
 
