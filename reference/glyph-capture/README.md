@@ -14,15 +14,65 @@ Apply two edits to a scratch copy of `vendor/Iosevka`:
 
 2. Append `dump.mjs` to the end of the same file.
 
-Then build with the capture enabled:
+Then build with the capture enabled. The set is the one the tests compare
+against: every variant `lower-a.ptl` builds, plus the letters, digits and
+punctuation the other suites walk. A capture missing one of them fails
+`crates/lemmata-glyphs/tests/lower_a.rs` with its name.
 
-```
+```sh
 IOSEVKA_BUILD_DIR=/tmp/opencode/iosevka-build
 LEMMATA_GLYPH_DUMP=/tmp/opencode/glyphs.bin
 LEMMATA_GLYPH_WIDTH=500
-LEMMATA_GLYPH_CODEPOINTS=32,48,49,97,98,99
+LEMMATA_GLYPH_SET='a,a.crossing,a.doubleStoreyFlatBottomSerifed,\
+a.doubleStoreyFlatBottomSerifless,\
+a.doubleStoreyHookInwardSerifedFlatBottomSerifed,\
+a.doubleStoreyHookInwardSerifedFlatBottomSerifless,\
+a.doubleStoreyHookInwardSerifedSerifed,\
+a.doubleStoreyHookInwardSerifedSerifless,\
+a.doubleStoreyHookInwardSerifedTailed,\
+a.doubleStoreyHookInwardSerifedToothlessCorner,\
+a.doubleStoreyHookInwardSerifedToothlessRounded,a.doubleStoreySerifed,\
+a.doubleStoreySerifless,a.doubleStoreyTailed,\
+a.doubleStoreyToothlessCorner,a.doubleStoreyToothlessRounded,\
+a.singleStoreyDoubleSerifed,a.singleStoreyEarlessCornerSerifed,\
+a.singleStoreyEarlessCornerSerifless,\
+a.singleStoreyEarlessCornerTailed,a.singleStoreyEarlessRoundedSerifed,\
+a.singleStoreyEarlessRoundedSerifless,\
+a.singleStoreyEarlessRoundedTailed,a.singleStoreyFlatTopDoubleSerifed,\
+a.singleStoreyFlatTopSerifed,a.singleStoreyFlatTopSerifless,\
+a.singleStoreyFlatTopTailed,a.singleStoreyFlatTopTailedSerifed,\
+a.singleStoreySerifed,a.singleStoreySerifless,a.singleStoreyTailed,\
+a.singleStoreyTailedSerifed,a.singleStoreyTopCutSerifed,\
+a.singleStoreyTopCutSerifless,a.singleStoreyTopCutTailed,\
+aCap.singleStoreyDoubleSerifed,aCap.singleStoreyEarlessCornerSerifed,\
+aCap.singleStoreyEarlessCornerSerifless,\
+aCap.singleStoreyEarlessCornerTailed,\
+aCap.singleStoreyEarlessRoundedSerifed,\
+aCap.singleStoreyEarlessRoundedSerifless,\
+aCap.singleStoreyEarlessRoundedTailed,\
+aCap.singleStoreyFlatTopDoubleSerifed,aCap.singleStoreyFlatTopSerifed,\
+aCap.singleStoreyFlatTopSerifless,aCap.singleStoreyFlatTopTailed,\
+aCap.singleStoreyFlatTopTailedSerifed,aCap.singleStoreySerifed,\
+aCap.singleStoreySerifless,aCap.singleStoreyTailed,\
+aCap.singleStoreyTailedSerifed,aCap.singleStoreyTopCutSerifed,\
+aCap.singleStoreyTopCutSerifless,aCap.singleStoreyTopCutTailed,\
+aHalf.doubleStoreyFlatBottomSerifed,\
+aHalf.doubleStoreyFlatBottomSerifless,aHalf.doubleStoreySerifed,\
+aHalf.doubleStoreySerifless,aHalf.doubleStoreyTailed,\
+aHalf.doubleStoreyToothlessCorner,aHalf.doubleStoreyToothlessRounded,\
+ampersand,asciiDoubleQuote,asciiSingleQuote,asterisk,at,b,c,colon,\
+comma,d,dollar,e,eight.lnum,equal,exclam,f,five.lnum,four.lnum,g,\
+greater,h,hyphen,i,j,k,l,less,m,n,nine.lnum,numberSign,o,one.lnum,p,\
+parenLeft,parenRight,percent,period,plus,q,question,r,s,semicolon,\
+seven.lnum,six.lnum,slash,space,t,three.lnum,two.lnum,u,v,w,x,y,z,\
+zero.lnum'
 npm run build -- ttf-unhinted::RefA
 ```
+
+The plan must hold only the upright slope. `reference/private-build-plans.toml`
+gives RefA an italic slope too, both are 500 units wide, and both pass the width
+guard, so the dump lands on whichever the build writes last. Build a plan with
+the italic slope removed.
 
 `LEMMATA_GLYPH_DUMP` is the binary output path, `LEMMATA_GLYPH_SET` selects by glyph name and `LEMMATA_GLYPH_CODEPOINTS` by codepoint. `LEMMATA_GLYPH_WIDTH` pins the advance width, because a plan can emit more than one font and the dump otherwise lands on whichever is written last.
 
