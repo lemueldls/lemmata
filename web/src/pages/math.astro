@@ -17,16 +17,18 @@ import Base from "../layouts/Base.astro";
 ---
 
 <Base title="Equations">
-  <h1>Equations</h1>
-  <p>
-    These are set in the font this page built from the math glyph set. The
-    MathML is editable: change an equation and it is re-rendered in the same
-    font, in the browser, with no upload.
-  </p>
-  <p id="status">Building…</p>
-  <textarea id="source" rows="12" spellcheck="false">{corpus}</textarea>
-  <div id="equations"></div>
-  <noscript><p>The equations need JavaScript: the font is built in the page.</p></noscript>
+  <div class="wrap page">
+    <h1>Equations</h1>
+    <p>
+      These are set in the font this page built from the math glyph set. The
+      MathML is editable: change an equation and it is re-rendered in the same
+      font, in the browser, with no upload.
+    </p>
+    <p id="status">Building…</p>
+    <textarea id="source" rows="12" spellcheck="false">{corpus}</textarea>
+    <div id="equations"></div>
+    <noscript><p>The equations need JavaScript: the font is built in the page.</p></noscript>
+  </div>
 
   <style>
     /* The equations are the point: they are set in the font the page built.
@@ -36,6 +38,7 @@ import Base from "../layouts/Base.astro";
        `math` element is what puts it on its own line. */
     #equations { font-family: Lemmata, serif; font-size: 24px; }
     #equations math { margin: 0.5rem 0; }
+    #status { color: var(--accent); font-size: var(--step--1); }
   </style>
 
   <script>
@@ -113,6 +116,7 @@ import Base from "../layouts/Base.astro";
       await face.load();
       document.fonts.add(face);
       await document.fonts.load("16px Lemmata");
+      document.documentElement.dataset.face = "ready";
 
       render();
       source.addEventListener("input", render);

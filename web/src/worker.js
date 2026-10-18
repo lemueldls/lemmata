@@ -2,7 +2,9 @@
 //
 //   page -> worker  { capture, plan }        build
 //   worker -> page  { phase, done, total }   progress
+//   page -> worker  { ask: "plan" }          the reference plan
 //   page -> worker  { cancel }               stop
+//   worker -> page  { plan }                 the reference plan
 //   worker -> page  { bytes } | { error }    the font, or why not
 //
 // One message is missing in practice. `build_font` is a synchronous call, so a
@@ -14,7 +16,7 @@
 // The build stays on the worker thread, which is the point: a full set is tens
 // of thousands of glyphs and would freeze the page.
 
-import init, { build_font } from "lemmata-web";
+import init, { build_font, default_plan } from "lemmata-web";
 
 // The worker has its own wasm instance, so it initialises its own glue.
 // Importing `build_font` without awaiting this is how the first browser run
@@ -34,6 +36,12 @@ self.onmessage = async (event) => {
 
   if (cancelled) {
     self.postMessage({ error: "cancelled" });
+    return;
+  }
+
+  if (message.ask === "plan") {
+    await ready;
+    self.postMessage({ plan: default_plan() });
     return;
   }
 

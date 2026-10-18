@@ -3,26 +3,28 @@ import Base from "../layouts/Base.astro";
 ---
 
 <Base title="Generate">
-  <h1>Generate</h1>
-  <p>
-    The plan below is the font's metrics. Every key defaults, so this is the
-    reference plan; change one and the tables follow. The outlines come from a
-    recorded glyph set, so they do not change yet, which is why the preview
-    below is a specimen of the font just built rather than a redraw.
-  </p>
-  <div class="row">
-    <button id="build">Build a font</button>
-    <a id="download" hidden download>Download</a>
-  </div>
-  <textarea id="plan" rows="8" spellcheck="false"></textarea>
-  <pre id="status">Starting the worker…</pre>
+  <div class="wrap page">
+    <h1>Generate</h1>
+    <p>
+      The plan below is the font's metrics. Every key defaults, so this is the
+      reference plan; change one and the tables follow. The outlines come from a
+      recorded glyph set, so they do not change yet, which is why the preview
+      below is a specimen of the font just built rather than a redraw.
+    </p>
+    <div class="row">
+      <button class="btn btn--primary" id="build">Build a font</button>
+      <a class="btn" id="download" hidden download>Download</a>
+    </div>
+    <textarea id="plan" rows="8" spellcheck="false"></textarea>
+    <pre id="status">Starting the worker…</pre>
 
-  <h2>Specimen</h2>
-  <p class="specimen" id="specimen">
-    The quick brown fox jumps over the lazy dog<br />
-    0123456789 ():;,."'*/%+#=&lt;&gt;
-  </p>
-  <pre id="metrics">Metrics appear once a font is built.</pre>
+    <h2>Specimen</h2>
+    <p class="specimen" id="specimen">
+      the quick brown fox jumps over the lazy dog<br />
+      0123456789 ():;,."'*/%+#=&lt;&gt;
+    </p>
+    <pre id="metrics">Metrics appear once a font is built.</pre>
+  </div>
 
   <script>
     import init, { default_plan } from "lemmata-web";
@@ -43,7 +45,7 @@ import Base from "../layouts/Base.astro";
 
     const worker = new GenerateWorker();
     // Base-relative, so the site works served at any root: the harness serves
-    // it from `www/dist` and a deploy serves it from `/`.
+    // it from `web/dist` and a deploy serves it from `/`.
     const capture = new Uint8Array(await (await fetch(`${import.meta.env.BASE_URL}glyphs.bin`)).arrayBuffer());
 
     const say = (text) => { status.textContent = text; };
@@ -69,10 +71,13 @@ import Base from "../layouts/Base.astro";
 
         // The specimen is the font just built, registered under the family the
         // font names, so it is the output being shown and not a placeholder.
+        // Registering it also sets the page in it, which is the same swap the
+        // landing makes.
         const face = new FontFace("Lemmata", bytes.buffer);
         face.load().then((loaded) => {
           document.fonts.add(loaded);
           specimen.style.fontFamily = "Lemmata";
+          document.documentElement.dataset.face = "ready";
         });
         metricsOut.textContent = `${bytes.length.toLocaleString()} bytes, built in ${message.elapsed.toFixed(0)} ms`;
         buildButton.disabled = false;

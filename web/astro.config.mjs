@@ -7,4 +7,7 @@ import { defineConfig } from "astro/config";
 // the browser, so nothing renders at request time (r[site.static]).
 export default defineConfig({
   compressHTML: true,
+  // `golden/parity.json` and `corpus/equations.mathml` sit outside `web/`, and
+  // the dev server only serves from inside the project root without this.
+  vite: { server: { fs: { allow: [".."] } } },
 });

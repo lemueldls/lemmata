@@ -1,20 +1,545 @@
 ---
+// The landing. The argument is a build: the page builds the font it shows,
+// hashes the result against a recorded pair, and reads every number back out of
+// the font's own tables.
+//
+// The interface is the system monospace rather than the build, because the
+// capture carries the lowercase letters, the digits and some punctuation and
+// nothing else. The wordmark and the specimen are set in the build, and the
+// specimen says which of its characters the build can actually draw.
 import Base from "../layouts/Base.astro";
+import golden from "../../../golden/parity.json";
+import corpus from "../../../corpus/equations.mathml?raw";
 
 const base = import.meta.env.BASE_URL;
+
+// The samples are content, so they are in the markup. The script only moves
+// them in and out of the field, and every line is written in the characters the
+// capture carries: no capitals, no underscore, no braces.
+const samples = {
+  code: `// one plan in, one font out
+let metrics = plan.metrics()?;
+let font = build(&glyphs, &metrics)?;`,
+  prose: `the quick brown fox jumps over the lazy dog
+five or six big planes flew quickly overhead
+0123456789 ():;,."'*/%+#=<>&@$`,
+  shell: `$ cargo xtask parity
+wasm matches the native build, byte for byte
+$ pnpm --dir web build
+3 pages built in 244 ms`,
+};
+
+// The spellings the glyph source names for `a`. One of them is what the
+// capture carries, which is why all three buttons draw the same letter.
+const variants = [
+  { name: "a", state: "built" },
+  { name: "a.doubleStoreySerifed", state: "pending" },
+  { name: "a.singleStoreySerifless", state: "pending" },
+];
+
+// The counts are the ones `docs/math.md` records.
+const ledger = [
+  { name: "Metrics", state: "built", note: "Every key in the plan reaches the font's tables." },
+  { name: "Parameters", state: "built", note: "Upstream's parameter files are read as they are." },
+  { name: "Outlines", state: "partial", note: "Three spellings of a are ported and match the build to the unit. The rest come from the capture." },
+  { name: "Math constants", state: "built", note: "Every constant the specification names, calibrated against New Computer Modern." },
+  { name: "Italic corrections", state: "built", note: "Measured from the ink of all 1076 letters, with top accent attachments." },
+  { name: "Stretchy delimiters", state: "partial", note: "Sixteen names, thirteen of them assemble from their own bands. Three want a drawn extender." },
+  { name: "Script style", state: "pending", note: "Needs the script letters and an ssty feature." },
+  { name: "Math kerning", state: "pending", note: "Unwritten. A simple equation does not need it." },
+  { name: "Horizontal constructions", state: "pending", note: "Unwritten. A fraction's bar does not grow yet." },
+];
 ---
 
 <Base title="A typeface factory in the browser">
-  <h1>Lemmata</h1>
-  <p>
-    A typeface factory written in Rust, meant to run in the browser and on the
-    command line from the same core, and to produce a full OpenType MATH table
-    rather than only the letters.
-  </p>
-  <p>
-    The <a href={`${base}generate/`}>generator</a> builds a font locally, in a
-    worker, with no upload, and the <a href={`${base}math/`}>equations page</a>
-    sets MathML in what it just built. What it builds today is narrow and honest: a plan
-    reaches the font's metrics, and the outlines come from a recorded glyph set.
-  </p>
+  <section class="hero">
+    <div class="wrap">
+      <p class="kicker">One Rust core · browser and command line</p>
+      <div class="hero__stage">
+        <h1 class="wordmark">lemmata<span class="probe" aria-hidden="true"></span></h1>
+        <div class="rules" id="rules" hidden>
+          <i class="rule rule--asc"><span>ascender <b id="rule-asc">…</b></span></i>
+          <i class="rule rule--x"><span>x-height <b id="rule-x">…</b></span></i>
+          <i class="rule rule--base"><span>baseline</span></i>
+        </div>
+      </div>
+      <p class="lede">
+        One plan in, one font out. The build runs in this tab, and the same core
+        builds the same bytes on the command line.
+      </p>
+      <div class="actions">
+        <a class="btn btn--primary" href={`${base}generate/`}>Open the generator</a>
+        <a class="btn" href="#plan">Read the plan</a>
+      </div>
+      <p class="status" id="build-status" data-state="note">Starting the builder…</p>
+    </div>
+  </section>
+
+  <section class="section" id="proof">
+    <div class="wrap section__grid">
+      <p class="label">01 / Proof</p>
+      <div class="section__body">
+        <h2>The build is the argument</h2>
+        <p>
+          A claim about a font is hard to check. A checksum is not. This page
+          hashes what it just built, sets the number beside the one the native
+          build recorded, and reads the metrics back out of the font's tables.
+        </p>
+        <div class="cols">
+          <div class="panel">
+            <div class="panel__head">
+              <span>Checksums</span>
+              <span class="chip" id="verdict" data-state="pending">hashing</span>
+            </div>
+            <div class="panel__body">
+              <dl class="rows">
+                <div class="rows__row">
+                  <dt>capture</dt>
+                  <dd id="sum-capture" data-hash={golden.capture} title={golden.capture}>
+                    {golden.capture.slice(0, 16)}…
+                  </dd>
+                </div>
+                <div class="rows__row">
+                  <dt>built here</dt>
+                  <dd id="sum-built">…</dd>
+                </div>
+                <div class="rows__row">
+                  <dt>recorded build</dt>
+                  <dd id="sum-recorded" data-hash={golden.font} title={golden.font}>
+                    {golden.font.slice(0, 16)}…
+                  </dd>
+                </div>
+              </dl>
+              <p class="note" id="parity-note">Waiting for the build.</p>
+              <p class="note">
+                rustc {golden.toolchain.rustc} · wasm-bindgen {golden.toolchain["wasm-bindgen"]} ·
+                upstream {golden.upstream.slice(0, 7)}
+              </p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel__head"><span>Read from the font</span></div>
+            <div class="panel__body">
+              <dl class="rows">
+                <div class="rows__row"><dt>units per em</dt><dd id="measure-upem">…</dd></div>
+                <div class="rows__row"><dt>glyphs drawn</dt><dd id="measure-glyphs">…</dd></div>
+                <div class="rows__row"><dt>characters mapped</dt><dd id="measure-mapped">…</dd></div>
+                <div class="rows__row"><dt>x-height, x</dt><dd id="measure-x">…</dd></div>
+                <div class="rows__row"><dt>ascender, l</dt><dd id="measure-asc">…</dd></div>
+                <div class="rows__row"><dt>descender, p</dt><dd id="measure-desc">…</dd></div>
+                <div class="rows__row"><dt>advance, x</dt><dd id="measure-advance">…</dd></div>
+              </dl>
+              <p class="note">
+                In font units, out of the tables of the font just built. The ink
+                is the bounding box the outline carries.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="specimen">
+    <div class="wrap section__grid">
+      <p class="label">02 / Specimen</p>
+      <div class="section__body">
+        <h2>A specimen you can edit</h2>
+        <p>
+          The plan decides the metrics, and the outlines come from a recorded
+          glyph set: the lowercase letters, the digits and some punctuation, and
+          nothing else. So the sample below is the font this page just built,
+          and the line under it says which of the sample's characters that font
+          can draw. Type a capital and it will tell you.
+        </p>
+        <div class="panel">
+          <div class="panel__head">
+            <div class="tabs">
+              <button class="tab" type="button" data-sample="code" aria-selected="true">code</button>
+              <button class="tab" type="button" data-sample="prose">prose</button>
+              <button class="tab" type="button" data-sample="shell">shell</button>
+            </div>
+            <label class="size">
+              size
+              <input id="size" type="range" min="12" max="44" step="1" value="20" />
+              <b id="size-value">20</b>
+            </label>
+          </div>
+          <textarea id="sample" class="sample" rows="6" spellcheck="false">{samples.code}</textarea>
+          <div class="panel__foot">
+            <p class="status" id="sample-status" data-state="note">Waiting for the build…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="variants">
+    <div class="wrap section__grid">
+      <p class="label">03 / Variants</p>
+      <div class="section__body">
+        <h2>One letter, three spellings</h2>
+        <p>
+          Most letters can be drawn more than one way, and the glyph source
+          names three spellings of <code>a</code>. This build carries one, so
+          the buttons draw the same letter and say what picking one would
+          change.
+        </p>
+        <div class="variants">
+          {variants.map((variant) => (
+            <button
+              class="variant"
+              type="button"
+              data-variant={variant.name}
+              data-state={variant.state}
+              aria-pressed={variant.state === "built"}
+            >
+              <b>a</b>
+              <span>{variant.name}</span>
+              <small>{variant.state === "built" ? "in this build" : "not in this build"}</small>
+            </button>
+          ))}
+        </div>
+        <p class="status" id="variant-status" data-state="note">
+          Pick a spelling to see what this build carries.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="plan">
+    <div class="wrap section__grid">
+      <p class="label">04 / Plan</p>
+      <div class="section__body">
+        <h2>The plan is the input</h2>
+        <p>
+          Every key defaults, so this is the reference plan, and every key it
+          carries reaches the font. The command line takes the same object with
+          <code>--plan</code>.
+        </p>
+        <div class="cols">
+          <div class="panel">
+            <div class="panel__head">
+              <span>plan.json</span>
+              <button class="chip" id="copy-plan" type="button">copy</button>
+            </div>
+            <pre class="code" id="plan-code">loading the builder…</pre>
+          </div>
+          <div class="panel">
+            <div class="panel__head"><span>What the plan reaches</span></div>
+            <div class="panel__body ledger">
+              {ledger.map((row) => (
+                <div class="ledger__row">
+                  <span class="ledger__name">{row.name}</span>
+                  <span class="chip" data-state={row.state}>{row.state}</span>
+                  <span class="ledger__note">{row.note}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="equations">
+    <div class="wrap section__grid">
+      <p class="label">05 / Equations</p>
+      <div class="section__body">
+        <h2>Equations, too</h2>
+        <p>
+          The same build writes the MATH table: the constants, the italic
+          corrections and the delimiters that stretch. This one is set in a
+          second face, built from the math glyph set when the section comes into
+          view.
+        </p>
+        <div class="panel">
+          <div class="panel__body">
+            <div class="equation" id="equation"></div>
+          </div>
+          <div class="panel__foot">
+            <p class="status" id="equation-status" data-state="note">
+              Waiting for the section to come into view.
+            </p>
+            <a class="btn" href={`${base}math/`}>Set your own</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div hidden id="sample-prose">{samples.prose}</div>
+  <div hidden id="sample-shell">{samples.shell}</div>
+  <template id="corpus" set:html={corpus}></template>
+
+  <script>
+    import Build from "../worker.js?worker";
+    import {
+      advance,
+      cmap,
+      coverage,
+      glyphCount,
+      ink,
+      isGzipped,
+      inflate,
+      registerFace,
+      sha256Hex,
+      short,
+      unitsPerEm,
+    } from "../lib/font.js";
+
+    const $ = (selector) => document.querySelector(selector);
+    const base = import.meta.env.BASE_URL;
+    const say = (element, state, text) => {
+      element.dataset.state = state;
+      element.textContent = text;
+    };
+
+    // One worker serves the whole page: the plan, the interface face and the
+    // math face. Requests are serialised, so one pending reply is enough.
+    const worker = new Build();
+    let pending = null;
+    worker.addEventListener("message", (event) => {
+      const reply = pending;
+      if (!reply || !(event.data.bytes || event.data.error)) return;
+      pending = null;
+      reply(event.data);
+    });
+
+    const build = (capture, plan) =>
+      new Promise((resolve, reject) => {
+        pending = (reply) =>
+          reply.error ? reject(new Error(reply.error)) : resolve(reply);
+        worker.postMessage({ capture, plan });
+      });
+
+    const askPlan = () =>
+      new Promise((resolve) => {
+        const once = (event) => {
+          if (!event.data.plan) return;
+          worker.removeEventListener("message", once);
+          resolve(event.data.plan);
+        };
+        worker.addEventListener("message", once);
+        worker.postMessage({ ask: "plan" });
+      });
+
+    // The samples are content, so the field already holds the first one.
+    const sampleField = $("#sample");
+    const samples = {
+      code: sampleField.value,
+      prose: $("#sample-prose").textContent,
+      shell: $("#sample-shell").textContent,
+    };
+
+    let page = null;
+    const sampleStatus = $("#sample-status");
+    const updateCoverage = () => {
+      if (!page) return;
+      const { total, missing } = coverage(page.map, sampleField.value);
+      say(
+        sampleStatus,
+        missing.length ? "note" : "ok",
+        missing.length
+          ? `${total - missing.length} of ${total} characters in this sample are in the font · missing ${missing.join(" ")}`
+          : `all ${total} characters in this sample are in the font`,
+      );
+    };
+
+    for (const tab of document.querySelectorAll(".tab")) {
+      tab.addEventListener("click", () => {
+        for (const other of document.querySelectorAll(".tab")) {
+          other.setAttribute("aria-selected", String(other === tab));
+        }
+        sampleField.value = samples[tab.dataset.sample];
+        updateCoverage();
+      });
+    }
+
+    const size = $("#size");
+    const applySize = () => {
+      sampleField.style.fontSize = `${size.value}px`;
+      $("#size-value").textContent = size.value;
+    };
+    size.addEventListener("input", applySize);
+    applySize();
+    sampleField.addEventListener("input", updateCoverage);
+
+    const variantStatus = $("#variant-status");
+    for (const button of document.querySelectorAll(".variant")) {
+      button.addEventListener("click", () => {
+        const name = button.dataset.variant;
+        const inBuild = button.dataset.state === "built";
+        say(
+          variantStatus,
+          inBuild ? "ok" : "note",
+          inBuild
+            ? `${name} is the spelling this build draws.`
+            : `${name} is named in the glyph source and not in this build, so the letter does not change.`,
+        );
+      });
+    }
+
+    // The rules are the font's own numbers, drawn where they sit in the
+    // wordmark. The baseline comes from a probe sitting on it rather than from
+    // the ascent and the half-leading, which is the arithmetic that put the
+    // first version of these rules above the letters.
+    const drawRules = (metrics) => {
+      const word = $(".wordmark");
+      const range = document.createRange();
+      range.selectNode(word.firstChild);
+      if (range.getClientRects().length !== 1) return;
+
+      const stage = $(".hero__stage");
+      const fontSize = Number.parseFloat(getComputedStyle(word).fontSize);
+      const scale = fontSize / 1000;
+      const baseline =
+        $(".probe").getBoundingClientRect().bottom -
+        stage.getBoundingClientRect().top;
+      const place = (selector, top) => { $(selector).style.top = `${top}px`; };
+
+      if (metrics.ascender !== null) {
+        place(".rule--asc", baseline - metrics.ascender * scale);
+      }
+      if (metrics.xHeight !== null) {
+        place(".rule--x", baseline - metrics.xHeight * scale);
+      }
+      place(".rule--base", baseline);
+      $("#rule-asc").textContent = metrics.ascender ?? "?";
+      $("#rule-x").textContent = metrics.xHeight ?? "?";
+      $("#rules").hidden = false;
+    };
+
+    const status = $("#build-status");
+    const planCode = $("#plan-code");
+    const captureRow = $("#sum-capture");
+    const builtRow = $("#sum-built");
+    const recordedRow = $("#sum-recorded");
+    const verdict = $("#verdict");
+    let planText = "{}";
+
+    const copy = $("#copy-plan");
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(planText);
+        copy.textContent = "copied";
+      } catch {
+        copy.textContent = "select it";
+      }
+      setTimeout(() => { copy.textContent = "copy"; }, 1400);
+    });
+
+    try {
+      const plan = JSON.parse(await askPlan());
+      planText = JSON.stringify(plan);
+      planCode.innerHTML = [
+        "{",
+        ...Object.entries(plan).map(
+          ([key, value]) =>
+            `  <span class="k">"${key}"</span>: <span class="n">${value}</span>`,
+        ),
+        "}",
+      ].join(",\n").replace(",\n}", "\n}");
+
+      const capture = new Uint8Array(
+        await (await fetch(`${base}glyphs.bin`)).arrayBuffer(),
+      );
+      const captureHash = await sha256Hex(capture);
+      captureRow.textContent = short(captureHash);
+      captureRow.title = captureHash;
+
+      const built = await build(capture, planText);
+      const bytes = new Uint8Array(built.bytes);
+      const builtHash = await sha256Hex(bytes);
+      const matchesCapture = captureHash === captureRow.dataset.hash;
+      const matchesBuild = builtHash === recordedRow.dataset.hash;
+      const drawn = glyphCount(bytes) ?? 0;
+
+      builtRow.textContent = short(builtHash);
+      builtRow.title = builtHash;
+      verdict.textContent = matchesBuild ? "byte-identical" : "differs";
+      verdict.dataset.state = matchesBuild ? "ok" : "bad";
+      $("#parity-note").textContent =
+        `${matchesCapture ? "capture matches" : "capture differs"} · ` +
+        `${matchesBuild ? "the built font matches the recorded build" : "the built font differs from the recorded build"}`;
+      say(
+        status,
+        matchesBuild ? "ok" : "bad",
+        `built in ${built.elapsed.toFixed(0)} ms · ${drawn.toLocaleString()} glyphs · ` +
+          `${bytes.length.toLocaleString()} bytes · sha256 ${short(builtHash, 12)}`,
+      );
+
+      await registerFace(bytes, "Lemmata");
+      document.documentElement.dataset.face = "ready";
+
+      const map = cmap(bytes);
+      const metrics = {
+        upem: unitsPerEm(bytes),
+        drawn,
+        mapped: map.size,
+        xHeight: ink(map, bytes, "x")?.yMax ?? null,
+        ascender: ink(map, bytes, "l")?.yMax ?? null,
+        descender: ink(map, bytes, "p")?.yMin ?? null,
+        advance: advance(map, bytes, "x"),
+      };
+      const rows = {
+        "#measure-upem": metrics.upem,
+        "#measure-glyphs": metrics.drawn,
+        "#measure-mapped": metrics.mapped,
+        "#measure-x": metrics.xHeight,
+        "#measure-asc": metrics.ascender,
+        "#measure-desc": metrics.descender,
+        "#measure-advance": metrics.advance,
+      };
+      for (const [selector, value] of Object.entries(rows)) {
+        $(selector).textContent =
+          value === null || value === undefined ? "not in the font" : `${value}`;
+      }
+      drawRules(metrics);
+
+      page = { map };
+      updateCoverage();
+    } catch (error) {
+      say(status, "bad", `The build failed: ${error.message ?? error}`);
+    }
+
+    // The math face is 400 KB compressed and only one section shows it, so it
+    // is built when that section is a screen away.
+    const equationStatus = $("#equation-status");
+    const observer = new IntersectionObserver(async (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      try {
+        say(equationStatus, "note", "Building the math face…");
+        const packed = new Uint8Array(
+          await (await fetch(`${base}math.bin.gz`)).arrayBuffer(),
+        );
+        const raw = isGzipped(packed) ? await inflate(packed) : packed;
+        const math = await build(raw, planText);
+        await registerFace(new Uint8Array(math.bytes), "Lemmata Math");
+
+        // The corpus sits in a template, and the template's contents are
+        // already parsed: taking the equation from there skips a second parse
+        // and the import that came with it.
+        const equations = [...$("#corpus").content.querySelectorAll("math")];
+        if (equations.length === 0) {
+          throw new Error("the corpus in the page carries no equations");
+        }
+        const pick =
+          equations.find((node) => node.textContent.includes("\u222B")) ??
+          equations[0];
+        const holder = $("#equation");
+        holder.append(pick);
+        holder.dataset.face = "ready";
+        say(
+          equationStatus,
+          "ok",
+          `Ready. ${equations.length} in the corpus, this one set in the font just built.`,
+        );
+      } catch (error) {
+        say(equationStatus, "bad", `The math face failed: ${error.message ?? error}`);
+      }
+    }, { rootMargin: "300px" });
+    observer.observe($("#equations"));
+  </script>
 </Base>

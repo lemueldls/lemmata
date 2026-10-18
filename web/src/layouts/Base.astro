@@ -1,11 +1,24 @@
 ---
-// One shell for the site. The styles are inline because the site is small and a
-// stylesheet would be a second thing to serve.
+// One shell for the site: the head, the masthead, the footer, the theme and the
+// keyboard shortcuts.
+//
+// The theme is decided by an inline script before the stylesheet applies. A
+// swap after paint shows the other theme for a frame, which is the one thing a
+// toggle cannot fix afterwards.
+import "../styles/site.css";
+
 interface Props {
   title: string;
+  description?: string;
 }
-const { title } = Astro.props;
+
+const {
+  title,
+  description = "A typeface factory that builds fonts in the browser from one Rust core.",
+} = Astro.props;
 const base = import.meta.env.BASE_URL;
+const on = (route: string) =>
+  Astro.url.pathname.replace(base, "").startsWith(route) ? "page" : undefined;
 ---
 
 <!doctype html>
@@ -14,39 +27,109 @@ const base = import.meta.env.BASE_URL;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} — Lemmata</title>
-    <style is:global>
-      :root { color-scheme: light dark; }
-      body {
-        margin: 0 auto; max-width: 46rem; padding: 3rem 1.5rem;
-        font: 16px/1.65 ui-sans-serif, system-ui, sans-serif;
-      }
-      h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
-      a { color: inherit; }
-      nav a { margin-right: 1rem; }
-      p, li { color: color-mix(in oklab, currentColor 78%, transparent); }
-      code, pre, textarea { font-family: ui-monospace, monospace; }
-      textarea, pre {
-        width: 100%; box-sizing: border-box; padding: 0.75rem 1rem;
-        border-radius: 0.4rem; background: transparent; color: inherit;
-        border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
-      }
-      textarea { resize: vertical; font-size: 13px; }
-      button {
-        font: inherit; padding: 0.5rem 1rem; border-radius: 0.4rem;
-        border: 1px solid currentColor; background: transparent;
-        color: inherit; cursor: pointer;
-      }
-      button[disabled] { opacity: 0.5; cursor: progress; }
-      .row { display: flex; gap: 1rem; align-items: center; }
-      .specimen { font-family: Lemmata; font-size: 28px; line-height: 1.5; }
-    </style>
+    <meta name="description" content={description} />
+    <link rel="icon" href="data:," />
+    <script is:inline>
+      const stored = localStorage.getItem("lemmata:theme");
+      const system = matchMedia("(prefers-color-scheme: light)").matches
+        ? "light"
+        : "dark";
+      document.documentElement.dataset.theme = stored ?? system;
+    </script>
   </head>
   <body>
-    <nav>
-      <a href={base}>Lemmata</a>
-      <a href={`${base}generate/`}>Generate</a>
-      <a href={`${base}math/`}>Equations</a>
-    </nav>
-    <slot />
+    <header class="masthead">
+      <div class="wrap masthead__inner">
+        <a class="brand" href={base}>Lemmata</a>
+        <nav>
+          <a href={`${base}generate/`} aria-current={on("generate")}>Generator</a>
+          <a href={`${base}math/`} aria-current={on("math")}>Equations</a>
+        </nav>
+        <div class="masthead__right">
+          <span class="chip" title="The Iosevka release the glyph definitions come from">
+            Iosevka 34.9.0
+          </span>
+          <button class="chip" id="theme" type="button" title="Switch the theme (t)">
+            theme
+          </button>
+        </div>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="footer">
+      <div class="wrap footer__grid">
+        <div>
+          <h3>Lemmata</h3>
+          <p>
+            One Rust core, a command line and this tab. The site is static
+            files, and the font is built in the browser.
+          </p>
+        </div>
+        <div>
+          <h3>Routes</h3>
+          <ul>
+            <li><a href={base}>Landing</a></li>
+            <li><a href={`${base}generate/`}>Generator</a></li>
+            <li><a href={`${base}math/`}>Equations</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Keys</h3>
+          <ul>
+            <li><kbd>g</kbd> generator</li>
+            <li><kbd>e</kbd> equations</li>
+            <li><kbd>t</kbd> theme</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Provenance</h3>
+          <ul>
+            <li>Glyph definitions: Iosevka 34.9.0, OFL</li>
+            <li>Everything else: MIT OR Apache-2.0</li>
+            <li>Nothing is uploaded. There is no server to upload to.</li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+    <script>
+      const root = document.documentElement;
+      const toggle = document.querySelector("#theme");
+
+      const paint = () => {
+        toggle.textContent = `theme ${root.dataset.theme}`;
+      };
+
+      const flip = () => {
+        root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
+        localStorage.setItem("lemmata:theme", root.dataset.theme);
+        paint();
+      };
+
+      paint();
+      toggle.addEventListener("click", flip);
+
+      // A key press anywhere outside a field is a shortcut. The footer lists
+      // them, which is the only place they are documented.
+      addEventListener("keydown", (event) => {
+        if (event.metaKey || event.ctrlKey || event.altKey) return;
+        const target = event.target;
+        if (
+          target instanceof HTMLElement &&
+          (target.isContentEditable ||
+            ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+        ) {
+          return;
+        }
+        if (event.key === "t") {
+          flip();
+          return;
+        }
+        const routes = { g: "generate/", e: "math/" };
+        const route = routes[event.key];
+        if (route) location.href = import.meta.env.BASE_URL + route;
+      });
+    </script>
   </body>
 </html>
