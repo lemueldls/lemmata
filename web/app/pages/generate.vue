@@ -22,10 +22,14 @@ const readings = computed(() => {
   if (!font) return "Metrics appear once a font is built.";
   const map = cmap(font);
 
+  // The advances are here because the spacing is a choice: `x` is the same cell
+  // either way, and `i` and `m` are what say which face was built.
   return [
     `${glyphCount(font) ?? "?"} glyphs drawn, ${map.size} characters mapped`,
     `x ${ink(map, font, "x")?.yMax ?? "?"} · l ${ink(map, font, "l")?.yMax ?? "?"} · ` +
-      `p ${ink(map, font, "p")?.yMin ?? "?"} · advance ${advance(map, font, "x") ?? "?"}`,
+      `p ${ink(map, font, "p")?.yMin ?? "?"}`,
+    `advance i ${advance(map, font, "i") ?? "?"} · m ${advance(map, font, "m") ?? "?"} · ` +
+      `x ${advance(map, font, "x") ?? "?"}`,
   ].join("\n");
 });
 
