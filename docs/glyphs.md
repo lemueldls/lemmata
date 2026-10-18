@@ -69,4 +69,21 @@ Two things about that work are worth writing down, because reading the source mi
 
 Two measurements narrow the rest. Aligning the earless corner's first knot against the capture gives `ours (126.20, 200.01)` against `theirs (64.01, 0.00)`, so both of its inputs are wrong in the same way: `HSwToV(sw - fine)` is about sixty units too wide, which says the `fine` that reaches the ring is far below `sw` where the capture needs the two to be nearly equal, and `y_end = bot + ada + TINY` is two hundred where the capture wants `TINY`, which says the arch depth reaching the corner is zero rather than the `smallArchDepth` the plan carries. Both are values the source passes down a chain of wrappers, and both are cheaper to read off a single ring than off a whole glyph.
 
+The capture's ring for `a.singleStoreyFlatTopSerifless` has twenty-three knots, and they say what the two constants are without any tracing:
+
+```
+  0 (   64.01,    0.00)     flat:  left + HSwToV(sw - fine),  yend
+  1 (  250.00,    0.00)
+  2 (  333.38,   13.45)     the arch from the bar's foot
+  ...
+  7 (  444.00,  200.00)
+  8 (  444.00,  320.00)     the straight side, so right + OX reaches 444
+  ...
+ 14 (  285.10,  528.00)     the top, overshooting XH by the overshoot
+  ...
+ 22 (  126.20,  319.99)     curl:  left + TINY,  top
+```
+
+The first and last knots pin it: `yend` is zero, and `left + TINY` is 126.20 while the bar sits at 397.15, so the ring's `left` is not the glyph's sidebearing and its `top` is not the x-height. The four numbers a variant needs are all in that list, which is why dumping the ring is cheaper than porting the body and aligning twenty-three knots at a time.
+
 The remaining two constants are the tail's `hookTurn`, where the port reads `AdviceStroke 16` as taking an extra scalar of one and the capture says otherwise, and the earless corner's `yend`, where the capture's `tiny` says the arch depth that reaches it is zero rather than the `smallArchDepth` of two hundred the plan carries.
