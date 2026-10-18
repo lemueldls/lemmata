@@ -10,10 +10,12 @@
 //
 //   Stub: spec.optical-sizes  the plan has no optical size key behind this row
 //   Stub: spec.script-style   needs the script letters, and an ssty feature
-//   Stub: texture.healing     the narrow letters have no shifted spelling and
-//                             the writer emits no `calt`, so the page moves the
-//                             ink with margins. What must not move, the
-//                             advance, does not.
+//   Stub: texture.healing     the narrow letters have no shifted spelling, and
+//                             `calt` needs a contextual lookup, which the layout
+//                             crate does not write: every feature it builds is a
+//                             single substitution. Until then the page moves the
+//                             ink with margins. What must not move, the advance,
+//                             does not.
 //   Stub: variant.picker      the capture carries one spelling per glyph, so
 //                             the picker sets the selection and reports it;
 //                             wire it to the worker once a plan can name the
@@ -442,10 +444,12 @@ const variants = [
     //
     // Stub: texture.healing. A font that carries this has a second spelling of
     // each narrow letter, shifted in its sidebearings, and a `calt` feature that
-    // swaps it in beside a wide neighbour. Neither is here: the spellings would
-    // have to come out of the glyph source and the feature needs a GSUB the
-    // writer does not produce. Margins are enough to show the effect, and the
-    // one thing that must not move does not: the advance, so the cell stays.
+    // swaps it in beside a wide neighbour. The spellings are a translation of
+    // the captured outlines rather than new drawing, the way the dotless forms
+    // are, but `calt` needs a contextual lookup and every feature
+    // `lemmata-layout` builds today is a single substitution. Margins are enough
+    // to show the effect, and the one thing that must not move does not: the
+    // advance, so the cell stays.
     const HEAL_SAMPLE = "millim minimum willow filial";
     const narrow = new Set("iltfjr");
     const wide = new Set("mw");
