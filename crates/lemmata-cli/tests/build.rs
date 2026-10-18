@@ -395,6 +395,66 @@ fn math_table_round_trips() {
     );
 }
 
+/// `r[pin.exact]`: every release-candidate dependency is pinned exactly, and
+/// every pin has a row in `docs/versions.md`.
+#[test]
+fn release_candidates_are_pinned_exactly() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let manifest =
+        std::fs::read_to_string(root.join("Cargo.toml")).expect("read the workspace manifest");
+    let record =
+        std::fs::read_to_string(root.join("docs/versions.md")).expect("read the version record");
+
+    let mut checked = 0usize;
+    let mut unpinned = Vec::new();
+    let mut unrecorded = Vec::new();
+    let mut inside = false;
+    for line in manifest.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            inside = line == "[workspace.dependencies]";
+            continue;
+        }
+        if !inside || line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((name, value)) = line.split_once('=') else {
+            continue;
+        };
+        let (name, value) = (name.trim(), value.trim().trim_matches('"'));
+        // The rule is about release candidates: a stable release may float
+        // within a caret, and a candidate may not, because the next one is a
+        // new interface rather than a fix.
+        if !value.contains("-rc.") {
+            continue;
+        }
+        checked += 1;
+        if !value.starts_with('=') {
+            unpinned.push(format!("{name} = {value}"));
+        }
+        // The record is what a bump change edits, so a pin with no row is a
+        // version that moved without the record moving with it.
+        let version = value.trim_start_matches('=');
+        let recorded = record.lines().any(|row| {
+            row.contains(&format!("| {name} |")) && row.contains(version)
+        });
+        if !recorded {
+            unrecorded.push(format!("{name} {version}"));
+        }
+    }
+
+    assert!(checked > 0, "the manifest carries no release candidates");
+    assert!(
+        unpinned.is_empty(),
+        "these release candidates are not pinned exactly: {unpinned:?}"
+    );
+    assert!(
+        unrecorded.is_empty(),
+        "these pins have no row in docs/versions.md: {unrecorded:?}"
+    );
+    eprintln!("pins: {checked} release candidates, all exact and recorded");
+}
+
 /// `r[port.upstream-tag]`: the pinned upstream tag is stamped into the font, and
 /// the stamp names the same commit the parity fingerprint was generated from.
 #[test]
