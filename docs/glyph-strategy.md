@@ -39,6 +39,8 @@ The glyph definitions stay where upstream maintains them, so an update is a tag 
 
 If coarse batching turns out to be impossible, the fallback is hand-porting the glyphs, measured against the same oracle.
 
+The ported runtime and the definition file in the tree are that fallback being costed, not the plan: they measure what a port needs and they are the layer a port would build on. Nothing on the path that writes a font reads them. `cargo xtask port-status` counts them against the mirrored tree, which is how far the fallback would have to go before it could be chosen instead.
+
 ## Port surface
 
 A pilot on `letter/latin/lower-a.ptl` (473 lines, and the file behind the captured `a`) asked what a port needs beyond the twelve primitives.
