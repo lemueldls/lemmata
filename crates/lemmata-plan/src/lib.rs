@@ -39,6 +39,14 @@ pub struct Plan {
     pub weight_class: u16,
     pub width_class: u16,
     pub italic_angle: f64,
+    /// The character variants the plan selects, by group and variant name.
+    ///
+    /// Iosevka names these in kebab case under `variants.design`, and the glyph
+    /// source spells the same choice in camel case: `double-storey-serifed` is
+    /// the glyph `a.doubleStoreySerifed`. The names are kept as written and
+    /// translated where a glyph is looked up, so a plan and an Iosevka plan read
+    /// the same.
+    pub variants: Vec<(String, String)>,
 }
 
 impl Default for Plan {
@@ -62,6 +70,7 @@ impl Default for Plan {
             weight_class: 400,
             width_class: 5,
             italic_angle: 0.0,
+            variants: Vec::new(),
         }
     }
 }
@@ -126,6 +135,36 @@ pub fn from_json(text: &str) -> Result<Plan, String> {
         plan.italic_angle = angle
             .as_f64()
             .ok_or_else(|| "italicAngle must be a number".to_string())?;
+    }
+    if let Some(variants) = object.get("variants") {
+        let variants = variants
+            .as_object()
+            .ok_or_else(|| "variants must be an object".to_string())?;
+        let name = |value: &Value| -> Result<String, String> {
+            value
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "a variant must be a name".to_string())
+        };
+        let mut chosen = Vec::new();
+        for (key, value) in variants {
+            match value.as_object() {
+                // Iosevka splits the choices across `design`, `upright`, `italic`
+                // and `oblique`. One build is one slope, so the four are read as
+                // one set of choices.
+                Some(table) => {
+                    for (group, variant) in table {
+                        chosen.push((group.clone(), name(variant)?));
+                    }
+                }
+                None => chosen.push((key.clone(), name(value)?)),
+            }
+        }
+        // Sorted and deduplicated, so a plan that names a group twice cannot
+        // depend on the order the keys arrived in.
+        chosen.sort();
+        chosen.dedup();
+        plan.variants = chosen;
     }
     Ok(plan)
 }

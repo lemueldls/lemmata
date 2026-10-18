@@ -28,7 +28,8 @@ fn advance_to_u16(advance: f64) -> u16 {
 /// Returns a message when the capture does not decode, the plan does not parse,
 /// or the font does not assemble.
 pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
-    let metrics = lemmata_plan::from_json(plan)?.to_font_metrics();
+    let plan = lemmata_plan::from_json(plan)?;
+    let metrics = plan.to_font_metrics();
     let captured = lemmata_capture::load(capture)?;
     let glyphs: Vec<GlyphData> = captured
         .iter()
@@ -40,7 +41,7 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
         })
         .collect();
 
-    lemmata_build::font::build(&glyphs, &metrics, &Names::default())
+    lemmata_build::font::build(&glyphs, &metrics, &Names::default(), &plan.variants)
 }
 
 /// The same build, for the page.
@@ -66,6 +67,38 @@ pub fn default_plan() -> String {
         plan.descender,
         plan.italic_angle,
         plan.weight_class
+    )
+}
+
+/// The variants a group has in a capture, as a JSON array of plan names.
+///
+/// The page's picker offers what the capture holds, so the list follows the
+/// capture rather than a table written into the page. The names are the
+/// kebab-case ones a plan takes, sorted, and the group's own drawing is not
+/// among them: it is what a plan gets by saying nothing.
+#[must_use]
+#[wasm_bindgen]
+pub fn variants_of(capture: &[u8], group: &str) -> String {
+    let Ok(captured) = lemmata_capture::load(capture) else {
+        return "[]".to_string();
+    };
+    let prefix = format!("{group}.");
+    let mut variants: Vec<String> = captured
+        .iter()
+        .filter_map(|glyph| glyph.name.strip_prefix(&prefix))
+        .filter(|suffix| !suffix.is_empty() && suffix.chars().all(|c| c.is_ascii_alphanumeric()))
+        .map(lemmata_build::character::kebab)
+        .collect();
+    variants.sort();
+    variants.dedup();
+
+    format!(
+        "[{}]",
+        variants
+            .iter()
+            .map(|name| format!("\"{name}\""))
+            .collect::<Vec<_>>()
+            .join(",")
     )
 }
 

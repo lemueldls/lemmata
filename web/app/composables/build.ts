@@ -4,8 +4,9 @@
 //
 // The build stays on the worker thread, which is the point: a full set is tens
 // of thousands of glyphs and would freeze the page.
-import init, { default_plan } from "lemmata-web";
+import type { WritableComputedRef } from "vue";
 import BuildWorker from "~/workers/build.ts?worker";
+import { usePlan } from "~/composables/plan";
 
 interface BuildReply {
   bytes?: Uint8Array;
@@ -17,7 +18,7 @@ interface BuildReply {
 }
 
 interface Build {
-  plan: Ref<string>;
+  plan: WritableComputedRef<string>;
   status: Ref<string>;
   state: Ref<string>;
   download: Ref<string>;
@@ -29,7 +30,9 @@ interface Build {
 }
 
 export function useBuild(): Build {
-  const plan = ref("");
+  // The plan and the capture are shared with the controls, so a choice made
+  // beside the specimen is the one the build reads.
+  const { plan, capture, ensure } = usePlan();
   const status = ref("Starting the worker…");
   const state = ref("note");
   const download = ref("");
@@ -39,19 +42,17 @@ export function useBuild(): Build {
   const busy = ref(false);
 
   let worker: Worker | null = null;
-  let capture: Uint8Array | null = null;
   let pending: ((reply: BuildReply) => void) | null = null;
 
   const build = (planText: string): Promise<BuildReply> =>
     new Promise((resolve, reject) => {
       pending = (reply) =>
         reply.error ? reject(new Error(reply.error)) : resolve(reply);
-      worker?.postMessage({ capture, plan: planText });
+      worker?.postMessage({ capture: capture.value, plan: planText });
     });
 
   onMounted(async () => {
-    await init();
-    plan.value = default_plan();
+    await ensure();
     worker = new BuildWorker();
     worker.addEventListener("message", (event: MessageEvent<BuildReply>) => {
       const reply = pending;
@@ -59,9 +60,6 @@ export function useBuild(): Build {
       pending = null;
       reply(event.data);
     });
-    // Base-relative, so the site works served at any root.
-    const response = await fetch("/glyphs.bin");
-    capture = new Uint8Array(await response.arrayBuffer());
     status.value = "Ready.";
   });
 

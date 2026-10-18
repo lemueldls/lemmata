@@ -41,7 +41,7 @@ fn build_font() -> Option<(Vec<u8>, Vec<GlyphData>)> {
             contours: lemmata_capture::contours(glyph),
         })
         .collect();
-    let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default())
+    let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default(), &[])
         .expect("build the font");
 
     Some((bytes, glyphs))

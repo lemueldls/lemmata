@@ -1,27 +1,56 @@
 <script setup lang="ts">
 // The spellings of `a` the glyph source names, as a row of choices.
 //
-// Stub: variant.picker. The capture carries one spelling per glyph, so this sets
-// the selection and reports it; wire it to the worker once a plan can name the
-// variant it wants, and the specimen can show the one that was picked.
-const VARIANTS = ["a", "a.doubleStoreySerifed", "a.singleStoreySerifless"];
+// The list is read out of the capture, so it follows the glyphs rather than a
+// table written here, and the choice goes into the shared plan: the generator
+// builds the one that was picked.
+import { usePlan } from "~/composables/plan";
 
-const chosen = ref(VARIANTS[0]);
+const plan = usePlan();
+
+const group = "a";
+// The list comes from the capture, which is fetched after the page is served, so
+// it is rendered only once the page is running: a server render would print an
+// empty row and the first client render would disagree with it.
+const mounted = ref(false);
+onMounted(async () => {
+  await plan.ensure();
+  mounted.value = true;
+});
+
+const options = computed(() => plan.variants(group));
+const picked = computed(() => plan.chosen(group));
+
+// The group's own drawing is what a plan gets by saying nothing, so it is a
+// choice of its own rather than a missing one.
+const clear = (): void => plan.choose(group, "");
 </script>
 
 <template>
-  <div class="variants">
+  <div v-if="mounted" class="variants">
     <button
-      v-for="name in VARIANTS"
+      class="variant"
+      type="button"
+      :aria-pressed="picked === ''"
+      @click="clear"
+    >
+      <b>a</b>
+      <span>the capture's own drawing</span>
+    </button>
+    <button
+      v-for="name in options"
       :key="name"
       class="variant"
       type="button"
-      :aria-pressed="chosen === name"
-      @click="chosen = name"
+      :aria-pressed="picked === name"
+      @click="plan.choose(group, name)"
     >
       <b>a</b>
       <span>{{ name }}</span>
     </button>
   </div>
-  <StatusLine state="ok">{{ chosen }} · the spelling this build draws</StatusLine>
+  <StatusLine v-if="mounted" state="ok">
+    {{ picked === "" ? "the capture's own drawing" : picked }} ·
+    {{ options.length }} spellings the capture carries
+  </StatusLine>
 </template>

@@ -347,17 +347,27 @@ fn substitutions(glyphs: &[GlyphData]) -> Gsub {
 ///
 /// Glyph zero is an empty `.notdef`; the rest follow the input order.
 ///
+/// `variants` is the plan's character choices. They are applied before anything
+/// else, because the derived glyphs are derived from what the choices leave: a
+/// `dtls` form of the `i` the plan selected, not of the one it replaced.
+///
 /// # Errors
 ///
 /// Returns a message when a contour cannot be written or a table fails to
 /// compile.
-pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<Vec<u8>, String> {
+pub fn build(
+    glyphs: &[GlyphData],
+    metrics: &Metrics,
+    names: &Names,
+    variants: &[(String, String)],
+) -> Result<Vec<u8>, String> {
     // The derived size variants join the set first, before anything counts the
     // glyphs or indexes into them. Appending them later leaves them past
     // `maxp.num_glyphs`, where they are ignored until something references one
     // and the reference is out of range.
-    let mut with_variants = glyphs.to_vec();
-    with_variants.extend(derived(glyphs, metrics));
+    let glyphs = crate::character::apply(glyphs, variants);
+    let mut with_variants = glyphs.clone();
+    with_variants.extend(derived(&glyphs, metrics));
     let glyphs = with_variants.as_slice();
 
     let mut glyf_builder = GlyfLocaBuilder::new();

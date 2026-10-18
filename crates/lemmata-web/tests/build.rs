@@ -10,6 +10,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use read_fonts::TableProvider;
+
 fn capture_path() -> PathBuf {
     std::env::var_os("LEMMATA_GLYPH_DUMP").map_or_else(
         || {
@@ -52,4 +54,43 @@ fn builds_a_font_from_the_capture() {
     assert_ne!(bytes, taller, "the plan did not reach the font");
 
     eprintln!("web build: {} bytes", bytes.len());
+}
+
+/// `r[plan.iosevka-keys]`: a plan's character choice reaches the font, and the
+/// page's list of choices comes from the capture rather than from the page.
+#[test]
+fn a_plan_reaches_a_character_variant() {
+    let Ok(capture) = fs::read(capture_path()) else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+
+    // The page offers what the capture holds, spelled the way a plan takes it.
+    let listed = lemmata_web::variants_of(&capture, "a");
+    for name in ["double-storey-serifed", "single-storey-serifed"] {
+        assert!(listed.contains(name), "{name} is not in {listed}");
+    }
+    assert_eq!(
+        lemmata_web::variants_of(&capture, "no-such-group"),
+        "[]",
+        "a group the capture does not have offers nothing"
+    );
+
+    let plain = lemmata_web::build(&capture, "").expect("build");
+    let chosen = lemmata_web::build(&capture, r#"{"variants": {"a": "single-storey-serifed"}}"#)
+        .expect("build with a variant");
+    assert_ne!(plain, chosen, "the variant did not reach the font");
+
+    // The codepoint still lands on the glyph named `a`, because every feature
+    // the font writes names glyphs and a cmap that pointed at the variant's own
+    // name would leave them all matching nothing.
+    let font = read_fonts::FontRef::new(&chosen).expect("reopen");
+    assert!(
+        font.cmap()
+            .expect("cmap")
+            .map_codepoint(u32::from('a'))
+            .is_some(),
+        "the choice lost the codepoint"
+    );
+    eprintln!("web variants: {}", listed.len());
 }

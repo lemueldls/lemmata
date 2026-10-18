@@ -51,7 +51,7 @@ fn build_font() -> Option<(Vec<u8>, Vec<Glyph>)> {
     let data = std::fs::read(dump_path()).ok()?;
     let captured = lemmata_capture::load(&data).expect("decode capture");
     let glyphs = glyph_data(&captured);
-    let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default())
+    let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default(), &[])
         .expect("build the font");
 
     Some((bytes, captured))
@@ -411,7 +411,7 @@ fn subsetting_restricts_the_export() {
     lemmata_build::font::retain_ranges(&mut glyphs, &[(0x0028, 0x0039)]);
     assert!(glyphs.len() < before, "the range has to drop something");
 
-    let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default())
+    let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default(), &[])
         .expect("build the subset");
     let font = FontRef::new(&bytes).expect("reopen the subset");
     let cmap = font.cmap().expect("cmap");
@@ -628,6 +628,7 @@ fn italic_style_bits_follow_the_angle() {
             subfamily: "Italic".to_string(),
             ..Names::default()
         },
+        &[],
     )
     .expect("build the slanted font");
 
@@ -907,4 +908,133 @@ fn texture_forms_move_within_the_cell() {
         "nothing was classified as giving or taking space"
     );
     eprintln!("texture: {healed} forms, every advance unchanged");
+}
+
+/// `r[plan.iosevka-keys]`: a plan names a character variant the way an Iosevka
+/// plan does, and the font is drawn with it.
+#[test]
+fn a_plan_selects_a_character_variant() {
+    let Some((_, captured)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let glyphs = glyph_data(&captured);
+
+    // The shape is Iosevka's: a kebab-case name under `variants.design`. A flat
+    // `variants` object is accepted too, because the page sends one key.
+    let plan =
+        lemmata_plan::from_json(r#"{"variants": {"design": {"a": "single-storey-serifed"}}}"#)
+            .expect("parse the plan");
+    assert_eq!(
+        plan.variants,
+        vec![("a".to_string(), "single-storey-serifed".to_string())]
+    );
+    assert_eq!(
+        lemmata_plan::from_json(r#"{"variants": {"a": "single-storey-serifed"}}"#)
+            .expect("parse the flat form")
+            .variants,
+        plan.variants
+    );
+
+    // Kebab case in the plan, camel case in the glyph source.
+    assert_eq!(
+        lemmata_build::character::variant_name("a", "single-storey-serifed"),
+        "a.singleStoreySerifed"
+    );
+
+    // The drawing moves onto the glyph that carries the group's codepoints,
+    // rather than the codepoint moving to the variant's glyph. Every feature the
+    // font writes names glyphs, so a cmap that pointed somewhere else would
+    // leave all of them matching nothing.
+    let contours = |set: &[GlyphData], name: &str| -> Vec<(u64, u64)> {
+        set.iter()
+            .find(|glyph| glyph.name == name)
+            .unwrap_or_else(|| panic!("{name} is not in the set"))
+            .contours
+            .iter()
+            .flatten()
+            .map(|point| (point.x.to_bits(), point.y.to_bits()))
+            .collect()
+    };
+    let variant = contours(&glyphs, "a.singleStoreySerifed");
+    assert_ne!(
+        contours(&glyphs, "a"),
+        variant,
+        "the variant should be a different drawing"
+    );
+    let applied = lemmata_build::character::apply(&glyphs, &plan.variants);
+    assert_eq!(
+        contours(&applied, "a"),
+        variant,
+        "the choice should move the variant's drawing onto `a`"
+    );
+    // The group's alternatives go with it, so the font carries one drawing per
+    // group rather than one plus the alternatives it did not choose.
+    assert!(
+        applied
+            .iter()
+            .all(|glyph| glyph.name != "a.singleStoreySerifed"),
+        "the chosen variant should not be carried twice"
+    );
+    assert!(
+        applied.len() < glyphs.len(),
+        "the group's other drawings should be dropped"
+    );
+
+    // The font follows, and the codepoint still reaches the glyph named `a`.
+    let bbox = |variants: &[(String, String)]| -> (i16, i16, i16, i16) {
+        let bytes =
+            lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default(), variants)
+                .expect("build the font");
+        let font = FontRef::new(&bytes).expect("reopen the font");
+        let id = font
+            .cmap()
+            .expect("cmap")
+            .map_codepoint(u32::from('a'))
+            .expect("`a` is mapped");
+        font_bbox(&font, id).expect("`a` has ink")
+    };
+    assert_ne!(
+        bbox(&plan.variants),
+        bbox(&[]),
+        "the font should be drawn with the variant the plan chose"
+    );
+    eprintln!("variants: a plan selects a drawing and the codepoint still lands on `a`");
+}
+
+/// `r[plan.iosevka-keys]`: the two spellings of a variant name are inverses, so
+/// a page can offer what the capture holds as plan names.
+#[test]
+fn a_variant_name_round_trips() {
+    let Some((_, captured)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let mut checked = 0usize;
+    for glyph in &captured {
+        let Some((group, suffix)) = glyph.name.split_once('.') else {
+            continue;
+        };
+        if !group.chars().all(|c| c.is_ascii_alphabetic())
+            || suffix.is_empty()
+            || !suffix.chars().all(|c| c.is_ascii_alphanumeric())
+        {
+            continue;
+        }
+        let kebab = lemmata_build::character::kebab(suffix);
+        assert_eq!(
+            lemmata_build::character::camel(&kebab),
+            suffix,
+            "{group} {suffix} should round-trip through {kebab}"
+        );
+        assert_eq!(
+            lemmata_build::character::variant_name(group, &kebab),
+            glyph.name,
+            "{group} {kebab} should name {glyph_name}",
+            glyph_name = glyph.name
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "the capture has no variant families to check");
+    eprintln!("variants: {checked} names round-trip");
 }

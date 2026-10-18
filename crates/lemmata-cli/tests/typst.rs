@@ -61,7 +61,7 @@ fn build_face(capture: &Path, directory: &Path, name: &str) -> Option<()> {
         },
         ..Names::default()
     };
-    let bytes = lemmata_build::font::build(&glyph_data(&captured), &metrics, &names)
+    let bytes = lemmata_build::font::build(&glyph_data(&captured), &metrics, &names, &[])
         .expect("build the face");
     std::fs::write(directory.join(name), bytes).expect("write the face");
 

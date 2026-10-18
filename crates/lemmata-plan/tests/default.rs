@@ -13,7 +13,7 @@ fn font_with(plan: &Plan) -> Vec<u8> {
         advance: 500,
         contours: Vec::new(),
     }];
-    build(&glyphs, &metrics, &Names::default()).expect("build")
+    build(&glyphs, &metrics, &Names::default(), &[]).expect("build")
 }
 
 #[test]

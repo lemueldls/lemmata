@@ -142,8 +142,9 @@ fn build(args: &[String]) -> Result<(), String> {
     // each glyph's gizmo, so the angle is taken from the source and overwrites
     // whatever the plan said; once the glyph source responds to a plan, the plan
     // is the one that decides.
+    let plan = lemmata_plan::from_json(&plan)?;
     let metrics = {
-        let mut metrics = lemmata_plan::from_json(&plan)?.to_font_metrics();
+        let mut metrics = plan.to_font_metrics();
         metrics.italic_angle = italic_angle;
         metrics
     };
@@ -158,7 +159,7 @@ fn build(args: &[String]) -> Result<(), String> {
         ..names
     };
 
-    let bytes = lemmata_build::font::build(&glyphs, &metrics, &names)?;
+    let bytes = lemmata_build::font::build(&glyphs, &metrics, &names, &plan.variants)?;
     // The extension decides the container. A `.woff2` is the same font
     // compressed, which is what a page serves and what a subsetter reads.
     let compressed = out_path

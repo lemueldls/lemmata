@@ -5,8 +5,7 @@
 // Stubs, and what they want. Grep for "Stub:" when one is finished.
 //
 //   Stub: spec.optical-sizes  the plan has no optical size key behind this row
-//   Stub: spec.script-style   needs the script letters, and an ssty feature
-//   Stub: variant.picker      in `VariantPicker.vue`
+//   Stub: spec.script-style   needs the script letters, which the glyph source lacks
 import { useLemmataFont } from "~/composables/font";
 
 useHead({
@@ -115,7 +114,7 @@ const status = computed(() => {
     <HealingPlate />
 
     <SubHead title="Spellings of a">
-      <p class="note">Pick one and the next build draws it.</p>
+      <p class="note">Pick one and the generator draws it.</p>
     </SubHead>
     <VariantPicker />
 
