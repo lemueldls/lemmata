@@ -638,19 +638,23 @@ const variants = [
       // The healing block is on the same grid as the hero, at the size that
       // block is set in, and the count is the number of characters: one cell
       // each, before and after the ink moves.
-      const healSize = Number.parseFloat(
-        getComputedStyle($(".heal-text")).fontSize,
-      );
-      const cell = (metrics.advance / 1000) * healSize;
-      $("#heal-lines").style.setProperty("--cell", `${cell}px`);
-      $("#heal-measure").textContent =
-        `${HEAL_SAMPLE.length} cells of ${Math.round(cell)} px, either line`;
+      const healGrid = () => {
+        const size = Number.parseFloat(
+          getComputedStyle($(".heal-text")).fontSize,
+        );
+        const cell = (metrics.advance / 1000) * size;
+        $("#heal-lines").style.setProperty("--cell", `${cell}px`);
+        $("#heal-measure").textContent =
+          `${HEAL_SAMPLE.length} cells of ${Math.round(cell)} px, either line`;
+      };
+      healGrid();
 
       const points = fit();
       if (points) drawRules(metrics, points);
       addEventListener("resize", () => {
         const next = fit();
         if (next) drawRules(metrics, next);
+        healGrid();
       });
     } catch (error) {
       say(status, "bad", `The font could not be read: ${error.message ?? error}`);

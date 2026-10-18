@@ -42,12 +42,12 @@ math {
   --face: var(--mono);
   --built: var(--font-lemmata, Lemmata), var(--mono);
 
-  --step--2: 11px;
-  --step--1: 13px;
-  --step-0: 15px;
-  --step-1: 18px;
-  --step-2: 24px;
-  --step-3: 32px;
+  --step--2: 12px;
+  --step--1: 14px;
+  --step-0: 16px;
+  --step-1: 19px;
+  --step-2: 26px;
+  --step-3: 34px;
   /* The wordmark is set to the width of the measure once the font is built, so
      this is only the guess the page paints with before that happens. */
   --display: clamp(3.5rem, 20vw, 16rem);
@@ -943,8 +943,11 @@ a:focus-visible {
   --shift: 0.14em;
   margin: 0;
   font-family: var(--built);
-  font-size: clamp(18px, 2.4vw, 26px);
+  /* Large on purpose: the shift is a fraction of the cell, and at reading sizes
+     it is a change you have to be told about to see. */
+  font-size: clamp(26px, 3.6vw, 44px);
   line-height: 1.9;
+  overflow-x: auto;
   white-space: pre;
   /* One cell per advance, set from the font's tables once it is here. */
   background-image: repeating-linear-gradient(
