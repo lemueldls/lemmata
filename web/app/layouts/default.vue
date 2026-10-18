@@ -16,7 +16,7 @@ useHead({
   meta: [
     {
       name: "description",
-      content: "A typeface built from a plan, and proved in the page that shows it.",
+      content: "A typeface built from a plan, and the build to check it against.",
     },
   ],
   script: [
@@ -78,12 +78,12 @@ useHead({
     <div class="wrap footer__grid">
       <div>
         <h3>Lemmata</h3>
-        <p>A typeface built from a plan, and proved in the page that shows it.</p>
+        <p>A typeface built from a plan, and the build to check it against.</p>
       </div>
       <div>
         <h3>Routes</h3>
         <ul>
-          <li><NuxtLink to="/">Premises</NuxtLink></li>
+          <li><NuxtLink to="/">Overview</NuxtLink></li>
           <li><NuxtLink to="/generate/">Generator</NuxtLink></li>
           <li><NuxtLink to="/math/">Equations</NuxtLink></li>
         </ul>

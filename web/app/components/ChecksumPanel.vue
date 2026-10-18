@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// The build proves itself: the font the page is set in, hashed here, against the
-// number the recorded pair carries, with the readings beside it taken from the
-// font's own tables.
+// The checksums: the font the page is set in, hashed here, against the number
+// the recorded pair carries, with the readings beside it from the font's own
+// tables.
 import golden from "../../../golden/parity.json";
 import { short } from "~/utils/font";
 import { useLemmataFont } from "~/composables/font";

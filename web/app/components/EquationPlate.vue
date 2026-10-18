@@ -38,7 +38,7 @@ async function show(): Promise<void> {
 }
 
 onMounted(() => {
-  const section = document.querySelector("#corollary");
+  const section = document.querySelector("#math");
   if (!section) return;
   const observer = new IntersectionObserver(
     (entries) => {

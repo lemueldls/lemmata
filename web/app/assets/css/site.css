@@ -452,7 +452,7 @@ kbd {
   font-size: var(--step--1);
 }
 
-/* The number is the order of the argument, not a label, so it is quiet. */
+/* The number is the order of the sections, not a label, so it is quiet. */
 .ledger__name b {
   margin-right: 4px;
   color: var(--faint);
@@ -1057,11 +1057,4 @@ a:focus-visible {
   color: var(--bg);
 }
 
-/* The proof closes the way a proof closes. */
-.qed {
-  justify-self: end;
-  color: var(--faint);
-  font-size: var(--step--1);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
+

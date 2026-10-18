@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// The landing, written as a proof: the plan is the premise, the font is the
-// construction, the checksum is the proof, and the equations are the corollary.
+// The landing: the plan it starts from, the font it ships, the numbers that tie
+// the two together, and one equation set in it.
 //
 // Stubs, and what they want. Grep for "Stub:" when one is finished.
 //
@@ -14,7 +14,7 @@ useHead({ title: "A typeface built from a plan" });
 const font = useLemmataFont();
 
 /// The reference plan, which is what `Plan::default()` carries. It is content on
-/// this page the way the samples are: the premise the rest is built from.
+/// this page the way the samples are: the object the rest is built from.
 const PLAN = {
   capHeight: 735,
   xHeight: 520,
@@ -63,15 +63,15 @@ const status = computed(() => {
 <template>
   <section class="hero">
     <div class="wrap">
-      <p class="kicker">A premise, a construction, a proof</p>
+      <p class="kicker">A plan, a font, and the numbers to check it</p>
       <HeroWord />
       <p class="lede">
-        A lemma is a premise you build the rest on. Take the plan as given and
-        this page builds the font: constructed here, measured here, and hashed so
-        that it can be checked.
+        This page is set in the font it describes. The plan is the input, the
+        font is the output, and both are here so that the result can be checked:
+        the file is hashed in the browser and read back out of its own tables.
       </p>
       <div class="actions">
-        <a class="btn" href="#construction">See the construction</a>
+        <a class="btn" href="#construction">See the font</a>
         <NuxtLink class="btn btn--primary" to="/generate/">Open the generator</NuxtLink>
       </div>
       <StatusLine :state="font.ready ? 'ok' : 'note'">{{ status }}</StatusLine>
@@ -79,11 +79,11 @@ const status = computed(() => {
     </div>
   </section>
 
-  <SectionBlock number="01" label="Premises">
+  <SectionBlock number="01" label="Plan">
     <h2>Everything is built from the plan</h2>
     <p>
-      The plan is the premise. Every key defaults, so this is the reference plan,
-      and every key it carries reaches the font.
+      Every key defaults, so this is the reference plan, and every key it carries
+      reaches the font.
     </p>
     <div class="cols">
       <PlanCard :plan="PLAN" />
@@ -94,7 +94,7 @@ const status = computed(() => {
     </div>
   </SectionBlock>
 
-  <SectionBlock id="construction" number="02" label="Construction">
+  <SectionBlock id="construction" number="02" label="Font">
     <h2>The font, set in itself</h2>
     <p>
       This is the font this site ships, and every reading further down comes out
@@ -119,25 +119,22 @@ const status = computed(() => {
     <GlyphSheet />
   </SectionBlock>
 
-  <SectionBlock id="proof" number="03" label="Proof">
-    <h2>The build proves itself</h2>
+  <SectionBlock id="checksums" number="03" label="Checksums">
+    <h2>The build checks itself</h2>
     <p>
-      A font is hard to argue with and easy to check. The build hashes itself,
-      and the number it produces is the number the reference build recorded, so
-      the plan and the font meet at one digest. The readings beside it come from
-      the tables, not from the page's memory of what it meant to do.
+      The font is hashed in the browser, and the number it produces is the number
+      the reference build recorded. The readings beside it come from the font's
+      own tables, measured rather than assumed.
     </p>
-    <ProofPanel />
-    <p class="qed">Q.E.D.</p>
+    <ChecksumPanel />
   </SectionBlock>
 
-  <SectionBlock id="corollary" number="04" label="Corollary">
-    <h2>Equations follow</h2>
+  <SectionBlock id="math" number="04" label="Equations">
+    <h2>Equations, set in the font it built</h2>
     <p>
-      A MATH table comes out of the same construction: the constants, the italic
-      corrections, and the delimiters that grow to fit. This one is set in a
-      second face, built from the math glyph set when the section comes into
-      view.
+      The same build writes a MATH table: the constants, the italic corrections,
+      and the delimiters that grow to fit. This one is set in a second face,
+      built from the math glyph set when the section comes into view.
     </p>
     <EquationPlate />
   </SectionBlock>

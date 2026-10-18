@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // A numbered section: the label in the left column, everything else in the
-// right one. The numbers are the order of the argument, which is a proof.
+// right one. The numbers are the order of the sections.
 defineProps<{ number: string; label: string; id?: string }>();
 </script>
 

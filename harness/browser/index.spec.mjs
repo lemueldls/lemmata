@@ -16,7 +16,7 @@ test("the index equation is set in the face the page built", async ({ page }) =>
   });
 
   await page.goto("/");
-  await page.locator("#corollary").scrollIntoViewIfNeeded();
+  await page.locator("#math").scrollIntoViewIfNeeded();
   await page.waitForFunction(
     () => document.querySelector("#equation")?.dataset.face === "ready",
     null,
