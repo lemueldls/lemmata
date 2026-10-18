@@ -407,8 +407,10 @@ const variants = [
       });
     }
 
-    // The wordmark is set to the width of the measure, in the font just built,
-    // so the grid behind it is the grid the letters sit on.
+    // The wordmark is set to the width of the measure, in the font it ships, so
+    // the grid behind it is the grid the letters sit on. The rules label their
+    // own lines at the right end of the measure, so the column they need is
+    // taken off first.
     const fit = () => {
       const word = $(".wordmark");
       const stage = $(".hero__stage");
@@ -418,7 +420,8 @@ const variants = [
       range.selectNode(word.firstChild);
       const width = range.getBoundingClientRect().width;
       if (!width) return 0;
-      const points = Math.min((100 * stage.clientWidth) / width, 340);
+      const room = Math.max(stage.clientWidth - 132, stage.clientWidth * 0.55);
+      const points = Math.min((100 * room) / width, 340);
       word.style.fontSize = `${points}px`;
 
       return points;
