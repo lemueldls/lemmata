@@ -834,6 +834,73 @@ a:focus-visible {
   line-height: 1.5;
 }
 
+/* The boot cover ------------------------------------------------------- */
+
+/* The font is a webfont, so it arrives after the first paint. The cover is in
+   the prerendered HTML, so it is the first thing a reader sees, and it leaves
+   when the font is here, which is also when the wordmark can be measured:
+   without it they would see the fallback face for a moment and then a line that
+   changes size. It carries no words, only a ruler and a bar that fills. */
+.boot {
+  --tick: 20px;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  transition: opacity 260ms ease;
+}
+
+.boot--gone {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot__meter {
+  display: grid;
+  gap: 10px;
+  width: min(calc(var(--tick) * 16), 68vw);
+}
+
+.boot__ticks {
+  height: 8px;
+  background-image: linear-gradient(90deg, var(--rule-2) 0 1px, transparent 1px);
+  background-size: calc(100% / 16) 100%;
+  border-right: 1px solid var(--rule-2);
+}
+
+.boot__track {
+  height: 1px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+/* A composited transform rather than a width, which needs no layout and
+   interpolates everywhere, and sixteen steps so every step lands on a tick. */
+.boot__track i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: boot-fill 1.3s steps(16, end) forwards;
+}
+
+@keyframes boot-fill {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot__track i {
+    transform: scaleX(1);
+    animation: none;
+  }
+}
+
 /* The glyph sheet ------------------------------------------------------ */
 
 .glyphs {

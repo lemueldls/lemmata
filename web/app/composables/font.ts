@@ -22,6 +22,9 @@ interface FontState {
   metrics: Reading | null;
   ready: boolean;
   error: string;
+  /// How long the font took to arrive and be read, in milliseconds. The site
+  /// prints it, the way it prints everything else it measures.
+  elapsed: number;
 }
 
 const state = reactive<FontState>({
@@ -31,9 +34,11 @@ const state = reactive<FontState>({
   metrics: null,
   ready: false,
   error: "",
+  elapsed: 0,
 });
 
 async function load(): Promise<void> {
+  const started = performance.now();
   try {
     // The file the module serves, which is the one the browser was given for the
     // preload, so the bytes hashed here are the bytes being rendered with.
@@ -55,6 +60,7 @@ async function load(): Promise<void> {
     // beside it whose source is a local family, and one face that cannot resolve
     // rejects the whole request even though this one loaded.
     await document.fonts.load('100px "Lemmata"', "lemmata");
+    state.elapsed = performance.now() - started;
     state.ready = true;
   } catch (error) {
     state.error = error instanceof Error ? error.message : String(error);

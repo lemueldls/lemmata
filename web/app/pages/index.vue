@@ -56,11 +56,15 @@ const status = computed(() => {
   const metrics = font.metrics;
   if (!metrics) return "Reading the font…";
 
-  return `${metrics.drawn.toLocaleString()} glyphs · ${metrics.mapped} mapped · sha256 ${font.digest.slice(0, 12)}`;
+  return (
+    `${metrics.drawn.toLocaleString()} glyphs · ${metrics.mapped} mapped · ` +
+    `sha256 ${font.digest.slice(0, 12)} · ready in ${Math.round(font.elapsed)} ms`
+  );
 });
 </script>
 
 <template>
+  <BootCover />
   <section class="hero">
     <div class="wrap">
       <p class="kicker">A plan, a font, and the numbers to check it</p>
