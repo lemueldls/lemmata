@@ -10,6 +10,8 @@
     "parity": "cargo xtask parity",
     "port-status": "cargo xtask port-status",
     "regen": "cargo xtask regen",
-    "test": "cargo test --workspace"
+    "test": "cargo test --workspace",
+    "web:build": "pnpm --dir web build",
+    "web:dev": "pnpm --dir web dev"
   }
 }

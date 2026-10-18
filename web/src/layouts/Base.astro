@@ -42,7 +42,11 @@ const base = import.meta.env.BASE_URL;
     </style>
   </head>
   <body>
-    <nav><a href={base}>Lemmata</a><a href={`${base}generate/`}>Generate</a></nav>
+    <nav>
+      <a href={base}>Lemmata</a>
+      <a href={`${base}generate/`}>Generate</a>
+      <a href={`${base}math/`}>Equations</a>
+    </nav>
     <slot />
   </body>
 </html>

@@ -23,7 +23,7 @@ test("the page builds the recorded pair, byte for byte", async ({ page }) => {
   });
 
   // The built site has its own root, as a deploy gives it.
-  await page.goto("http://127.0.0.1:8782/generate/");
+  await page.goto("/generate/");
   await expect(page.locator("#status")).toHaveText("Ready.");
   await page.locator("#plan").fill(JSON.stringify(golden.plan));
   await page.locator("#build").click();

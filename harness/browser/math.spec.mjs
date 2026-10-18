@@ -1,7 +1,7 @@
 // The browser's half of r[math.mathml]: the equation corpus, set in a browser
 // from our own outlines.
 //
-// Needs `pnpm install` and a browser: `nix develop .#browser` provides both.
+// Needs `pnpm install`, a browser and a built site: `pnpm --dir web build`.
 
 import { expect, test } from "@playwright/test";
 
@@ -11,7 +11,7 @@ test("the corpus renders from our font, not a fallback", async ({ page }) => {
     if (message.type() === "error") failures.push(message.text());
   });
 
-  await page.goto("/www/math.html");
+  await page.goto("/math/");
   await expect(page.locator("#status")).toContainText("Ready.");
   expect(failures).toEqual([]);
 

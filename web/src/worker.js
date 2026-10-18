@@ -1,5 +1,3 @@
-// The generator's worker (PLAN.md 4.6).
-//
 // The page and this worker exchange messages rather than calls:
 //
 //   page -> worker  { capture, plan }        build

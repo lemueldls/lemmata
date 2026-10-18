@@ -14,16 +14,16 @@ importers:
         specifier: ^1.56.0
         version: 1.64.1
 
-  site:
+  web:
     dependencies:
       astro:
         specifier: ^7.4.0
         version: 7.4.0(yaml@2.9.1)
       lemmata-web:
         specifier: workspace:*
-        version: link:../www/pkg
+        version: link:pkg
 
-  www/pkg: {}
+  web/pkg: {}
 
 packages:
 

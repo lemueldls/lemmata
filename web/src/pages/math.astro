@@ -1,0 +1,112 @@
+---
+// The equations page, from `www/math.html` and `www/math.js`, which the math
+// work put there. It builds the font in the page and sets MathML in it, which is
+// the only way anyone sees r[math.*]'s work.
+//
+// Two changes from the prototype. The corpus is editable, so the page is a
+// place to try an equation rather than a fixed sample, and it is a page of the
+// site rather than a file served from the repository root.
+//
+// What it can show is what the MATH table carries: the constants, the glyph
+// info and the variants, so a delimiter grows to fit its content. Script style
+// needs an `ssty` feature the font does not write, and math kerning and the
+// horizontal constructions are unwritten, so a fraction's bar does not grow the
+// way a parenthesis does. `docs/math.md` has the list.
+import corpus from "../../../corpus/equations.mathml?raw";
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="Equations">
+  <h1>Equations</h1>
+  <p>
+    These are set in the font this page built from the math glyph set. The
+    MathML is editable: change an equation and it is re-rendered in the same
+    font, in the browser, with no upload.
+  </p>
+  <p id="status">Building…</p>
+  <textarea id="source" rows="12" spellcheck="false">{corpus}</textarea>
+  <div id="equations"></div>
+  <noscript><p>The equations need JavaScript: the font is built in the page.</p></noscript>
+
+  <style>
+    /* The equations are the point: they are set in the font the page built.
+       Not `display: block` on the math elements, which would replace the
+       `block math` the user agent stylesheet gives a `math[display="block"]`
+       and lay every token out on a line of its own; the attribute on each
+       `math` element is what puts it on its own line. */
+    #equations { font-family: Lemmata, serif; font-size: 24px; }
+    #equations math { margin: 0.5rem 0; }
+  </style>
+
+  <script>
+    import init, { build_font, default_plan } from "lemmata-web";
+
+    const status = document.querySelector("#status");
+    const equations = document.querySelector("#equations");
+    const source = document.querySelector("#source");
+
+    /// Measures a string in a family, to tell whether a font rendered it.
+    function widthOf(family, text) {
+      const context = document.createElement("canvas").getContext("2d");
+      context.font = `32px ${family}`;
+      return context.measureText(text).width;
+    }
+
+    // A renderer that cannot serve the corpus falls back, so the check is that
+    // the family changes the measurement. The sample is the constructs a math
+    // font has to carry: a radical, a large operator, an integral, Greek.
+    function measure() {
+      const ours = widthOf("Lemmata", "\u2211 \u222B \u221A x \u03B1");
+      const fallback = widthOf('"Lemmata Absent"', "\u2211 \u222B \u221A x \u03B1");
+      const rendered = equations.querySelectorAll("math").length;
+
+      // A delimiter grown to fit its content is built by stacking pieces, so it
+      // stays as wide as the glyph it was cut from, while a renderer with no
+      // assembly scales the glyph and widens it. Both are recorded rather than
+      // asserted: whether a browser stretches at all is the browser's business.
+      document.body.dataset.measure = JSON.stringify(
+        [...equations.querySelectorAll("mo")]
+          .filter((mo) => mo.textContent === "(" || mo.textContent === ")")
+          .map((mo) => {
+            const box = mo.getBoundingClientRect();
+            return { width: Math.round(box.width), height: Math.round(box.height) };
+          }),
+      );
+
+      status.textContent =
+        ours !== fallback && rendered > 0
+          ? `Ready. ${rendered} equations.`
+          : `Fallback. ${rendered} equations.`;
+    }
+
+    const render = () => {
+      equations.innerHTML = source.value;
+      measure();
+    };
+
+    const run = async () => {
+      await init();
+
+      // The math capture, not the coverage one: the corpus needs the
+      // alphanumerics and the operators as well as the letters. It ships
+      // gzipped because it is 2.4 MB raw and 250 KB compressed, and a browser
+      // decompresses a stream with no library.
+      const response = await fetch(`${import.meta.env.BASE_URL}math.bin.gz`);
+      const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
+      const capture = new Uint8Array(await new Response(stream).arrayBuffer());
+      const bytes = build_font(capture, default_plan());
+
+      const face = new FontFace("Lemmata", bytes.buffer);
+      await face.load();
+      document.fonts.add(face);
+      await document.fonts.load("16px Lemmata");
+
+      render();
+      source.addEventListener("input", render);
+    };
+
+    run().catch((error) => {
+      status.textContent = `Failed: ${error}`;
+    });
+  </script>
+</Base>

@@ -3,5 +3,5 @@
 # alone, offline, so the parity pair can be checked without an install.
 packages:
   - harness/*
-  - site
-  - www/pkg
+  - web
+  - web/pkg

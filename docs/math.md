@@ -98,7 +98,7 @@ The band is what makes a piece repeatable, so the derivation measures it: it cut
 
 ## The browser
 
-`corpus/equations.mathml` is the same twelve equations as MathML. `www/math.html` builds the font in the page from the math capture, registers it as a face, and sets the corpus in it. `harness/browser/math.spec.mjs` runs that through a real browser and checks the family is what rendered: a renderer that cannot serve the corpus falls back, and the fallback changes the measurement.
+`corpus/equations.mathml` is the same twelve equations as MathML. `web/src/pages/math.astro` builds the font in the page from the math capture, registers it as a face, and sets MathML in it. The corpus is editable, so the page is somewhere to try an equation rather than a fixed sample. The capture ships gzipped under `web/public/` because it is 2.4 MB raw and 400 KB compressed, and the page decompresses it with `DecompressionStream`. `harness/browser/math.spec.mjs` runs that through a real browser and checks the family is what rendered: a renderer that cannot serve the corpus falls back, and the fallback changes the measurement.
 
 That is `r[math.mathml]`'s rendering half. The page's stylesheet must not set `display` on a `math` element. `display: block` replaces the `block math` the user agent stylesheet gives `math[display="block"]`, and every token inside is then laid out on a line of its own with no `mrow` to run. The page did exactly that until a screenshot of it showed the equations stacked vertically. The `display` attribute on each `math` element is what puts it on its own line.
 

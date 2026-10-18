@@ -1,5 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
+
+const base = import.meta.env.BASE_URL;
 ---
 
 <Base title="A typeface factory in the browser">
@@ -10,8 +12,9 @@ import Base from "../layouts/Base.astro";
     rather than only the letters.
   </p>
   <p>
-    The <a href="/www/dist/generate/">generator</a> builds a font locally, in a
-    worker, with no upload. What it builds today is narrow and honest: a plan
+    The <a href={`${base}generate/`}>generator</a> builds a font locally, in a
+    worker, with no upload, and the <a href={`${base}math/`}>equations page</a>
+    sets MathML in what it just built. What it builds today is narrow and honest: a plan
     reaches the font's metrics, and the outlines come from a recorded glyph set.
   </p>
 </Base>
