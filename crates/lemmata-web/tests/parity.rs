@@ -9,6 +9,7 @@
 //! The profile does not change the output, checked before this was written, so
 //! one fingerprint covers a debug test run and a release wasm build.
 
+use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -29,11 +30,11 @@ fn capture_path() -> PathBuf {
 fn sha256(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
-    hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    let mut out = String::with_capacity(64);
+    for byte in hasher.finalize() {
+        let _ = write!(out, "{byte:02x}");
+    }
+    out
 }
 
 #[test]

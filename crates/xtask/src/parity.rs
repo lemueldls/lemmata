@@ -10,6 +10,7 @@
 //! geometry nor the font writer and cannot disagree with the CLI about what it
 //! built.
 
+use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -30,11 +31,11 @@ fn sha256_file(path: &Path) -> Result<String, String> {
     let bytes = fs::read(path).map_err(|error| format!("reading {}: {error}", path.display()))?;
     let mut hasher = Sha256::new();
     hasher.update(&bytes);
-    Ok(hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
+    let mut out = String::with_capacity(64);
+    for byte in hasher.finalize() {
+        let _ = write!(out, "{byte:02x}");
+    }
+    Ok(out)
 }
 
 fn run(command: &mut Command) -> Result<(), String> {
