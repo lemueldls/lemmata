@@ -6,6 +6,7 @@
 import { defineConfig } from "@playwright/test";
 
 const port = 8781;
+const sitePort = 8782;
 
 export default defineConfig({
   testDir: ".",
@@ -19,10 +20,22 @@ export default defineConfig({
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM }
       : {},
   },
-  webServer: {
-    command: `python3 -m http.server ${port} --bind 127.0.0.1`,
-    cwd: "../..",
-    url: `http://127.0.0.1:${port}/www/index.html`,
-    reuseExistingServer: true,
-  },
+  // Two servers, because they are two different roots. The built site is served
+  // at the root of its own, which is what a deploy does and what its
+  // root-absolute asset URLs assume. The prototype pages live at the repository
+  // root and are reached from there until they are retired.
+  webServer: [
+    {
+      command: `python3 -m http.server ${port} --bind 127.0.0.1`,
+      cwd: "../..",
+      url: `http://127.0.0.1:${port}/www/index.html`,
+      reuseExistingServer: true,
+    },
+    {
+      command: `python3 -m http.server ${sitePort} --bind 127.0.0.1`,
+      cwd: "../../www/dist",
+      url: `http://127.0.0.1:${sitePort}/index.html`,
+      reuseExistingServer: true,
+    },
+  ],
 });

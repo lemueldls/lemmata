@@ -1,0 +1,17 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="A typeface factory in the browser">
+  <h1>Lemmata</h1>
+  <p>
+    A typeface factory written in Rust, meant to run in the browser and on the
+    command line from the same core, and to produce a full OpenType MATH table
+    rather than only the letters.
+  </p>
+  <p>
+    The <a href="/www/dist/generate/">generator</a> builds a font locally, in a
+    worker, with no upload. What it builds today is narrow and honest: a plan
+    reaches the font's metrics, and the outlines come from a recorded glyph set.
+  </p>
+</Base>

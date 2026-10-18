@@ -1,0 +1,88 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="Generate">
+  <h1>Generate</h1>
+  <p>
+    The plan below is the font's metrics. Every key defaults, so this is the
+    reference plan; change one and the tables follow. The outlines come from a
+    recorded glyph set, so they do not change yet, which is why the preview
+    below is a specimen of the font just built rather than a redraw.
+  </p>
+  <div class="row">
+    <button id="build">Build a font</button>
+    <a id="download" hidden download>Download</a>
+  </div>
+  <textarea id="plan" rows="8" spellcheck="false"></textarea>
+  <pre id="status">Starting the worker…</pre>
+
+  <h2>Specimen</h2>
+  <p class="specimen" id="specimen">
+    The quick brown fox jumps over the lazy dog<br />
+    0123456789 ():;,."'*/%+#=&lt;&gt;
+  </p>
+  <pre id="metrics">Metrics appear once a font is built.</pre>
+
+  <script>
+    import init, { default_plan } from "lemmata-web";
+    // Vite bundles the worker and gives back a constructor. Building the URL by
+    // hand from `import.meta.url` does not survive the build, which is how this
+    // failed the first time.
+    import GenerateWorker from "../worker.js?worker";
+
+    const status = document.querySelector("#status");
+    const planField = document.querySelector("#plan");
+    const specimen = document.querySelector("#specimen");
+    const metricsOut = document.querySelector("#metrics");
+    const download = document.querySelector("#download");
+    const buildButton = document.querySelector("#build");
+
+    await init();
+    planField.value = default_plan();
+
+    const worker = new GenerateWorker();
+    // Base-relative, so the site works served at any root: the harness serves
+    // it from `www/dist` and a deploy serves it from `/`.
+    const capture = new Uint8Array(await (await fetch(`${import.meta.env.BASE_URL}glyphs.bin`)).arrayBuffer());
+
+    const say = (text) => { status.textContent = text; };
+    say("Ready.");
+
+    worker.onmessage = (event) => {
+      const message = event.data;
+      if (message.error) {
+        say(`Build failed: ${message.error}`);
+        buildButton.disabled = false;
+        return;
+      }
+      if (message.phase === "building") {
+        say("Building…");
+        return;
+      }
+      if (message.bytes) {
+        const bytes = new Uint8Array(message.bytes);
+        say(`Built ${bytes.length.toLocaleString()} bytes in ${message.elapsed.toFixed(0)} ms.`);
+        download.href = URL.createObjectURL(new Blob([bytes], { type: "font/ttf" }));
+        download.download = "Lemmata-Regular.ttf";
+        download.hidden = false;
+
+        // The specimen is the font just built, registered under the family the
+        // font names, so it is the output being shown and not a placeholder.
+        const face = new FontFace("Lemmata", bytes.buffer);
+        face.load().then((loaded) => {
+          document.fonts.add(loaded);
+          specimen.style.fontFamily = "Lemmata";
+        });
+        metricsOut.textContent = `${bytes.length.toLocaleString()} bytes, built in ${message.elapsed.toFixed(0)} ms`;
+        buildButton.disabled = false;
+      }
+    };
+
+    buildButton.addEventListener("click", () => {
+      buildButton.disabled = true;
+      download.hidden = true;
+      worker.postMessage({ capture, plan: planField.value });
+    });
+  </script>
+</Base>

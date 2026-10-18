@@ -22,7 +22,8 @@ test("the page builds the recorded pair, byte for byte", async ({ page }) => {
     if (message.type() === "error") failures.push(message.text());
   });
 
-  await page.goto("/www/index.html");
+  // The built site has its own root, as a deploy gives it.
+  await page.goto("http://127.0.0.1:8782/generate/");
   await expect(page.locator("#status")).toHaveText("Ready.");
   await page.locator("#plan").fill(JSON.stringify(golden.plan));
   await page.locator("#build").click();
