@@ -19,4 +19,5 @@ lemmata-geom = { path = "../lemmata-geom" }
 lemmata-plan = { path = "../lemmata-plan" }
 
 [dev-dependencies]
+harfrust.workspace = true
 read-fonts.workspace = true

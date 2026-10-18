@@ -18,6 +18,7 @@ use read_fonts::tables::head::MacStyle;
 use read_fonts::tables::math::{MathConstant, StretchAxis};
 use read_fonts::tables::os2::SelectionFlags;
 use read_fonts::types::NameId;
+use read_fonts::types::{GlyphId, Tag};
 use read_fonts::{FontRef, TableProvider};
 
 /// Allowed bounding box difference against Iosevka, in font units.
@@ -827,4 +828,83 @@ fn ots_sanitize_accepts_the_font() {
         stdout.contains("sanitized successfully") || stderr.contains("sanitized successfully"),
         "ots-sanitize said something unexpected:\n{stdout}{stderr}"
     );
+}
+
+/// `r[build.texture]`: the healed forms move inside the cell and the cell stays
+/// the same size, which is what lets the grid survive.
+#[test]
+fn texture_forms_move_within_the_cell() {
+    let Some((bytes, captured)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let tags: Vec<Tag> = font
+        .gsub()
+        .expect("a GSUB")
+        .feature_list()
+        .expect("a feature list")
+        .feature_records()
+        .iter()
+        .map(|record| record.feature_tag())
+        .collect();
+    assert!(
+        tags.contains(&Tag::new(b"calt")),
+        "the features are {tags:?}"
+    );
+
+    // The forms are derived, so the test derives them too and finds them by the
+    // name the derivation gives them.
+    let glyphs = glyph_data(&captured);
+    let derived = lemmata_build::font::derived(&glyphs, &Metrics::default());
+    let id = |name: &str| -> GlyphId {
+        let index = derived
+            .iter()
+            .position(|glyph| glyph.name == name)
+            .unwrap_or_else(|| panic!("{name} is not derived"));
+        GlyphId::new(u32::try_from(glyphs.len() + 1 + index).expect("glyph id"))
+    };
+    let hmtx = font.hmtx().expect("hmtx");
+    let advance = |id: GlyphId| -> u16 { hmtx.advance(id).expect("an advance") };
+
+    let mut healed = 0usize;
+    for (index, role) in lemmata_build::texture::classify(&glyphs) {
+        let base = &glyphs[index];
+        let base_id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
+        for (side, contours) in lemmata_build::texture::forms(base, role, base.advance) {
+            let name = lemmata_build::texture::form_name(&base.name, side);
+            let form = id(&name);
+            // The advance is the whole trick: the drawing moves and the cell
+            // does not, so the monospace grid is untouched.
+            assert_eq!(
+                advance(form),
+                advance(base_id),
+                "{name} must not change the advance"
+            );
+            let (x_min, _, x_max, _) =
+                lemmata_build::font::ink(&contours).unwrap_or_else(|| panic!("{name} has ink"));
+            let (base_min, _, base_max, _) =
+                lemmata_build::font::ink(&base.contours).expect("the base has ink");
+            match side {
+                lemmata_build::texture::Side::Left => assert!(
+                    x_min < base_min && x_max <= base_max,
+                    "{name} should move left: {x_min}..{x_max} against {base_min}..{base_max}"
+                ),
+                lemmata_build::texture::Side::Right => assert!(
+                    x_min >= base_min && x_max > base_max,
+                    "{name} should move right: {x_min}..{x_max} against {base_min}..{base_max}"
+                ),
+                lemmata_build::texture::Side::Both => assert!(
+                    x_min < base_min && x_max > base_max,
+                    "{name} should reach both ways: {x_min}..{x_max} against {base_min}..{base_max}"
+                ),
+            }
+            healed += 1;
+        }
+    }
+    assert!(
+        healed > 0,
+        "nothing was classified as giving or taking space"
+    );
+    eprintln!("texture: {healed} forms, every advance unchanged");
 }

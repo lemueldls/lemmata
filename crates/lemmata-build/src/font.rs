@@ -109,24 +109,30 @@ impl GlyphData {
     /// The glyph's bounding box, or `None` when it has no points.
     #[must_use]
     pub fn bounding_box(&self) -> Option<(i16, i16, i16, i16)> {
-        let mut bounds: Option<(f64, f64, f64, f64)> = None;
-        for point in self.contours.iter().flatten() {
-            let entry = bounds.get_or_insert((point.x, point.y, point.x, point.y));
-            entry.0 = entry.0.min(point.x);
-            entry.1 = entry.1.min(point.y);
-            entry.2 = entry.2.max(point.x);
-            entry.3 = entry.3.max(point.y);
-        }
-
-        bounds.map(|(x_min, y_min, x_max, y_max)| {
-            (
-                x_min.floor() as i16,
-                y_min.floor() as i16,
-                x_max.ceil() as i16,
-                y_max.ceil() as i16,
-            )
-        })
+        ink(&self.contours)
     }
+}
+
+/// The bounding box of a set of contours, or `None` when they hold no points.
+#[must_use]
+pub fn ink(contours: &[Vec<QuadifyPoint>]) -> Option<(i16, i16, i16, i16)> {
+    let mut bounds: Option<(f64, f64, f64, f64)> = None;
+    for point in contours.iter().flatten() {
+        let entry = bounds.get_or_insert((point.x, point.y, point.x, point.y));
+        entry.0 = entry.0.min(point.x);
+        entry.1 = entry.1.min(point.y);
+        entry.2 = entry.2.max(point.x);
+        entry.3 = entry.3.max(point.y);
+    }
+
+    bounds.map(|(x_min, y_min, x_max, y_max)| {
+        (
+            x_min.floor() as i16,
+            y_min.floor() as i16,
+            x_max.ceil() as i16,
+            y_max.ceil() as i16,
+        )
+    })
 }
 
 /// The glyphs derived from the captured set: the size variants of the stretchy
@@ -150,8 +156,89 @@ pub fn derived(glyphs: &[GlyphData], metrics: &Metrics) -> Vec<GlyphData> {
     derived.extend(pieces);
     let dotless = crate::dotless::derive(glyphs, f64::from(metrics.x_height), next_code(&derived));
     derived.extend(dotless);
+    let healed = crate::texture::derive(glyphs, next_code(&derived));
+    derived.extend(healed);
 
     derived
+}
+
+/// The `calt` feature: texture healing's passes, in the order they have to run.
+///
+/// Each pass names what it changes and what it changes it in front of, and a
+/// later pass sees what an earlier one left: the centre pass only fires between
+/// two givers that the first two passes have already moved apart.
+fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
+    use crate::texture::{Role, Side, form_name};
+
+    let id = |name: &str| -> Option<GlyphId16> {
+        let index = glyphs.iter().position(|glyph| glyph.name == name)?;
+        u16::try_from(index + 1).ok().map(GlyphId16::new)
+    };
+    // One classification for the coverages and the forms both, so the rule and
+    // the glyph it names cannot come apart.
+    let roles = crate::texture::classify(glyphs);
+    let of = |role: Role| -> Vec<usize> {
+        roles
+            .iter()
+            .filter(|(_, recorded)| *recorded == role)
+            .map(|(index, _)| *index)
+            .collect()
+    };
+    let givers = of(Role::Gives);
+    let takers = of(Role::Takes);
+    if givers.is_empty() || takers.is_empty() {
+        return None;
+    }
+    let ids = |indices: &[usize]| -> Vec<GlyphId16> {
+        indices
+            .iter()
+            .filter_map(|index| id(&glyphs[*index].name))
+            .collect()
+    };
+    let shifted = |indices: &[usize], side: Side| -> Vec<(GlyphId16, GlyphId16)> {
+        indices
+            .iter()
+            .filter_map(|index| {
+                let name = &glyphs[*index].name;
+                Some((id(name)?, id(&form_name(name, side))?))
+            })
+            .collect()
+    };
+
+    Some(lemmata_layout::Feature {
+        tag: Tag::new(b"calt"),
+        scripts: vec![Tag::new(b"latn"), Tag::new(b"DFLT")],
+        effect: lemmata_layout::Effect::Contextual(vec![
+            // A giver before a taker cedes toward it.
+            lemmata_layout::Rule {
+                backtrack: Vec::new(),
+                input: ids(&givers),
+                lookahead: ids(&takers),
+                apply: shifted(&givers, Side::Left),
+            },
+            // A giver after a taker cedes toward it.
+            lemmata_layout::Rule {
+                backtrack: ids(&takers),
+                input: ids(&givers),
+                lookahead: Vec::new(),
+                apply: shifted(&givers, Side::Right),
+            },
+            // A taker between two givers takes both sides, which only fires
+            // once the passes above have moved the givers apart.
+            lemmata_layout::Rule {
+                backtrack: shifted(&givers, Side::Left)
+                    .into_iter()
+                    .map(|(_, to)| to)
+                    .collect(),
+                input: ids(&takers),
+                lookahead: shifted(&givers, Side::Right)
+                    .into_iter()
+                    .map(|(_, to)| to)
+                    .collect(),
+                apply: shifted(&takers, Side::Both),
+            },
+        ]),
+    })
 }
 
 /// The substitutions the font carries.
@@ -175,11 +262,16 @@ fn substitutions(glyphs: &[GlyphData]) -> Gsub {
         pairs.push((GlyphId16::new(from), GlyphId16::new(to)));
     }
 
-    lemmata_layout::gsub(&[lemmata_layout::Feature {
+    let mut features = vec![lemmata_layout::Feature {
         tag: Tag::new(b"dtls"),
-        script: Tag::new(b"math"),
-        substitutions: pairs,
-    }])
+        scripts: vec![Tag::new(b"math")],
+        effect: lemmata_layout::Effect::Single(pairs),
+    }];
+    if let Some(healing) = texture(glyphs) {
+        features.push(healing);
+    }
+
+    lemmata_layout::gsub(&features)
 }
 
 /// Builds a TrueType font.

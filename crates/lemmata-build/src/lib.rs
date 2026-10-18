@@ -13,6 +13,7 @@ pub mod assembly;
 pub mod dotless;
 pub mod font;
 pub mod math;
+pub mod texture;
 pub mod variants;
 
 /// Hit and miss counters for one table.

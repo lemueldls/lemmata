@@ -5,90 +5,197 @@
 //! for the three lists, so this assembles them from a description small enough
 //! to read.
 //!
-//! Every feature here is a single substitution, which is what a form that
-//! differs per glyph needs: one coverage naming the glyphs that change, and one
-//! replacement per covered glyph, in coverage order.
+//! Two kinds of feature are expressible. A plain substitution covers a set of
+//! glyphs and replaces each with its partner, which is what a form that differs
+//! per glyph needs. A contextual one fires only where the neighbours allow,
+//! which is what a form that borrows space from the glyph beside it needs.
 
-use write_fonts::tables::gsub::{Gsub, SingleSubst, SubstitutionLookup};
-use write_fonts::tables::layout::Feature as FeatureTable;
+use write_fonts::tables::gsub::{Gsub, SingleSubst, SubstitutionChainContext, SubstitutionLookup};
 use write_fonts::tables::layout::{
-    CoverageTable, FeatureList, FeatureRecord, LangSys, Lookup, LookupFlag, LookupList, Script,
-    ScriptList, ScriptRecord,
+    ChainedSequenceContext, ChainedSequenceContextFormat3, CoverageTable, Feature as FeatureTable,
+    FeatureList, FeatureRecord, LangSys, Lookup, LookupFlag, LookupList, Script, ScriptList,
+    ScriptRecord, SequenceLookupRecord,
 };
 use write_fonts::types::{GlyphId16, Tag};
 
 /// A language system with no required feature. The specification uses `0xFFFF`.
 const NO_REQUIRED_FEATURE: u16 = 0xFFFF;
 
-/// One feature: a tag, the script it is registered under, and the glyphs it
-/// substitutes, in coverage order.
+/// One contextual rule: when the input glyph is in `input`, with the glyph
+/// before it in `backtrack` and the one after in `lookahead`, substitute the
+/// input through `apply`.
+///
+/// An empty coverage matches anything, which is how a rule that only cares
+/// about one side is written.
+#[derive(Clone, Debug, Default)]
+pub struct Rule {
+    pub backtrack: Vec<GlyphId16>,
+    pub input: Vec<GlyphId16>,
+    pub lookahead: Vec<GlyphId16>,
+    pub apply: Vec<(GlyphId16, GlyphId16)>,
+}
+
+/// What a feature does.
+#[derive(Clone, Debug)]
+pub enum Effect {
+    /// One lookup substituting each of these glyphs for its partner.
+    Single(Vec<(GlyphId16, GlyphId16)>),
+    /// A sequence of rules, applied in order, so a later rule sees what an
+    /// earlier one left behind.
+    Contextual(Vec<Rule>),
+}
+
+/// One feature: a tag, the scripts it is registered under, and what it does.
 #[derive(Clone, Debug)]
 pub struct Feature {
     pub tag: Tag,
-    pub script: Tag,
-    pub substitutions: Vec<(GlyphId16, GlyphId16)>,
+    pub scripts: Vec<Tag>,
+    pub effect: Effect,
 }
 
-/// Builds a GSUB with one lookup per feature.
+/// A coverage from a glyph list.
 ///
-/// A feature with no substitutions is skipped: a lookup with an empty coverage
-/// is valid but names nothing, and a feature that changes nothing is worse than
-/// an absent one because it hides the gap.
+/// `write-fonts`' builder takes the glyphs in order and does not sort them, and
+/// a coverage that is out of order reads as a coverage that does not match: the
+/// lookup is well formed, `ots-sanitize` accepts it, and the shaper quietly
+/// does nothing. Anything that arrives in another order is sorted here.
+fn coverage(glyphs: Vec<GlyphId16>) -> CoverageTable {
+    let mut glyphs = glyphs;
+    glyphs.sort_unstable();
+    glyphs.dedup();
+
+    glyphs.into_iter().collect()
+}
+
+/// A single-substitution lookup.
+fn substitution(pairs: &[(GlyphId16, GlyphId16)]) -> SubstitutionLookup {
+    // Format 2 pairs the coverage with the replacements in order, so the pairs
+    // are sorted before they are split. Sorting the coverage alone, which is
+    // what the builder needs, would leave each glyph pointing at another
+    // glyph's form.
+    let mut pairs = pairs.to_vec();
+    pairs.sort_unstable();
+    let (covered, replacements): (Vec<GlyphId16>, Vec<GlyphId16>) = pairs.into_iter().unzip();
+
+    SubstitutionLookup::Single(Lookup::new(
+        LookupFlag::empty(),
+        vec![SingleSubst::format_2(coverage(covered), replacements)],
+    ))
+}
+
+/// Builds a GSUB carrying `features`.
+///
+/// A feature with nothing to do is skipped: a lookup with an empty coverage is
+/// valid but names nothing, and a feature that changes nothing is worse than an
+/// absent one because it hides the gap.
 #[must_use]
 pub fn gsub(features: &[Feature]) -> Gsub {
     let mut lookups = Vec::new();
-    let mut records = Vec::new();
+    let mut features_out: Vec<(Tag, Vec<Tag>, Vec<u16>)> = Vec::new();
     for feature in features {
-        if feature.substitutions.is_empty() {
-            continue;
+        let mut indices = Vec::new();
+        match &feature.effect {
+            Effect::Single(pairs) => {
+                if pairs.is_empty() {
+                    continue;
+                }
+                indices.push(push(&mut lookups, substitution(pairs)));
+            }
+            Effect::Contextual(rules) => {
+                for rule in rules {
+                    if rule.input.is_empty() || rule.apply.is_empty() {
+                        continue;
+                    }
+                    // The substitution is reached through the rule, so it goes
+                    // in the list but not in the feature's own indices: a
+                    // lookup a feature names directly applies everywhere.
+                    let applied = push(&mut lookups, substitution(&rule.apply));
+                    // One coverage per position, each naming every glyph that
+                    // fits it. A coverage per glyph instead says the sequence
+                    // is as long as the set is wide, which is a rule that can
+                    // never match: the table is well formed and the shaper
+                    // finds nothing to apply.
+                    let context = ChainedSequenceContextFormat3 {
+                        backtrack_coverages: if rule.backtrack.is_empty() {
+                            Vec::new()
+                        } else {
+                            vec![coverage(rule.backtrack.clone()).into()]
+                        },
+                        input_coverages: vec![coverage(rule.input.clone()).into()],
+                        lookahead_coverages: if rule.lookahead.is_empty() {
+                            Vec::new()
+                        } else {
+                            vec![coverage(rule.lookahead.clone()).into()]
+                        },
+                        seq_lookup_records: vec![SequenceLookupRecord::new(0, applied)],
+                    };
+                    // The newtype has no constructor, so it is filled through
+                    // its `DerefMut`.
+                    let mut wrapped = SubstitutionChainContext::default();
+                    *wrapped = ChainedSequenceContext::Format3(context);
+                    indices.push(push(
+                        &mut lookups,
+                        SubstitutionLookup::ChainContextual(Lookup::new(
+                            LookupFlag::empty(),
+                            vec![wrapped],
+                        )),
+                    ));
+                }
+            }
         }
-        let index = u16::try_from(lookups.len()).unwrap_or(u16::MAX);
-        let (covered, replacements): (Vec<GlyphId16>, Vec<GlyphId16>) =
-            feature.substitutions.iter().copied().unzip();
-        lookups.push(SubstitutionLookup::Single(Lookup::new(
-            LookupFlag::empty(),
-            vec![SingleSubst::format_2(
-                covered.into_iter().collect::<CoverageTable>(),
-                replacements,
-            )],
-        )));
-        records.push((feature.tag, index));
+        if !indices.is_empty() {
+            features_out.push((feature.tag, feature.scripts.clone(), indices));
+        }
     }
-    if records.is_empty() {
+    if features_out.is_empty() {
         return Gsub::default();
     }
 
-    // One feature record per tag, each pointing at its own lookup.
+    // The specification requires both lists in tag order, and a shaper binary
+    // searches them, so an unsorted list is a list it cannot find anything in.
+    // This is invisible to a read-back and to a sanitizer, and it is what kept
+    // the features out of the shaper's hands.
+    let mut order: Vec<usize> = (0..features_out.len()).collect();
+    order.sort_by_key(|index| features_out[*index].0);
+    let mut remapped = vec![0u16; features_out.len()];
+    for (position, index) in order.iter().enumerate() {
+        remapped[*index] = u16::try_from(position).unwrap_or(u16::MAX);
+    }
+
     let feature_list = FeatureList {
-        feature_records: records
+        feature_records: order
             .iter()
-            .map(|(tag, lookup)| FeatureRecord {
-                feature_tag: *tag,
-                feature: FeatureTable {
-                    feature_params: None.into(),
-                    lookup_list_indices: vec![*lookup],
+            .map(|index| {
+                let (tag, _, indices) = &features_out[*index];
+                FeatureRecord {
+                    feature_tag: *tag,
+                    feature: FeatureTable {
+                        feature_params: None.into(),
+                        lookup_list_indices: indices.clone(),
+                    }
+                    .into(),
                 }
-                .into(),
             })
             .collect(),
     };
 
-    // A script points at every feature registered under it. Two features under
-    // one script are two entries in the same language system, which is what
-    // makes them both apply.
+    // A script points at every feature registered under it, and a feature may
+    // be registered under more than one, which is how a contextual feature
+    // reaches ordinary text as well as whatever else names it.
     let mut scripts: Vec<(Tag, Vec<u16>)> = Vec::new();
-    for (index, (tag, _)) in records.iter().enumerate() {
-        let script = features
-            .iter()
-            .find(|feature| feature.tag == *tag)
-            .map_or(Tag::new(b"DFLT"), |feature| feature.script);
-        let Ok(index) = u16::try_from(index) else {
-            continue;
-        };
-        match scripts.iter_mut().find(|(recorded, _)| *recorded == script) {
-            Some((_, indices)) => indices.push(index),
-            None => scripts.push((script, vec![index])),
+    for (index, (_, tags, _)) in features_out.iter().enumerate() {
+        let feature = remapped[index];
+        for tag in tags {
+            match scripts.iter_mut().find(|(recorded, _)| recorded == tag) {
+                Some((_, indices)) => indices.push(feature),
+                None => scripts.push((*tag, vec![feature])),
+            }
         }
+    }
+    scripts.sort_by_key(|(tag, _)| *tag);
+    for (_, indices) in &mut scripts {
+        indices.sort_unstable();
+        indices.dedup();
     }
 
     Gsub {
@@ -117,4 +224,12 @@ pub fn gsub(features: &[Feature]) -> Gsub {
         .into(),
         ..Gsub::default()
     }
+}
+
+/// Appends a lookup and answers its index.
+fn push(lookups: &mut Vec<SubstitutionLookup>, lookup: SubstitutionLookup) -> u16 {
+    let index = u16::try_from(lookups.len()).unwrap_or(u16::MAX);
+    lookups.push(lookup);
+
+    index
 }
