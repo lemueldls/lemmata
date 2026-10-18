@@ -54,19 +54,33 @@ i. ii. iii. iv. v. 1st 2nd 3rd 4th`,
 // than carried by the font, which `texture.healing` further down records.
 const spec = [
   { name: "Metrics", note: "Every key in the plan reaches the font's tables." },
-  { name: "Parameters", note: "The parameter tables, read as upstream writes them." },
-  { name: "Variants", note: "Every letter in as many spellings as you care to compare." },
-  { name: "Texture healing", note: "A narrow letter gives its sidebearings to a wide neighbour, and the cell stays where it was." },
-  { name: "Math", note: "The constants, the italic corrections, and the delimiters that grow to fit." },
-  { name: "Optical sizes", note: "A cut for footnotes and a cut for display, from one plan." },
-  { name: "Script style", note: "Letters drawn for the size of the body they sit in." },
+  {
+    name: "Parameters",
+    note: "The parameter tables, read as upstream writes them.",
+  },
+  {
+    name: "Variants",
+    note: "Every letter in as many spellings as you care to compare.",
+  },
+  {
+    name: "Texture healing",
+    note: "A narrow letter gives its sidebearings to a wide neighbour, and the cell stays where it was.",
+  },
+  {
+    name: "Math",
+    note: "The constants, the italic corrections, and the delimiters that grow to fit.",
+  },
+  {
+    name: "Optical sizes",
+    note: "A cut for footnotes and a cut for display, from one plan.",
+  },
+  {
+    name: "Script style",
+    note: "Letters drawn for the size of the body they sit in.",
+  },
 ];
 
-const variants = [
-  "a",
-  "a.doubleStoreySerifed",
-  "a.singleStoreySerifless",
-];
+const variants = ["a", "a.doubleStoreySerifed", "a.singleStoreySerifless"];
 ---
 
 <Base title="A typeface built from a plan">
@@ -75,9 +89,13 @@ const variants = [
       <p class="kicker">A premise, a construction, a proof</p>
       <div class="hero__stage">
         <div class="hero__grid" aria-hidden="true"></div>
-        <h1 class="wordmark">lemmata<span class="probe" aria-hidden="true"></span></h1>
+        <h1 class="wordmark">
+          lemmata<span class="probe" aria-hidden="true"></span>
+        </h1>
         <div class="rules" id="rules" hidden>
-          <i class="rule rule--asc"><span>ascender <b id="rule-asc">…</b></span></i>
+          <i class="rule rule--asc"
+            ><span>ascender <b id="rule-asc">…</b></span></i
+          >
           <i class="rule rule--x"><span>x-height <b id="rule-x">…</b></span></i>
           <i class="rule rule--base"><span>baseline</span></i>
         </div>
@@ -89,9 +107,13 @@ const variants = [
       </p>
       <div class="actions">
         <a class="btn" href="#construction">See the construction</a>
-        <a class="btn btn--primary" href={`${base}generate/`}>Open the generator</a>
+        <a class="btn btn--primary" href={`${base}generate/`}
+          >Open the generator</a
+        >
       </div>
-      <p class="status" id="build-status" data-state="note">Reading the font…</p>
+      <p class="status" id="build-status" data-state="note">
+        Reading the font…
+      </p>
     </div>
   </section>
 
@@ -110,17 +132,21 @@ const variants = [
               <span>plan.json</span>
               <button class="chip" id="copy-plan" type="button">copy</button>
             </div>
-            <pre class="code" id="plan-code">{JSON.stringify(plan, null, 2)}</pre>
+            <pre
+              class="code"
+              id="plan-code">{JSON.stringify(plan, null, 2)}</pre>
           </div>
           <div class="panel">
             <div class="panel__head"><span>What the plan carries</span></div>
             <div class="panel__body ledger">
-              {spec.map((row) => (
-                <div class="ledger__row">
-                  <span class="ledger__name">{row.name}</span>
-                  <span class="ledger__note">{row.note}</span>
-                </div>
-              ))}
+              {
+                spec.map((row) => (
+                  <div class="ledger__row">
+                    <span class="ledger__name">{row.name}</span>
+                    <span class="ledger__note">{row.note}</span>
+                  </div>
+                ))
+              }
             </div>
           </div>
         </div>
@@ -140,19 +166,39 @@ const variants = [
         <div class="panel">
           <div class="panel__head">
             <div class="tabs">
-              <button class="tab" type="button" data-sample="code" aria-selected="true">code</button>
-              <button class="tab" type="button" data-sample="prose">prose</button>
-              <button class="tab" type="button" data-sample="figures">figures</button>
+              <button
+                class="tab"
+                type="button"
+                data-sample="code"
+                aria-selected="true">code</button
+              >
+              <button class="tab" type="button" data-sample="prose"
+                >prose</button
+              >
+              <button class="tab" type="button" data-sample="figures"
+                >figures</button
+              >
             </div>
             <label class="size">
               size
-              <input id="size" type="range" min="12" max="52" step="1" value="22" />
+              <input
+                id="size"
+                type="range"
+                min="12"
+                max="52"
+                step="1"
+                value="22"
+              />
               <b id="size-value">22</b>
             </label>
           </div>
-          <textarea id="sample" class="sample" rows="6" spellcheck="false">{samples.code}</textarea>
+          <textarea id="sample" class="sample" rows="6" spellcheck="false"
+            >{samples.code}</textarea
+          >
           <div class="panel__foot">
-            <p class="status" id="sample-status" data-state="note">Waiting for the build…</p>
+            <p class="status" id="sample-status" data-state="note">
+              Waiting for the build…
+            </p>
             <button class="btn" id="present" type="button">Present</button>
           </div>
         </div>
@@ -169,17 +215,17 @@ const variants = [
             </div>
             <div class="heal-line">
               <span class="heal-label">calt on</span>
-              <p class="heal-text" id="heal-healed"></p>
+              <p class="heal-text heal-texture--healed" id="heal-healed"></p>
             </div>
           </div>
           <div class="panel__foot">
             <p class="note">
-              A monospace cell is one width for every letter, so the letters that
-              leave the cell empty sit beside the ones that fill it. Healing
-              moves the drawing within the cell and gives the space to the
-              neighbour that wants it, which is a sixteenth of the advance and
-              never the advance itself. Both lines end in the same column, and
-              the grid is what shows it.
+              A monospace cell is one width for every letter, so the letters
+              that leave the cell empty sit beside the ones that fill it.
+              Healing moves the drawing within the cell and gives the space to
+              the neighbour that wants it, which is a sixteenth of the advance
+              and never the advance itself. Both lines end in the same column,
+              and the grid is what shows it.
             </p>
           </div>
         </div>
@@ -189,17 +235,19 @@ const variants = [
           <p class="note">Pick one and the next build draws it.</p>
         </div>
         <div class="variants">
-          {variants.map((name, index) => (
-            <button
-              class="variant"
-              type="button"
-              data-variant={name}
-              aria-pressed={index === 0}
-            >
-              <b>a</b>
-              <span>{name}</span>
-            </button>
-          ))}
+          {
+            variants.map((name, index) => (
+              <button
+                class="variant"
+                type="button"
+                data-variant={name}
+                aria-pressed={index === 0}
+              >
+                <b>a</b>
+                <span>{name}</span>
+              </button>
+            ))
+          }
         </div>
         <p class="status" id="variant-status" data-state="note">
           a · the spelling this build draws
@@ -230,13 +278,18 @@ const variants = [
           <div class="panel">
             <div class="panel__head">
               <span>Checksums</span>
-              <span class="chip" id="verdict" data-state="pending">hashing</span>
+              <span class="chip" id="verdict" data-state="pending">hashing</span
+              >
             </div>
             <div class="panel__body">
               <dl class="rows">
                 <div class="rows__row">
                   <dt>capture</dt>
-                  <dd id="sum-capture" data-hash={golden.capture} title={golden.capture}>
+                  <dd
+                    id="sum-capture"
+                    data-hash={golden.capture}
+                    title={golden.capture}
+                  >
                     {golden.capture.slice(0, 16)}…
                   </dd>
                 </div>
@@ -246,15 +299,20 @@ const variants = [
                 </div>
                 <div class="rows__row">
                   <dt>reference build</dt>
-                  <dd id="sum-recorded" data-hash={golden.font} title={golden.font}>
+                  <dd
+                    id="sum-recorded"
+                    data-hash={golden.font}
+                    title={golden.font}
+                  >
                     {golden.font.slice(0, 16)}…
                   </dd>
                 </div>
               </dl>
               <p class="note" id="parity-note">Waiting for the build.</p>
               <p class="note">
-                rustc {golden.toolchain.rustc} · wasm-bindgen {golden.toolchain["wasm-bindgen"]} ·
-                upstream {golden.upstream.slice(0, 7)}
+                rustc {golden.toolchain.rustc} · wasm-bindgen {
+                  golden.toolchain["wasm-bindgen"]
+                } · upstream {golden.upstream.slice(0, 7)}
               </p>
             </div>
           </div>
@@ -262,13 +320,27 @@ const variants = [
             <div class="panel__head"><span>Read from the font</span></div>
             <div class="panel__body">
               <dl class="rows">
-                <div class="rows__row"><dt>units per em</dt><dd id="measure-upem">…</dd></div>
-                <div class="rows__row"><dt>glyphs drawn</dt><dd id="measure-glyphs">…</dd></div>
-                <div class="rows__row"><dt>characters mapped</dt><dd id="measure-mapped">…</dd></div>
-                <div class="rows__row"><dt>x-height, x</dt><dd id="measure-x">…</dd></div>
-                <div class="rows__row"><dt>ascender, l</dt><dd id="measure-asc">…</dd></div>
-                <div class="rows__row"><dt>descender, p</dt><dd id="measure-desc">…</dd></div>
-                <div class="rows__row"><dt>advance, x</dt><dd id="measure-advance">…</dd></div>
+                <div class="rows__row">
+                  <dt>units per em</dt><dd id="measure-upem">…</dd>
+                </div>
+                <div class="rows__row">
+                  <dt>glyphs drawn</dt><dd id="measure-glyphs">…</dd>
+                </div>
+                <div class="rows__row">
+                  <dt>characters mapped</dt><dd id="measure-mapped">…</dd>
+                </div>
+                <div class="rows__row">
+                  <dt>x-height, x</dt><dd id="measure-x">…</dd>
+                </div>
+                <div class="rows__row">
+                  <dt>ascender, l</dt><dd id="measure-asc">…</dd>
+                </div>
+                <div class="rows__row">
+                  <dt>descender, p</dt><dd id="measure-desc">…</dd>
+                </div>
+                <div class="rows__row">
+                  <dt>advance, x</dt><dd id="measure-advance">…</dd>
+                </div>
               </dl>
               <p class="note">
                 In font units, out of the tables of the font just built. The ink
@@ -310,7 +382,7 @@ const variants = [
 
   <div hidden id="sample-prose">{samples.prose}</div>
   <div hidden id="sample-figures">{samples.figures}</div>
-  <template id="corpus" set:html={corpus}></template>
+  <template id="corpus" set:html={corpus} />
 
   <div class="stage" id="stage" hidden tabindex="-1">
     <div class="stage__body">
@@ -394,7 +466,9 @@ const variants = [
     };
     const nextSample = () => {
       const tabs = [...document.querySelectorAll(".tab")];
-      const current = tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true");
+      const current = tabs.findIndex(
+        (tab) => tab.getAttribute("aria-selected") === "true",
+      );
       tabs[(current + 1) % tabs.length].click();
     };
 
@@ -432,7 +506,11 @@ const variants = [
         for (const other of document.querySelectorAll(".variant")) {
           other.setAttribute("aria-pressed", String(other === button));
         }
-        say(variantStatus, "ok", `${button.dataset.variant} · the spelling this build draws`);
+        say(
+          variantStatus,
+          "ok",
+          `${button.dataset.variant} · the spelling this build draws`,
+        );
       });
     }
 
@@ -481,7 +559,9 @@ const variants = [
       const baseline =
         $(".probe").getBoundingClientRect().bottom -
         stage.getBoundingClientRect().top;
-      const place = (selector, top) => { $(selector).style.top = `${top}px`; };
+      const place = (selector, top) => {
+        $(selector).style.top = `${top}px`;
+      };
 
       place(".rule--asc", baseline - metrics.ascender * scale);
       place(".rule--x", baseline - metrics.xHeight * scale);
@@ -532,7 +612,9 @@ const variants = [
       } catch {
         copy.textContent = "select it";
       }
-      setTimeout(() => { copy.textContent = "copy"; }, 1400);
+      setTimeout(() => {
+        copy.textContent = "copy";
+      }, 1400);
     });
 
     planCode.innerHTML = [
@@ -542,7 +624,9 @@ const variants = [
           `  <span class="k">"${key}"</span>: <span class="n">${value}</span>`,
       ),
       "}",
-    ].join(",\n").replace(",\n}", "\n}");
+    ]
+      .join(",\n")
+      .replace(",\n}", "\n}");
 
     try {
       // The file the page is set in, taken from the preload link so this is the
@@ -551,10 +635,9 @@ const variants = [
       const href =
         [...document.querySelectorAll("link[rel=preload]")]
           .map((link) => link.getAttribute("href"))
-          .find((value) => value?.endsWith(".ttf")) ?? `${base}fonts/lemmata.ttf`;
-      const bytes = new Uint8Array(
-        await (await fetch(href)).arrayBuffer(),
-      );
+          .find((value) => value?.endsWith(".ttf")) ??
+        `${base}fonts/lemmata.ttf`;
+      const bytes = new Uint8Array(await (await fetch(href)).arrayBuffer());
       const digest = await sha256Hex(bytes);
       const matches = digest === recordedRow.dataset.hash;
       const drawn = glyphCount(bytes) ?? 0;
@@ -577,8 +660,8 @@ const variants = [
       // fallback face beside it, and asking for the list loads both: the
       // fallback is a local family that may not be installed, and one failed
       // face is enough to reject the whole request even though this one loaded.
-      const primary = getComputedStyle(sampleField).fontFamily
-        .split(",")[0]
+      const primary = getComputedStyle(sampleField)
+        .fontFamily.split(",")[0]
         .trim();
       await document.fonts.load(`100px ${primary}`, "lemmata");
 
@@ -603,7 +686,9 @@ const variants = [
       };
       for (const [selector, value] of Object.entries(rows)) {
         $(selector).textContent =
-          value === null || value === undefined ? "not in the font" : `${value}`;
+          value === null || value === undefined
+            ? "not in the font"
+            : `${value}`;
       }
 
       page = { map, metrics };
@@ -646,7 +731,11 @@ const variants = [
         healGrid();
       });
     } catch (error) {
-      say(status, "bad", `The font could not be read: ${error.message ?? error}`);
+      say(
+        status,
+        "bad",
+        `The font could not be read: ${error.message ?? error}`,
+      );
     }
 
     // The math face is a second font, and one section shows it, so it is asked
@@ -654,38 +743,47 @@ const variants = [
     // the family once the attribute is set, which is what keeps the download
     // out of the way until then.
     const equationStatus = $("#equation-status");
-    const observer = new IntersectionObserver(async (entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      observer.disconnect();
-      try {
-        say(equationStatus, "note", "Setting the equation…");
-        // Using the family is what asks for the file, so the attribute goes on
-        // first and the load is asked for by the name the element resolves to.
-        const holder = $("#equation");
-        holder.dataset.face = "ready";
-        const primary = getComputedStyle(holder).fontFamily.split(",")[0].trim();
-        await document.fonts.load(`24px ${primary}`, "\u222B");
+    const observer = new IntersectionObserver(
+      async (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        try {
+          say(equationStatus, "note", "Setting the equation…");
+          // Using the family is what asks for the file, so the attribute goes on
+          // first and the load is asked for by the name the element resolves to.
+          const holder = $("#equation");
+          holder.dataset.face = "ready";
+          const primary = getComputedStyle(holder)
+            .fontFamily.split(",")[0]
+            .trim();
+          await document.fonts.load(`24px ${primary}`, "\u222B");
 
-        // The corpus sits in a template, and the template's contents are
-        // already parsed: taking the equation from there skips a second parse
-        // and the import that came with it.
-        const equations = [...$("#corpus").content.querySelectorAll("math")];
-        if (equations.length === 0) {
-          throw new Error("the corpus in the page carries no equations");
+          // The corpus sits in a template, and the template's contents are
+          // already parsed: taking the equation from there skips a second parse
+          // and the import that came with it.
+          const equations = [...$("#corpus").content.querySelectorAll("math")];
+          if (equations.length === 0) {
+            throw new Error("the corpus in the page carries no equations");
+          }
+          const pick =
+            equations.find((node) => node.textContent.includes("\u222B")) ??
+            equations[0];
+          holder.append(pick);
+          say(
+            equationStatus,
+            "ok",
+            `Ready. ${equations.length} in the corpus, this one set in the font built from the math glyph set.`,
+          );
+        } catch (error) {
+          say(
+            equationStatus,
+            "bad",
+            `The math face failed: ${error.message ?? error}`,
+          );
         }
-        const pick =
-          equations.find((node) => node.textContent.includes("\u222B")) ??
-          equations[0];
-        holder.append(pick);
-        say(
-          equationStatus,
-          "ok",
-          `Ready. ${equations.length} in the corpus, this one set in the font built from the math glyph set.`,
-        );
-      } catch (error) {
-        say(equationStatus, "bad", `The math face failed: ${error.message ?? error}`);
-      }
-    }, { rootMargin: "300px" });
+      },
+      { rootMargin: "300px" },
+    );
     observer.observe($("#corollary"));
   </script>
 </Base>
