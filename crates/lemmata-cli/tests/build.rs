@@ -520,3 +520,45 @@ fn italic_outlines_lean() {
     );
     eprintln!("italic: {compared} letters, {mean:.1} units more lean");
 }
+
+/// `r[build.license]`: the font carries the copyright notice and the license
+/// statement the OFL asks for, and the license text ships beside it.
+#[test]
+fn license_records_are_present() {
+    let Some((bytes, _)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let name = font.name().expect("name");
+    let string_data = name.string_data();
+    let read = |id: NameId| -> Option<String> {
+        name.name_record()
+            .iter()
+            .find(|record| record.name_id() == id && record.platform_id() == 3)
+            .and_then(|record| record.string(string_data).ok())
+            .map(|value| value.to_string())
+    };
+
+    let copyright = read(NameId::COPYRIGHT_NOTICE).expect("a copyright notice");
+    assert!(
+        copyright.contains("Renzhi Li"),
+        "the notice is upstream's, since the glyphs derive from it: {copyright}"
+    );
+    let description = read(NameId::LICENSE_DESCRIPTION).expect("a license statement");
+    assert!(
+        description.contains("SIL Open Font License"),
+        "the statement names the license: {description}"
+    );
+    let url = read(NameId::LICENSE_URL).expect("a license URL");
+    assert!(url.starts_with("https://"), "the URL is absolute: {url}");
+
+    // The license text ships with the repository rather than only inside the
+    // submodule, because a release artifact is distributed without it.
+    let text = std::fs::read_to_string(workspace_path("LICENSE-OFL.md"))
+        .expect("the license text is in the repository");
+    assert!(
+        text.contains("SIL Open Font License v1.1"),
+        "the shipped text is the OFL itself"
+    );
+}

@@ -413,6 +413,18 @@ fn glyph_path(contours: &[Vec<QuadifyPoint>]) -> BezPath {
     path
 }
 
+/// The copyright the license requires. The glyphs derive from upstream, so the
+/// notice is upstream's.
+const COPYRIGHT: &str =
+    "Copyright (c) 2015-2026, Renzhi Li (aka. Belleve Invis, belleve@typeof.net)";
+
+/// What nameID 13 carries: the statement the OFL asks a font to make.
+const LICENSE_DESCRIPTION: &str =
+    "This Font Software is licensed under the SIL Open Font License, Version 1.1.";
+
+/// Where the license lives, for nameID 14.
+const LICENSE_URL: &str = "https://openfontlicense.org";
+
 fn build_name_table(names: &Names, metrics: &Metrics) -> Name {
     let full_name = format!("{} {}", names.family, names.subfamily);
     let postscript_name = format!("{}-{}", names.family, names.subfamily);
@@ -430,6 +442,12 @@ fn build_name_table(names: &Names, metrics: &Metrics) -> Name {
         // the two.
         (NameId::TYPOGRAPHIC_FAMILY_NAME, names.family.clone()),
         (NameId::TYPOGRAPHIC_SUBFAMILY_NAME, names.subfamily.clone()),
+        // The license asks for a copyright notice and a statement of the
+        // license, and a font that derives from OFL Font Software has to carry
+        // both wherever it goes.
+        (NameId::COPYRIGHT_NOTICE, COPYRIGHT.to_string()),
+        (NameId::LICENSE_DESCRIPTION, LICENSE_DESCRIPTION.to_string()),
+        (NameId::LICENSE_URL, LICENSE_URL.to_string()),
     ];
     let mut name_record = Vec::new();
     for (name_id, value) in records {
