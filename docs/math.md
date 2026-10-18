@@ -124,6 +124,16 @@ What separates a tittle from an accent is worth recording, because an accent is 
 
 `ssty` and `flac` are not written. `ssty` needs forms that look right when the engine scales them, which is a design rather than a derivation, and `flac` needs flattened accents drawn. Both wait on the same crate, which now exists.
 
+## Texture healing
+
+The same crate carries the other feature, and it is not a math one. A monospace grid forces every letter into the same advance, so a narrow letter carries whitespace it does not need while a wide one is squeezed. Texture healing substitutes a form that gives that space to the neighbour that wants it, and the whole trick is that the advance does not change: only the drawing moves inside the cell.
+
+Two roles and a third for the marks. A letter gives space when its ink leaves much of the cell empty and takes it when the ink nearly fills the cell; the classification is a rank rather than a threshold, because this font fills its cells far more evenly than the design texture healing was invented for. A mark that leaves more room than the narrowest giving letter stands still, because a period that moved would stop reading as a period, and the letter beside it moves instead.
+
+Seven passes run in order under `calt`: a giver cedes toward a taker on either side, a taker between two givers takes both sides, a taker reaches into the gap a giver has already opened, and a taker reaches toward a mark beside it.
+
+Four things had to be right that no other check sees. The coverage builder takes glyphs in order and does not sort them. Format 2 pairs a coverage with its replacements in order, so the coverage cannot be sorted on its own. The script and feature lists must be in tag order, because a shaper binary searches them. And format 3 takes one coverage per position, each naming every glyph that fits it, rather than one coverage per glyph. All four pass `ots-sanitize` and a read-back; only a shaper notices.
+
 ## What is deferred
 
 Two things went wrong while deriving the glyphs and both are worth keeping.

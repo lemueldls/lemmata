@@ -70,7 +70,6 @@ fn texture_healing_fires_in_context() {
     let blob: harfrust::font::Blob = bytes.into();
     let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
     let shaper = harfrust::ShaperFont::new(&font);
-
     let run = |text: &str| -> Vec<GlyphId> {
         let mut buffer = harfrust::Buffer::new();
         buffer.push_str(text);
@@ -125,14 +124,16 @@ fn texture_healing_fires_in_context() {
         ],
         "imi should heal"
     );
+    // The giver moves away, which opens a gap on that side, and the taker
+    // reaches into it. Both ends of the pair end up moved.
     assert_eq!(
         run("im"),
-        vec![form('i', Side::Left), base('m')],
-        "a pair heals the giver"
+        vec![form('i', Side::Left), form('m', Side::Left)],
+        "a pair heals both ways"
     );
     assert_eq!(
         run("mi"),
-        vec![base('m'), form('i', Side::Right)],
+        vec![form('m', Side::Right), form('i', Side::Right)],
         "and heals it the other way round"
     );
 
@@ -143,5 +144,31 @@ fn texture_healing_fires_in_context() {
         run("ii"),
         vec![base('i'), base('i')],
         "ii has nothing to heal"
+    );
+
+    // A mark beside a taker does not move, because a period that moved would
+    // stop reading as a period. The taker moves toward it instead, which is the
+    // pass that needs a third role.
+    let mark = |letter: char| -> GlyphId {
+        let glyph = glyphs
+            .iter()
+            .find(|glyph| glyph.unicodes.contains(&u32::from(letter)))
+            .unwrap_or_else(|| panic!("{letter} is not captured"));
+        let index = glyphs
+            .iter()
+            .position(|other| other.name == glyph.name)
+            .expect("index");
+
+        GlyphId::new(u32::try_from(index + 1).expect("glyph id"))
+    };
+    assert_eq!(
+        run(".m"),
+        vec![mark('.'), form('m', Side::Left)],
+        "a taker reaches toward the mark before it"
+    );
+    assert_eq!(
+        run("m."),
+        vec![form('m', Side::Right), mark('.')],
+        "and toward the one after it"
     );
 }

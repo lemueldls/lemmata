@@ -186,6 +186,7 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
     };
     let givers = of(Role::Gives);
     let takers = of(Role::Takes);
+    let stationary = of(Role::Stationary);
     if givers.is_empty() || takers.is_empty() {
         return None;
     }
@@ -205,39 +206,82 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
             .collect()
     };
 
+    let givers_left: Vec<GlyphId16> = shifted(&givers, Side::Left)
+        .into_iter()
+        .map(|(_, to)| to)
+        .collect();
+    let givers_right: Vec<GlyphId16> = shifted(&givers, Side::Right)
+        .into_iter()
+        .map(|(_, to)| to)
+        .collect();
+    let wide = ids(&takers);
+    let mut passes = vec![
+        // A giver before a taker cedes toward it.
+        lemmata_layout::Rule {
+            backtrack: Vec::new(),
+            input: ids(&givers),
+            lookahead: wide.clone(),
+            apply: shifted(&givers, Side::Left),
+        },
+        // A giver after a taker cedes toward it.
+        lemmata_layout::Rule {
+            backtrack: wide.clone(),
+            input: ids(&givers),
+            lookahead: Vec::new(),
+            apply: shifted(&givers, Side::Right),
+        },
+        // A taker between two givers takes both sides. This runs after the two
+        // passes above, so what it looks for is the forms they left behind.
+        lemmata_layout::Rule {
+            backtrack: givers_left.clone(),
+            input: wide.clone(),
+            lookahead: givers_right.clone(),
+            apply: shifted(&takers, Side::Both),
+        },
+    ];
+
+    // A giver that has already moved left opened a gap on its right, so the
+    // taker after it can reach into that gap. The same the other way round.
+    // These run after the centre pass, and a taker it turned into `.both` is no
+    // longer in the input coverage, so the two cannot fight.
+    if !givers_left.is_empty() {
+        passes.push(lemmata_layout::Rule {
+            backtrack: givers_left,
+            input: wide.clone(),
+            lookahead: Vec::new(),
+            apply: shifted(&takers, Side::Left),
+        });
+    }
+    if !givers_right.is_empty() {
+        passes.push(lemmata_layout::Rule {
+            backtrack: Vec::new(),
+            input: wide.clone(),
+            lookahead: givers_right,
+            apply: shifted(&takers, Side::Right),
+        });
+    }
+
+    // A mark beside a taker does not move itself, so the taker moves toward it.
+    let marks = ids(&stationary);
+    if !marks.is_empty() {
+        passes.push(lemmata_layout::Rule {
+            backtrack: marks.clone(),
+            input: wide.clone(),
+            lookahead: Vec::new(),
+            apply: shifted(&takers, Side::Left),
+        });
+        passes.push(lemmata_layout::Rule {
+            backtrack: Vec::new(),
+            input: wide,
+            lookahead: marks,
+            apply: shifted(&takers, Side::Right),
+        });
+    }
+
     Some(lemmata_layout::Feature {
         tag: Tag::new(b"calt"),
         scripts: vec![Tag::new(b"latn"), Tag::new(b"DFLT")],
-        effect: lemmata_layout::Effect::Contextual(vec![
-            // A giver before a taker cedes toward it.
-            lemmata_layout::Rule {
-                backtrack: Vec::new(),
-                input: ids(&givers),
-                lookahead: ids(&takers),
-                apply: shifted(&givers, Side::Left),
-            },
-            // A giver after a taker cedes toward it.
-            lemmata_layout::Rule {
-                backtrack: ids(&takers),
-                input: ids(&givers),
-                lookahead: Vec::new(),
-                apply: shifted(&givers, Side::Right),
-            },
-            // A taker between two givers takes both sides, which only fires
-            // once the passes above have moved the givers apart.
-            lemmata_layout::Rule {
-                backtrack: shifted(&givers, Side::Left)
-                    .into_iter()
-                    .map(|(_, to)| to)
-                    .collect(),
-                input: ids(&takers),
-                lookahead: shifted(&givers, Side::Right)
-                    .into_iter()
-                    .map(|(_, to)| to)
-                    .collect(),
-                apply: shifted(&takers, Side::Both),
-            },
-        ]),
+        effect: lemmata_layout::Effect::Contextual(passes),
     })
 }
 

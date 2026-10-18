@@ -51,8 +51,15 @@ impl Side {
 /// What a glyph does in a pair.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
+    /// A letter with room to spare, which cedes it to the neighbour.
     Gives,
+    /// A glyph whose ink nearly fills the cell, which takes what a neighbour
+    /// cedes.
     Takes,
+    /// A mark with room to spare that stays where it is. A period that moved
+    /// would stop reading as a period, so it lets the letter beside it move
+    /// instead.
+    Stationary,
 }
 
 impl Role {
@@ -65,6 +72,9 @@ impl Role {
             // because the other side has nothing to give.
             Self::Takes => &[Side::Left, Side::Right, Side::Both],
             Self::Gives => &[Side::Left, Side::Right],
+            // A stationary glyph has no forms at all: it is a context, not a
+            // participant.
+            Self::Stationary => &[],
         }
     }
 }
@@ -82,11 +92,7 @@ fn empty(glyph: &GlyphData) -> Option<f64> {
     Some(1.0 - f64::from(x_max - x_min) / f64::from(glyph.advance))
 }
 
-/// A letter of one codepoint, which is what the ranking is over.
-///
-/// Punctuation is left out. It leaves the most room of anything in the font,
-/// but a period that moved would stop being a period, which is why the design
-/// this follows keeps those still and lets the letter beside them move.
+/// A letter of one codepoint.
 fn is_letter(glyph: &GlyphData) -> bool {
     glyph.unicodes.len() == 1
         && glyph
@@ -95,15 +101,30 @@ fn is_letter(glyph: &GlyphData) -> bool {
             .is_some_and(|code| char::from_u32(*code).is_some_and(|c| c.is_ascii_alphabetic()))
 }
 
-/// What each glyph does in a pair, by rank among the letters, as an index into
+/// A mark of one codepoint: punctuation, and not a digit.
+///
+/// A figure that shifted would stop lining up with the figures around it, so
+/// digits are left out of this the way the design it follows leaves them out.
+fn is_mark(glyph: &GlyphData) -> bool {
+    glyph.unicodes.len() == 1
+        && glyph
+            .unicodes
+            .first()
+            .is_some_and(|code| char::from_u32(*code).is_some_and(|c| !c.is_alphanumeric()))
+}
+
+/// What each glyph does in a pair, by rank against the rest, as an index into
 /// `glyphs` and the role.
 ///
 /// A rank rather than a threshold, because what counts as narrow is a property
 /// of the font. This one fills its cells more evenly than the design texture
 /// healing was invented for, so an absolute cut either misses the narrow
-/// letters or takes in half the alphabet. The narrowest quarter of the letters
-/// gives space and the widest quarter takes it. Monaspace chooses its set by
-/// hand; a rank is what a derivation has.
+/// letters or takes in half the alphabet.
+///
+/// The emptiest quarter give space, and the fullest quarter take it. A mark in
+/// the giving quarter stands still instead: it has the room, but it is the
+/// letter beside it that should move. Monaspace chooses its set by hand; a rank
+/// is what a derivation has.
 #[must_use]
 pub fn classify(glyphs: &[GlyphData]) -> Vec<(usize, Role)> {
     let mut ranked: Vec<(f64, usize)> = glyphs
@@ -118,16 +139,35 @@ pub fn classify(glyphs: &[GlyphData]) -> Vec<(usize, Role)> {
         return Vec::new();
     }
 
+    let mut narrowest = f64::INFINITY;
     let mut roles = Vec::new();
-    for (rank, (_, index)) in ranked.iter().enumerate() {
+    for (rank, (value, index)) in ranked.iter().enumerate() {
         let role = if rank < cut {
-            Role::Gives
+            if is_letter(&glyphs[*index]) {
+                narrowest = narrowest.min(*value);
+                Role::Gives
+            } else {
+                Role::Stationary
+            }
         } else if rank + cut >= ranked.len() {
             Role::Takes
         } else {
             continue;
         };
         roles.push((*index, role));
+    }
+
+    // A mark that leaves more room than the narrowest giving letter has to
+    // spare, but must not spend it itself. Ranking the marks alongside the
+    // letters instead would widen the quarters and take in letters that are
+    // neither narrow nor wide, which is worse than leaving them out.
+    for (index, glyph) in glyphs.iter().enumerate() {
+        if is_letter(glyph) || !is_mark(glyph) {
+            continue;
+        }
+        if empty(glyph).is_some_and(|value| value > narrowest) {
+            roles.push((index, Role::Stationary));
+        }
     }
 
     roles
