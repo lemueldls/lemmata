@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
 use read_fonts::tables::glyf::Glyph as ReadGlyph;
-use read_fonts::tables::math::StretchAxis;
+use read_fonts::tables::math::{PartFlags, StretchAxis};
 use read_fonts::types::GlyphId;
 use read_fonts::{FontRef, TableProvider};
 
@@ -213,12 +213,8 @@ const STRETCHY: &[u32] = &[
     0x230A, 0x230B, 0x27E8, 0x27E9,
 ];
 
-/// `r[math.stretch]` as far as it goes: the stretchy glyphs are named in the
-/// table, and the overlap its assemblies will join along is the stroke width.
-///
-/// The size variants and the assemblies themselves are not written yet. Iosevka
-/// ships no MATH table, so it has no size variants to inherit, and a font with
-/// no MATH table has no reason to draw three widths of a parenthesis.
+/// `r[math.stretch]`: the stretchy glyphs are named in the table, and the
+/// overlap an assembly joins along is the stroke width.
 #[test]
 fn stretchy_glyphs_are_covered() {
     let Some((bytes, captured)) = build_math_font() else {
@@ -330,4 +326,154 @@ fn stretchy_glyphs_are_covered() {
         STRETCHY.len() * lemmata_build::variants::SCALES.len()
     );
     eprintln!("stretchy: {covered} glyphs covered, {derived} derived sizes");
+}
+
+/// `r[math.stretch]`: every stretchy glyph has an assembly whose pieces tile the
+/// glyph's height, so a renderer stacking them covers it without a gap.
+#[test]
+fn stretchy_glyphs_have_assemblies() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let variants = font
+        .math()
+        .expect("MATH")
+        .math_variants()
+        .expect("MathVariants");
+    let tolerance = i32::from(u16::from(variants.min_connector_overlap()));
+    let loca = font.loca(None).expect("loca");
+    let glyf = font.glyf().expect("glyf");
+
+    // The ink's bounding box, read back from the font rather than from the
+    // capture, so the check covers what the writer actually stored.
+    let span = |id: GlyphId| -> (i32, i32, i32, i32) {
+        let glyph = loca
+            .get_glyf(id, &glyf)
+            .expect("read a glyph")
+            .unwrap_or_else(|| panic!("glyph {id} has no outline"));
+        let ReadGlyph::Simple(simple) = glyph else {
+            panic!("a stretchy piece is a simple glyph");
+        };
+        let (mut x_min, mut y_min) = (i32::MAX, i32::MAX);
+        let (mut x_max, mut y_max) = (i32::MIN, i32::MIN);
+        for point in simple.points() {
+            x_min = x_min.min(i32::from(point.x));
+            y_min = y_min.min(i32::from(point.y));
+            x_max = x_max.max(i32::from(point.x));
+            y_max = y_max.max(i32::from(point.y));
+        }
+
+        (x_min, y_min, x_max, y_max)
+    };
+
+    let mut assembled = 0usize;
+    for (index, glyph) in captured.iter().enumerate() {
+        if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
+            continue;
+        }
+        let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
+        let construction = variants
+            .glyph_construction(id, StretchAxis::Vertical)
+            .unwrap_or_else(|| panic!("{} has no construction", glyph.name));
+        let assembly = construction
+            .glyph_assembly()
+            .unwrap_or_else(|| panic!("{} has no assembly", glyph.name))
+            .unwrap_or_else(|error| panic!("{}: {error:?}", glyph.name));
+        let parts = assembly.part_records();
+        assert_eq!(
+            parts.len(),
+            lemmata_build::assembly::PIECES.len(),
+            "{} should have one piece per band",
+            glyph.name
+        );
+
+        // Stack the parts the way a renderer does: the bottom one first, each
+        // later one overlapping the one below it by the smaller of the two
+        // connectors.
+        let mut bottom = 0i32;
+        let mut below: Option<(i32, i32, i32)> = None;
+        let mut extenders = 0usize;
+        let mut joins = 0i32;
+        for (position, part) in parts.iter().enumerate() {
+            let (x_min, y_min, x_max, y_max) =
+                span(GlyphId::new(u32::from(part.glyph_id().to_u16())));
+            let full = i32::from(u16::from(part.full_advance()));
+            let start = i32::from(u16::from(part.start_connector_length()));
+            let end = i32::from(u16::from(part.end_connector_length()));
+            // A part's ink spans its advance, which is what lets the advances
+            // tiling stand in for the pieces joining.
+            assert_eq!(
+                y_min, 0,
+                "{} piece {position} does not start on the baseline",
+                glyph.name
+            );
+            assert_eq!(
+                y_max, full,
+                "{} piece {position} spans {y_max} against an advance of {full}",
+                glyph.name
+            );
+            assert!(
+                start + end <= full,
+                "{} piece {position} has connectors wider than the part",
+                glyph.name
+            );
+            if part.part_flags().contains(PartFlags::EXTENDER_FLAG) {
+                extenders += 1;
+                assert_eq!(
+                    position,
+                    lemmata_build::assembly::EXTENDER,
+                    "{} repeats a piece that is not the middle one",
+                    glyph.name
+                );
+            }
+
+            if let Some((below_x_min, below_x_max, below_end)) = below {
+                // The join is only a join if the two parts' ink crosses.
+                assert!(
+                    x_min < below_x_max && below_x_min < x_max,
+                    "{} piece {position} does not cross the one below it",
+                    glyph.name
+                );
+                let overlap = below_end.min(start);
+                assert!(
+                    overlap > 0,
+                    "{} piece {position} does not overlap the one below it",
+                    glyph.name
+                );
+                assert!(
+                    overlap <= tolerance,
+                    "{} piece {position} overlaps by {overlap}, past the {tolerance} the table allows",
+                    glyph.name
+                );
+                joins += overlap;
+                bottom += full - overlap;
+            } else {
+                bottom = full;
+            }
+            below = Some((x_min, x_max, end));
+        }
+
+        assert_eq!(
+            extenders, 1,
+            "{} should repeat exactly one piece",
+            glyph.name
+        );
+        let (_, base_low, _, base_high) = span(id);
+        let height = base_high - base_low;
+        assert!(
+            height - bottom <= joins,
+            "{} assembles to {bottom} against a glyph {height} tall",
+            glyph.name
+        );
+        assembled += 1;
+    }
+
+    assert_eq!(
+        assembled,
+        STRETCHY.len(),
+        "every stretchy glyph has an assembly"
+    );
+    eprintln!("assemblies: {assembled} glyphs, {tolerance} unit joins");
 }

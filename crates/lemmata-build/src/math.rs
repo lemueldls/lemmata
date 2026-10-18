@@ -4,11 +4,10 @@
 //!
 //! The table has three parts: the constants a renderer reads to lay out an
 //! equation, per-glyph information such as italic corrections, and the size
-//! variants and assembly recipes a stretchy delimiter needs. Only the constants
-//! are written so far. The other two are separate slices: the per-glyph
-//! information needs coverage tables over math glyphs, and the variants need
-//! glyphs that do not exist yet, since Iosevka ships no MATH table and so has
-//! no size variants to inherit.
+//! variants and assembly recipes a stretchy delimiter needs. The glyphs the
+//! last two index into do not come from upstream, which ships no MATH table and
+//! so has no variants or assembly pieces to inherit: `crate::variants` and
+//! `crate::assembly` derive them from the glyphs that do exist.
 //!
 //! The specification treats a constant of zero as "not specified, use the
 //! renderer's default", so a profile only names the constants it has an opinion
@@ -22,8 +21,9 @@
 
 use write_fonts::tables::layout::CoverageTable;
 use write_fonts::tables::math::{
-    Math, MathConstants, MathGlyphConstruction, MathGlyphInfo, MathGlyphVariantRecord,
-    MathItalicsCorrectionInfo, MathTopAccentAttachment, MathValueRecord, MathVariants,
+    GlyphAssembly, GlyphPartRecord, Math, MathConstants, MathGlyphConstruction, MathGlyphInfo,
+    MathGlyphVariantRecord, MathItalicsCorrectionInfo, MathTopAccentAttachment, MathValueRecord,
+    MathVariants, PartFlags,
 };
 use write_fonts::types::{FWord, GlyphId16, UfWord};
 
@@ -92,13 +92,11 @@ pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
     }
 }
 
-/// The stretchy constructions, one per glyph.
-///
-/// Every one is empty for now: no size variants, and no assembly. The coverage
-/// is what makes the table meaningful before the parts exist, since it names
-/// the glyphs a renderer may ask to stretch.
+/// The stretchy constructions, one per glyph: the derived sizes a renderer
+/// picks from, and the assembly it builds when none is tall enough.
 #[must_use]
 pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
+    let stroke = metrics.underline_thickness.unsigned_abs();
     let mut ids = Vec::new();
     for (index, glyph) in glyphs.iter().enumerate() {
         if !glyph
@@ -125,16 +123,18 @@ pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
                 .filter_map(|step| {
                     let name = crate::variants::variant_name(&glyphs[base].name, step);
                     let variant = glyphs.iter().position(|other| other.name == name)?;
+                    // A vertical variant's measurement is its height, which is
+                    // what it grew by and what a renderer weighs against the
+                    // room the equation gives it.
+                    let (_, y_min, _, y_max) = glyphs[variant].bounding_box()?;
                     Some(MathGlyphVariantRecord {
                         variant_glyph: GlyphId16::new(u16::try_from(variant + 1).ok()?),
-                        advance_measurement: UfWord::new(
-                            metrics.underline_thickness.unsigned_abs(),
-                        ),
+                        advance_measurement: UfWord::new(u16::try_from(y_max - y_min).ok()?),
                     })
                 })
                 .collect();
             MathGlyphConstruction {
-                glyph_assembly: None.into(),
+                glyph_assembly: assembly(&glyphs[base], glyphs, stroke).into(),
                 math_glyph_variant_records: records,
             }
             .into()
@@ -145,11 +145,53 @@ pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
         // The pieces of an assembly join along this overlap, so it is the width
         // of a stroke: anything narrower leaves a seam and anything wider
         // doubles the ink where they meet.
-        min_connector_overlap: UfWord::new(metrics.underline_thickness.unsigned_abs()),
+        min_connector_overlap: UfWord::new(stroke),
         vert_glyph_coverage: Some(ids.iter().copied().collect::<CoverageTable>()).into(),
         vert_glyph_constructions: constructions,
         ..MathVariants::default()
     }
+}
+
+/// The assembly recipe for one stretchy glyph: its three pieces, bottom to top.
+///
+/// The pieces are horizontal bands of the glyph, so each one's ink already
+/// spans its band and the only thing left to say is how far they overlap. Every
+/// connector is the stroke width, which is the value the table gives as the
+/// minimum overlap and roughly the bar material a band has to spare at its
+/// edge.
+fn assembly(base: &GlyphData, glyphs: &[GlyphData], stroke: u16) -> Option<GlyphAssembly> {
+    let last = crate::assembly::PIECES.len() - 1;
+    let mut part_records = Vec::new();
+    for index in 0..crate::assembly::PIECES.len() {
+        let name = crate::assembly::piece_name(&base.name, index);
+        let position = glyphs.iter().position(|glyph| glyph.name == name)?;
+        let (_, y_min, _, y_max) = glyphs[position].bounding_box()?;
+        let full = u16::try_from(y_max - y_min).ok()?;
+        // The spec requires the two connectors to fit inside the part, which
+        // a short band would otherwise break.
+        let overlap = stroke.min(full / 2);
+        let part_flags = if index == crate::assembly::EXTENDER {
+            PartFlags::EXTENDER_FLAG
+        } else {
+            PartFlags::empty()
+        };
+        part_records.push(GlyphPartRecord {
+            glyph_id: GlyphId16::new(u16::try_from(position + 1).ok()?),
+            // The start of a part is its bottom, so the piece that lands first
+            // has nothing below it to join to.
+            start_connector_length: UfWord::new(if index == 0 { 0 } else { overlap }),
+            end_connector_length: UfWord::new(if index == last { 0 } else { overlap }),
+            full_advance: UfWord::new(full),
+            part_flags,
+        });
+    }
+
+    Some(GlyphAssembly {
+        // An assembly's correction does not depend on its size, and the pieces
+        // lean with the glyph rather than past it.
+        italics_correction: value(0),
+        part_records,
+    })
 }
 
 /// The MATH table.

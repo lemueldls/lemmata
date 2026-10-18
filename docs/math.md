@@ -84,32 +84,30 @@ It skips when Typst is not installed, like the tests that skip without a capture
 
 ## Stretchy glyphs
 
-`MathVariants` names the glyphs a renderer may stretch, and sets the overlap an assembly joins along to the stroke width. The constructions are empty: no size variants and no assembly, because Iosevka ships no MATH table and so has no size variants to inherit. A font with no MATH table has no reason to draw three widths of a parenthesis.
+`MathVariants` names the sixteen codepoints a renderer may stretch, and each construction carries both things a renderer needs: the sizes it picks from and the assembly it builds when none is tall enough.
 
-Sixteen codepoints can stretch. The font has twelve: the capture set carried the parentheses but not the brackets or the braces, so `[`, `]`, `{` and `}` are absent rather than uncovered. The test pins both the count and which four are missing, so the day they arrive the assertion flips.
+The sizes are derived rather than drawn. Scaling a glyph in y alone keeps a vertical stroke at its width, since x is untouched, so a parenthesis grows into something that encloses taller content at the weight the rest of the font is drawn at. Each stretchy glyph gets two, at 1.5 and 2 times its own height, and the test checks each is taller than its base.
 
-That is the same shape as the script letters in `r[math.alphabets]`: a gap in the glyph source, pinned rather than hidden.
+An assembly is how a renderer goes taller than that: it stacks a bottom piece, repeats a middle one, and caps it with a top piece. The pieces are the glyph cut into three horizontal bands, so the joins are the cuts and the three tile the original outline. They are derived and encoded in the same private-use block as the sizes. The test stacks the parts the way a renderer does and checks that each one's ink spans its declared advance, that consecutive parts cross, and that no join overlaps by more than the stroke width the table names as its minimum.
+
+The band is what makes a piece repeatable, and it is the limit of the approach. A band whose ink is a straight stem stacks on itself, which is what a bracket, a brace or a ceiling does. A band taken from a curved or barred part of a glyph repeats that feature: a radical's extender is a slice of its diagonal, and a summation's is a slice of its middle bar. An extender drawn for each glyph is what would replace them.
 
 ## The browser
 
 `corpus/equations.mathml` is the same eleven equations as MathML. `www/math.html` builds the font in the page from the math capture, registers it as a face, and sets the corpus in it. `harness/browser/math.spec.mjs` runs that through a real browser and checks the family is what rendered: a renderer that cannot serve the corpus falls back, and the fallback changes the measurement.
 
-That is `r[math.mathml]`'s rendering half. What it does not check is "correct stretching and spacing": the delimiters have size variants now but no assemblies, so a delimiter taller than the largest variant is still drawn short, and judging that needs a visual comparison rather than a measurement.
+That is `r[math.mathml]`'s rendering half. What it does not check is "correct stretching and spacing": the delimiters have sizes and assemblies now, but whether a stretched one looks right is a visual question, and the pieces it stretches with are derived rather than drawn.
 
 The browser shell needed `PLAYWRIGHT_BROWSERS_PATH`. Playwright looks in `~/.cache/ms-playwright` by default and the shell provides the engines from the store, so without it the suite fails with "Executable doesn't exist" and suggests downloading a browser that is already there.
 
 ## What is deferred
 
-`MathVariants` names the stretchy glyphs, and each construction has no variants and no assembly. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis.
-
-The variants are derivable rather than drawn. Scaling a glyph in y alone keeps a vertical stroke at its width, since x is untouched, so a parenthesis stretches into something that encloses taller content at the weight the rest of the font is drawn at. Each stretchy glyph gets two derived sizes, and the test checks each is taller than its base.
-
-Two things went wrong on the way and both are worth keeping.
+Two things went wrong while deriving the glyphs and both are worth keeping.
 
 The derived glyphs have to be encoded, at U+F000 and up. They are not characters, so nothing types them, but a subsetter keeps what is reachable and drops what is not: a variant named only by the MATH table disappears and leaves the table pointing at nothing. Iosevka encodes its own derived texture variants in the same block.
 
-They also have to join the glyph set before anything counts it. Appending them later leaves them past `maxp.num_glyphs`, where they are ignored until something references one and the reference is out of range. That was the bug: `ots-sanitize` said `bad glyph ID: 1593`, one past the count, and a renderer only said `malformed font`. A renderer shrugs where the sanitizer names the number.
+They also have to join the glyph set before anything counts it. Appending them later leaves them past `maxp.num_glyphs`, where they are ignored until something references one and the reference is out of range. That was the bug: `ots-sanitize` said `bad glyph ID: 1593`, one past the count, and a renderer only said `malformed font`. A renderer shrugs where the sanitizer names the number. The writer and the caller that reports the count now read one function, so a derived glyph cannot be written without being counted.
 
-The assemblies are further off. An assembly joins pieces along a connector, and the pieces are glyphs the font does not have: a parenthesis is one curve with no straight middle to cut an extender out of.
+The script style `r[math.alphabets]` names is still a gap in the glyph source, and `r[math.script-style]` needs an `ssty` feature, which is a GSUB table the font does not write yet.
 
 Math kerning, the extended shape coverage inside `MathGlyphInfo`, and the horizontal constructions are also unwritten. None is needed by a simple equation.

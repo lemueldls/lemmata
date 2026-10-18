@@ -127,6 +127,24 @@ impl GlyphData {
     }
 }
 
+/// The glyphs derived from the captured set: the size variants of the stretchy
+/// glyphs, then the pieces their assemblies stack.
+///
+/// The writer appends these and a caller reporting the glyph count reads the
+/// same function, so a derived glyph cannot be written without being counted.
+/// The pieces take the private-use codes after the variants, so the two blocks
+/// do not collide.
+#[must_use]
+pub fn derived(glyphs: &[GlyphData]) -> Vec<GlyphData> {
+    let variants = crate::variants::derive(glyphs);
+    let first_piece_code =
+        crate::variants::PRIVATE_USE_START + u32::try_from(variants.len()).unwrap_or(0);
+    let mut derived = variants;
+    derived.extend(crate::assembly::derive(glyphs, first_piece_code));
+
+    derived
+}
+
 /// Builds a TrueType font.
 ///
 /// Glyph zero is an empty `.notdef`; the rest follow the input order.
@@ -141,7 +159,7 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
     // `maxp.num_glyphs`, where they are ignored until something references one
     // and the reference is out of range.
     let mut with_variants = glyphs.to_vec();
-    with_variants.extend(crate::variants::derive(glyphs));
+    with_variants.extend(derived(glyphs));
     let glyphs = with_variants.as_slice();
 
     let mut glyf_builder = GlyfLocaBuilder::new();
@@ -387,7 +405,7 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
 
 /// Turns quadratic contours into a path. A quadratic point is a control point
 /// whose partner is the next corner; two corners make a line.
-fn glyph_path(contours: &[Vec<QuadifyPoint>]) -> BezPath {
+pub(crate) fn glyph_path(contours: &[Vec<QuadifyPoint>]) -> BezPath {
     let mut path = BezPath::new();
     for contour in contours {
         if contour.len() < 2 {
