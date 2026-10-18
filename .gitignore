@@ -1,3 +1,4 @@
+/.direnv
 /target
 /reference/spiro-oracle/node_modules
 /node_modules
