@@ -89,11 +89,24 @@ import Base from "../layouts/Base.astro";
 
       // The math capture, not the coverage one: the corpus needs the
       // alphanumerics and the operators as well as the letters. It ships
-      // gzipped because it is 2.4 MB raw and 250 KB compressed, and a browser
-      // decompresses a stream with no library.
+      // gzipped because it is 2.4 MB raw and 400 KB compressed, and a browser
+      // decompresses it with no library.
+      //
+      // A static server may decompress a `.gz` on its own, if it decides the
+      // name means `Content-Encoding: gzip` and sets the header. Then the bytes
+      // arriving here are the capture, and decompressing them fails with
+      // "incorrect header check". So look at the bytes: gzip starts with
+      // 1f 8b, and anything else is already the capture.
       const response = await fetch(`${import.meta.env.BASE_URL}math.bin.gz`);
-      const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
-      const capture = new Uint8Array(await new Response(stream).arrayBuffer());
+      const body = new Uint8Array(await response.arrayBuffer());
+      const capture =
+        body[0] === 0x1f && body[1] === 0x8b
+          ? new Uint8Array(
+              await new Response(
+                new Response(body).body.pipeThrough(new DecompressionStream("gzip")),
+              ).arrayBuffer(),
+            )
+          : body;
       const bytes = build_font(capture, default_plan());
 
       const face = new FontFace("Lemmata", bytes.buffer);
