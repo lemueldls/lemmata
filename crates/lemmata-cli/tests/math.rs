@@ -14,9 +14,6 @@ use read_fonts::tables::math::StretchAxis;
 use read_fonts::types::GlyphId;
 use read_fonts::{FontRef, TableProvider};
 
-/// The math alphanumerics block, which is what `r[math.corrections]` covers.
-const MATH_ALPHANUMERICS: std::ops::RangeInclusive<u32> = 0x1D400..=0x1D7FF;
-
 fn math_dump_path() -> PathBuf {
     std::env::var_os("LEMMATA_MATH_DUMP").map_or_else(
         || {
@@ -137,7 +134,7 @@ fn math_letters_have_corrections_and_accents() {
         if !glyph
             .unicodes
             .iter()
-            .any(|code| MATH_ALPHANUMERICS.contains(code))
+            .any(|code| char::from_u32(*code).is_some_and(char::is_alphabetic))
         {
             continue;
         }
@@ -180,7 +177,18 @@ fn math_letters_have_corrections_and_accents() {
         }
     }
 
-    assert_eq!(covered, 904, "every math alphanumeric is covered");
+    // Every letter the font carries, not the math alphanumerics alone: a
+    // renderer sets a plain Latin or Greek letter in math too.
+    let letters = captured
+        .iter()
+        .filter(|glyph| {
+            glyph
+                .unicodes
+                .iter()
+                .any(|code| char::from_u32(*code).is_some_and(char::is_alphabetic))
+        })
+        .count();
+    assert_eq!(covered, letters, "every letter is covered");
     let italic_mean = italic_total / italic_count.max(1);
     let upright_mean = upright_total / upright_count.max(1);
     assert!(

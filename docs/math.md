@@ -20,7 +20,7 @@ These are plumbing, not typography. They make the table exist and parse. A desig
 
 ## Per-glyph information
 
-`MathGlyphInfo` carries italic corrections and top accent attachments, each as a coverage table over glyphs. Both are written for the math alphanumerics, the 904 codepoints of U+1D400 to U+1D7FF.
+`MathGlyphInfo` carries italic corrections and top accent attachments, each as a coverage table over glyphs. Both are written for every letter the font carries, 1076 of them, rather than for the math alphanumerics alone. A renderer sets a plain Latin or Greek letter in math as readily as it reaches for U+1D465, so covering only that block leaves the letters it actually uses without corrections.
 
 An italic correction is how far a slanted letter leans, which a renderer needs to place what follows it. The port measures it rather than taking it from a design: the ink is split at its midline, and the correction is the upper half's centre against the lower half's, clamped at zero and at a quarter of the advance. An upright style measures near zero and an italic one does not, which is what makes the measure testable.
 

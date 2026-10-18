@@ -175,9 +175,16 @@ pub fn table(metrics: &Metrics, profile: &MathProfile, glyphs: &[GlyphData]) -> 
     )
 }
 
-/// The math alphanumerics block: the letters that take an italic correction and
-/// an accent attachment.
-const MATH_ALPHANUMERICS: std::ops::RangeInclusive<u32> = 0x1D400..=0x1D7FF;
+/// Whether a glyph is a letter, which is what takes an italic correction and a
+/// top accent attachment.
+///
+/// This is every letter the font carries rather than the math alphanumerics
+/// alone. A renderer sets a plain Latin or Greek letter in math as readily as
+/// it reaches for U+1D465, so covering only that block leaves the letters it
+/// actually uses without corrections.
+fn is_letter(code: u32) -> bool {
+    char::from_u32(code).is_some_and(char::is_alphabetic)
+}
 
 /// A glyph's ink split at its midline: the horizontal extent of the upper half
 /// and of the lower half.
@@ -243,11 +250,7 @@ pub fn glyph_info(glyphs: &[GlyphData]) -> MathGlyphInfo {
     let mut corrections = Vec::new();
     let mut attachments = Vec::new();
     for (index, glyph) in glyphs.iter().enumerate() {
-        if !glyph
-            .unicodes
-            .iter()
-            .any(|code| MATH_ALPHANUMERICS.contains(code))
-        {
+        if !glyph.unicodes.iter().any(|code| is_letter(*code)) {
             continue;
         }
         let Ok(id) = u16::try_from(index + 1) else {
