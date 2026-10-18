@@ -33,12 +33,14 @@ math {
 
   --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "DejaVu Sans Mono",
     Menlo, Consolas, monospace;
-  /* The interface is the system monospace, and `--built` is the face a page
-     has just built. They are separate because a capture carries a subset of
-     the glyphs the interface needs, so the page is set in the build where the
-     build reaches and says so where it does not. */
+  /* The interface is the system monospace, and `--built` is the face the site
+     ships. They are separate because a capture carries a subset of the glyphs
+     the interface needs, so the page is set in the build where the build
+     reaches and says so where it does not. The fallback inside the variable is
+     for the font arriving: an undefined variable would invalidate the whole
+     declaration rather than fall back. */
   --face: var(--mono);
-  --built: var(--mono);
+  --built: var(--font-lemmata, Lemmata), var(--mono);
 
   --step--2: 11px;
   --step--1: 13px;
@@ -823,75 +825,6 @@ a:focus-visible {
   font-family: var(--built);
   font-size: clamp(20px, 3vw, 28px);
   line-height: 1.5;
-}
-
-/* The boot cover ------------------------------------------------------- */
-
-/* The font is built on load, so the page arrives behind a cover that carries
-   no words: a ruler and a bar, which fill and then get out of the way. */
-.boot {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  background: var(--bg);
-  transition: opacity 320ms ease;
-  /* One tick is one cell of the meter, and the fill steps cell by cell, so the
-     ruler and the bar are on the same scale by construction. */
-  --tick: 20px;
-}
-
-.boot[data-done] {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.boot__meter {
-  display: grid;
-  gap: 10px;
-  width: min(calc(var(--tick) * 16), 68vw);
-}
-
-.boot__ticks {
-  height: 8px;
-  background-image: linear-gradient(90deg, var(--rule-2) 0 1px, transparent 1px);
-  background-size: calc(100% / 16) 100%;
-  border-right: 1px solid var(--rule-2);
-}
-
-.boot__track {
-  height: 1px;
-  background: var(--rule);
-  overflow: hidden;
-}
-
-.boot__track i {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: var(--accent);
-  transform: scaleX(0);
-  transform-origin: left center;
-  animation: boot-fill 1.3s steps(16, end) forwards;
-}
-
-.boot[data-done] .boot__track i {
-  transform: scaleX(1);
-  animation: none;
-}
-
-@keyframes boot-fill {
-  to {
-    transform: scaleX(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .boot__track i {
-    transform: scaleX(1);
-    animation: none;
-  }
 }
 
 /* The glyph sheet ------------------------------------------------------ */

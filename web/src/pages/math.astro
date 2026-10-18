@@ -1,11 +1,8 @@
 ---
-// The equations page, from `www/math.html` and `www/math.js`, which the math
-// work put there. It builds the font in the page and sets MathML in it, which is
-// the only way anyone sees r[math.*]'s work.
-//
-// Two changes from the prototype. The corpus is editable, so the page is a
-// place to try an equation rather than a fixed sample, and it is a page of the
-// site rather than a file served from the repository root.
+// The equations page. The face it is set in is one of the two the site builds
+// ahead of time and ships, so the page has nothing to compile: it waits for the
+// font and then sets MathML in it. The MathML is editable, which is the part
+// worth playing with.
 //
 // What it can show is what the MATH table carries: the constants, the glyph
 // info and the variants, so a delimiter grows to fit its content. Script style
@@ -16,44 +13,45 @@ import corpus from "../../../corpus/equations.mathml?raw";
 import Base from "../layouts/Base.astro";
 ---
 
-<Base title="Equations" boot>
+<Base title="Equations">
   <div class="wrap page">
     <h1>Equations</h1>
     <p>
-      These are set in the font this page built from the math glyph set. The
-      MathML is editable: change an equation and it is re-rendered in the same
-      font, in the browser, with no upload.
+      These are set in the font this project built from the math glyph set. The
+      MathML is editable: change an equation and it is set again in the same
+      font, with no upload.
     </p>
-    <p id="status">Building…</p>
+    <p id="status">Setting the equations…</p>
     <textarea id="source" rows="12" spellcheck="false">{corpus}</textarea>
     <div id="equations"></div>
-    <noscript><p>The equations need JavaScript: the font is built in the page.</p></noscript>
+    <noscript><p>The equations need JavaScript: they are set from the field above.</p></noscript>
   </div>
 
   <style>
-    /* The equations are the point: they are set in the font the page built.
+    /* The equations are the point: they are set in the font this project built.
        Not `display: block` on the math elements, which would replace the
        `block math` the user agent stylesheet gives a `math[display="block"]`
        and lay every token out on a line of its own; the attribute on each
        `math` element is what puts it on its own line. */
-    /* The family reaches the equations because `site.css` puts `math` back to
-       inheriting; the user agent rule would otherwise override it. */
-    #equations { font-family: Lemmata, serif; font-size: 24px; }
+    #equations { font-family: var(--font-lemmata-math), serif; font-size: 24px; }
     #equations math { margin: 0.5rem 0; }
     #status { color: var(--accent); font-size: var(--step--1); }
   </style>
 
   <script>
-    import init, { build_font, default_plan } from "lemmata-web";
-
     const status = document.querySelector("#status");
     const equations = document.querySelector("#equations");
     const source = document.querySelector("#source");
+    // The family is read off the element rather than guessed: the Fonts API
+    // renames the family it emits and appends an optimized fallback to it. Only
+    // the primary is asked for, since one face that cannot resolve is enough to
+    // reject the whole request.
+    const family = () => getComputedStyle(equations).fontFamily.split(",")[0].trim();
 
     /// Measures a string in a family, to tell whether a font rendered it.
-    function widthOf(family, text) {
+    function widthOf(name, text) {
       const context = document.createElement("canvas").getContext("2d");
-      context.font = `32px ${family}`;
+      context.font = `32px ${name}`;
       return context.measureText(text).width;
     }
 
@@ -61,7 +59,7 @@ import Base from "../layouts/Base.astro";
     // the family changes the measurement. The sample is the constructs a math
     // font has to carry: a radical, a large operator, an integral, Greek.
     function measure() {
-      const ours = widthOf("Lemmata", "\u2211 \u222B \u221A x \u03B1");
+      const ours = widthOf(`"${family()}"`, "\u2211 \u222B \u221A x \u03B1");
       const fallback = widthOf('"Lemmata Absent"', "\u2211 \u222B \u221A x \u03B1");
       const rendered = equations.querySelectorAll("math").length;
 
@@ -89,44 +87,17 @@ import Base from "../layouts/Base.astro";
       measure();
     };
 
-    const run = async () => {
-      await init();
-
-      // The math capture, not the coverage one: the corpus needs the
-      // alphanumerics and the operators as well as the letters. It ships
-      // gzipped because it is 2.4 MB raw and 400 KB compressed, and a browser
-      // decompresses it with no library.
-      //
-      // A static server may decompress a `.gz` on its own, if it decides the
-      // name means `Content-Encoding: gzip` and sets the header. Then the bytes
-      // arriving here are the capture, and decompressing them fails with
-      // "incorrect header check". So look at the bytes: gzip starts with
-      // 1f 8b, and anything else is already the capture.
-      const response = await fetch(`${import.meta.env.BASE_URL}math.bin.gz`);
-      const body = new Uint8Array(await response.arrayBuffer());
-      const capture =
-        body[0] === 0x1f && body[1] === 0x8b
-          ? new Uint8Array(
-              await new Response(
-                new Response(body).body.pipeThrough(new DecompressionStream("gzip")),
-              ).arrayBuffer(),
-            )
-          : body;
-      const bytes = build_font(capture, default_plan());
-
-      const face = new FontFace("Lemmata", bytes.buffer);
-      await face.load();
-      document.fonts.add(face);
-      await document.fonts.load("16px Lemmata");
-      document.documentElement.dataset.face = "ready";
-
-      render();
-      source.addEventListener("input", render);
-      document.documentElement.dataset.boot = "done";
-    };
-
-    run().catch((error) => {
-      status.textContent = `Failed: ${error}`;
-    });
+    // The face is in the head with the rest of the page, so there is nothing to
+    // build and nothing to decompress: the page waits for the font it is about
+    // to use and then sets the corpus.
+    document.fonts
+      .load(`24px ${family()}`, "\u222B")
+      .then(() => {
+        render();
+        source.addEventListener("input", render);
+      })
+      .catch((error) => {
+        status.textContent = `Failed: ${error}`;
+      });
   </script>
 </Base>

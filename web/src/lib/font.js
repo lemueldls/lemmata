@@ -178,16 +178,3 @@ export async function registerFace(bytes, family) {
 
   return face;
 }
-
-/// True when the bytes start with the gzip magic. A server that sets
-/// `Content-Encoding: gzip` for a `.gz` name hands back the file already
-/// decompressed, so the page looks at the bytes rather than trusting the name.
-export const isGzipped = (bytes) => bytes[0] === 0x1f && bytes[1] === 0x8b;
-
-export async function inflate(bytes) {
-  const stream = new Response(bytes).body.pipeThrough(
-    new DecompressionStream("gzip"),
-  );
-
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}

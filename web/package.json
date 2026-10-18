@@ -4,8 +4,10 @@
   "type": "module",
   "description": "The site: a project area and the generator (PLAN.md 4.6).",
   "scripts": {
-    "build": "astro build",
-    "dev": "astro dev",
+    "font": "node scripts/font.mjs",
+    "font:write": "node scripts/font.mjs --write",
+    "build": "pnpm font && astro build",
+    "dev": "pnpm font && astro dev",
     "preview": "astro preview"
   },
   "dependencies": {

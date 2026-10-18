@@ -24,6 +24,18 @@ import corpus from "../../../corpus/equations.mathml?raw";
 
 const base = import.meta.env.BASE_URL;
 
+// The reference plan, which is what `Plan::default()` carries. It is content on
+// this page the way the samples are: the premise the rest is built from, and the
+// object the command line takes with `--plan`.
+const plan = {
+  capHeight: 735,
+  xHeight: 520,
+  ascender: 965,
+  descender: -215,
+  italicAngle: 0,
+  weight: 400,
+};
+
 const samples = {
   code: `// one plan in, one font out
 let metrics = plan.metrics()?;
@@ -55,7 +67,7 @@ const variants = [
 ];
 ---
 
-<Base title="A typeface built from a plan" boot>
+<Base title="A typeface built from a plan">
   <section class="hero">
     <div class="wrap">
       <p class="kicker">A premise, a construction, a proof</p>
@@ -77,7 +89,7 @@ const variants = [
         <a class="btn" href="#construction">See the construction</a>
         <a class="btn btn--primary" href={`${base}generate/`}>Open the generator</a>
       </div>
-      <p class="status" id="build-status" data-state="note">Starting the builder…</p>
+      <p class="status" id="build-status" data-state="note">Reading the font…</p>
     </div>
   </section>
 
@@ -96,7 +108,7 @@ const variants = [
               <span>plan.json</span>
               <button class="chip" id="copy-plan" type="button">copy</button>
             </div>
-            <pre class="code" id="plan-code">loading the builder…</pre>
+            <pre class="code" id="plan-code">{JSON.stringify(plan, null, 2)}</pre>
           </div>
           <div class="panel">
             <div class="panel__head"><span>What the plan carries</span></div>
@@ -279,16 +291,12 @@ const variants = [
   </div>
 
   <script>
-    import Build from "../worker.js?worker";
     import {
       advance,
       cmap,
       coverage,
       glyphCount,
       ink,
-      isGzipped,
-      inflate,
-      registerFace,
       sha256Hex,
       short,
       unitsPerEm,
@@ -303,35 +311,6 @@ const variants = [
     const escape = (text) =>
       text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-    // One worker serves the whole page: the plan, the interface face and the
-    // math face. Requests are serialised, so one pending reply is enough.
-    const worker = new Build();
-    let pending = null;
-    worker.addEventListener("message", (event) => {
-      const reply = pending;
-      if (!reply || !(event.data.bytes || event.data.error)) return;
-      pending = null;
-      reply(event.data);
-    });
-
-    const build = (capture, plan) =>
-      new Promise((resolve, reject) => {
-        pending = (reply) =>
-          reply.error ? reject(new Error(reply.error)) : resolve(reply);
-        worker.postMessage({ capture, plan });
-      });
-
-    const askPlan = () =>
-      new Promise((resolve) => {
-        const once = (event) => {
-          if (!event.data.plan) return;
-          worker.removeEventListener("message", once);
-          resolve(event.data.plan);
-        };
-        worker.addEventListener("message", once);
-        worker.postMessage({ ask: "plan" });
-      });
-
     // The samples are content, so the field already holds the first one.
     const sampleField = $("#sample");
     const samples = {
@@ -344,6 +323,9 @@ const variants = [
     const sampleStatus = $("#sample-status");
     const updateCoverage = () => {
       if (!page) return;
+      // The character map, not a measurement: a family that is missing a glyph
+      // hands the character to a fallback, and the fallback's numbers would pass
+      // for the font's.
       const { total, missing } = coverage(page.map, sampleField.value);
       say(
         sampleStatus,
@@ -494,12 +476,13 @@ const variants = [
 
     const status = $("#build-status");
     const planCode = $("#plan-code");
-    const captureRow = $("#sum-capture");
     const builtRow = $("#sum-built");
     const recordedRow = $("#sum-recorded");
     const verdict = $("#verdict");
-    let planText = "{}";
 
+    // The plan is rendered into the page, so the copy button takes it from the
+    // element rather than from a builder that had to be asked for it.
+    const planText = planCode.textContent;
     const copy = $("#copy-plan");
     copy.addEventListener("click", async () => {
       try {
@@ -511,48 +494,52 @@ const variants = [
       setTimeout(() => { copy.textContent = "copy"; }, 1400);
     });
 
+    planCode.innerHTML = [
+      "{",
+      ...Object.entries(JSON.parse(planText)).map(
+        ([key, value]) =>
+          `  <span class="k">"${key}"</span>: <span class="n">${value}</span>`,
+      ),
+      "}",
+    ].join(",\n").replace(",\n}", "\n}");
+
     try {
-      const plan = JSON.parse(await askPlan());
-      planText = JSON.stringify(plan);
-      planCode.innerHTML = [
-        "{",
-        ...Object.entries(plan).map(
-          ([key, value]) =>
-            `  <span class="k">"${key}"</span>: <span class="n">${value}</span>`,
-        ),
-        "}",
-      ].join(",\n").replace(",\n}", "\n}");
-
-      const capture = new Uint8Array(
-        await (await fetch(`${base}glyphs.bin`)).arrayBuffer(),
+      // The file the page is set in, taken from the preload link so this is the
+      // request the browser already made: the bytes hashed here are the bytes
+      // being rendered with.
+      const href =
+        [...document.querySelectorAll("link[rel=preload]")]
+          .map((link) => link.getAttribute("href"))
+          .find((value) => value?.endsWith(".ttf")) ?? `${base}fonts/lemmata.ttf`;
+      const bytes = new Uint8Array(
+        await (await fetch(href)).arrayBuffer(),
       );
-      const captureHash = await sha256Hex(capture);
-      captureRow.textContent = short(captureHash);
-      captureRow.title = captureHash;
-
-      const built = await build(capture, planText);
-      const bytes = new Uint8Array(built.bytes);
-      const builtHash = await sha256Hex(bytes);
-      const matchesCapture = captureHash === captureRow.dataset.hash;
-      const matchesBuild = builtHash === recordedRow.dataset.hash;
+      const digest = await sha256Hex(bytes);
+      const matches = digest === recordedRow.dataset.hash;
       const drawn = glyphCount(bytes) ?? 0;
 
-      builtRow.textContent = short(builtHash);
-      builtRow.title = builtHash;
-      verdict.textContent = matchesBuild ? "byte-identical" : "differs";
-      verdict.dataset.state = matchesBuild ? "ok" : "bad";
-      $("#parity-note").textContent =
-        `${matchesCapture ? "capture matches" : "capture differs"} · ` +
-        `${matchesBuild ? "the built font matches the reference build" : "the built font differs from the reference build"}`;
+      builtRow.textContent = short(digest);
+      builtRow.title = digest;
+      verdict.textContent = matches ? "byte-identical" : "differs";
+      verdict.dataset.state = matches ? "ok" : "bad";
+      $("#parity-note").textContent = matches
+        ? "the font this page is set in matches the reference build"
+        : "the font this page is set in differs from the reference build";
       say(
         status,
-        matchesBuild ? "ok" : "bad",
-        `built in ${built.elapsed.toFixed(0)} ms · ${drawn.toLocaleString()} glyphs · ` +
-          `${bytes.length.toLocaleString()} bytes · sha256 ${short(builtHash, 12)}`,
+        matches ? "ok" : "bad",
+        `${drawn.toLocaleString()} glyphs · ${bytes.length.toLocaleString()} bytes · ` +
+          `sha256 ${short(digest, 12)}`,
       );
 
-      await registerFace(bytes, "Lemmata");
-      document.documentElement.dataset.face = "ready";
+      // The primary family only. The list Astro emits carries an optimized
+      // fallback face beside it, and asking for the list loads both: the
+      // fallback is a local family that may not be installed, and one failed
+      // face is enough to reject the whole request even though this one loaded.
+      const primary = getComputedStyle(sampleField).fontFamily
+        .split(",")[0]
+        .trim();
+      await document.fonts.load(`100px ${primary}`, "lemmata");
 
       const map = cmap(bytes);
       const metrics = {
@@ -591,29 +578,26 @@ const variants = [
         const next = fit();
         if (next) drawRules(metrics, next);
       });
-
-      // Everything the cover was waiting for has happened, so the page can be
-      // looked at.
-      document.documentElement.dataset.boot = "done";
     } catch (error) {
-      say(status, "bad", `The build failed: ${error.message ?? error}`);
-      document.documentElement.dataset.boot = "done";
+      say(status, "bad", `The font could not be read: ${error.message ?? error}`);
     }
 
-    // The math face is 400 KB compressed and only one section shows it, so it
-    // is built when that section is a screen away.
+    // The math face is a second font, and one section shows it, so it is asked
+    // for when that section is a screen away. The stylesheet only reaches for
+    // the family once the attribute is set, which is what keeps the download
+    // out of the way until then.
     const equationStatus = $("#equation-status");
     const observer = new IntersectionObserver(async (entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       observer.disconnect();
       try {
-        say(equationStatus, "note", "Building the math face…");
-        const packed = new Uint8Array(
-          await (await fetch(`${base}math.bin.gz`)).arrayBuffer(),
-        );
-        const raw = isGzipped(packed) ? await inflate(packed) : packed;
-        const math = await build(raw, planText);
-        await registerFace(new Uint8Array(math.bytes), "Lemmata Math");
+        say(equationStatus, "note", "Setting the equation…");
+        // Using the family is what asks for the file, so the attribute goes on
+        // first and the load is asked for by the name the element resolves to.
+        const holder = $("#equation");
+        holder.dataset.face = "ready";
+        const primary = getComputedStyle(holder).fontFamily.split(",")[0].trim();
+        await document.fonts.load(`24px ${primary}`, "\u222B");
 
         // The corpus sits in a template, and the template's contents are
         // already parsed: taking the equation from there skips a second parse
@@ -625,13 +609,11 @@ const variants = [
         const pick =
           equations.find((node) => node.textContent.includes("\u222B")) ??
           equations[0];
-        const holder = $("#equation");
         holder.append(pick);
-        holder.dataset.face = "ready";
         say(
           equationStatus,
           "ok",
-          `Ready. ${equations.length} in the corpus, this one set in the font just built.`,
+          `Ready. ${equations.length} in the corpus, this one set in the font built from the math glyph set.`,
         );
       } catch (error) {
         say(equationStatus, "bad", `The math face failed: ${error.message ?? error}`);

@@ -8,7 +8,8 @@ import Base from "../layouts/Base.astro";
     <p>
       The plan below is the font's metrics. Every key defaults, so this is the
       reference plan; change one and the tables follow. The specimen under it is
-      the font it builds.
+      the font it builds, and the readings under that come from the font's own
+      tables.
     </p>
     <div class="row">
       <button class="btn btn--primary" id="build">Build a font</button>
@@ -31,6 +32,7 @@ import Base from "../layouts/Base.astro";
     // hand from `import.meta.url` does not survive the build, which is how this
     // failed the first time.
     import GenerateWorker from "../worker.js?worker";
+    import { advance, cmap, glyphCount, ink } from "../lib/font.js";
 
     const status = document.querySelector("#status");
     const planField = document.querySelector("#plan");
@@ -68,17 +70,23 @@ import Base from "../layouts/Base.astro";
         download.download = "Lemmata-Regular.ttf";
         download.hidden = false;
 
-        // The specimen is the font just built, registered under the family the
-        // font names, so it is the output being shown and not a placeholder.
-        // Registering it also sets the page in it, which is the same swap the
-        // landing makes.
-        const face = new FontFace("Lemmata", bytes.buffer);
+        // The specimen is the font just built, registered under a family of its
+        // own so it does not stand in for the reference face the rest of the
+        // site is set in.
+        const face = new FontFace("Lemmata Build", bytes.buffer);
         face.load().then((loaded) => {
           document.fonts.add(loaded);
-          specimen.style.fontFamily = "Lemmata";
-          document.documentElement.dataset.face = "ready";
+          specimen.style.fontFamily = "Lemmata Build";
         });
-        metricsOut.textContent = `${bytes.length.toLocaleString()} bytes, built in ${message.elapsed.toFixed(0)} ms`;
+
+        // The readings are the built font's own tables, read here rather than
+        // taken on trust.
+        const map = cmap(bytes);
+        metricsOut.textContent = [
+          `${glyphCount(bytes) ?? "?"} glyphs drawn, ${map.size} characters mapped`,
+          `x ${ink(map, bytes, "x")?.yMax ?? "?"} · l ${ink(map, bytes, "l")?.yMax ?? "?"} · ` +
+            `p ${ink(map, bytes, "p")?.yMin ?? "?"} · advance ${advance(map, bytes, "x") ?? "?"}`,
+        ].join("\n");
         buildButton.disabled = false;
       }
     };

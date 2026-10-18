@@ -51,12 +51,17 @@ test("the corpus renders from our font, not a fallback", async ({ page }) => {
   expect(applied.ours).not.toBe(applied.absent);
 
   const widths = await page.evaluate(() => {
+    // The family the page resolved, not the one it was configured with. The
+    // Fonts API renames what it emits, so a literal name here would measure a
+    // family that does not exist and compare the fallback with itself.
+    const set = document.querySelector("#equations math");
+    const ours = getComputedStyle(set).fontFamily.split(",")[0].trim();
     const measure = (family) => {
       const context = document.createElement("canvas").getContext("2d");
       context.font = `32px ${family}`;
       return context.measureText("\u2211 \u222B \u221A x \u03B1").width;
     };
-    return { ours: measure("Lemmata"), fallback: measure('"Lemmata Absent"') };
+    return { ours: measure(`"${ours}"`), fallback: measure('"Lemmata Absent"') };
   });
   expect(widths.ours).not.toBe(widths.fallback);
 });
