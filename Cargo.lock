@@ -140,6 +140,7 @@ dependencies = [
  "lemmata-build",
  "lemmata-capture",
  "lemmata-geom",
+ "lemmata-plan",
  "read-fonts",
 ]
 
@@ -175,6 +176,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lemmata-plan"
+version = "0.1.0"
+dependencies = [
+ "lemmata-build",
+ "serde_json",
+]
+
+[[package]]
 name = "lemmata-ptl"
 version = "0.1.0"
 dependencies = [
@@ -191,6 +200,7 @@ version = "0.1.0"
 dependencies = [
  "lemmata-build",
  "lemmata-capture",
+ "lemmata-plan",
  "read-fonts",
  "wasm-bindgen",
 ]

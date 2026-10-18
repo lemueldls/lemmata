@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use lemmata_build::font::{GlyphData, Metrics, Names};
+use lemmata_build::font::{GlyphData, Names};
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -41,12 +41,14 @@ Usage: lemmata build [--glyphs <capture>] [--out <font.ttf>] [--family <name>]
 
   --glyphs  glyph capture to read (default target/glyphs.bin)
   --out     font to write (default target/Lemmata-Regular.ttf)
-  --family  family name for the output font (default Lemmata)";
+  --family  family name for the output font (default Lemmata)
+  --plan    JSON plan for the font's metrics (default: the reference plan)";
 
 fn build(args: &[String]) -> Result<(), String> {
     let mut glyphs_path = PathBuf::from("target/glyphs.bin");
     let mut out_path = PathBuf::from("target/Lemmata-Regular.ttf");
     let mut names = Names::default();
+    let mut plan_path = String::new();
 
     let mut index = 0;
     while index < args.len() {
@@ -58,6 +60,7 @@ fn build(args: &[String]) -> Result<(), String> {
             "--glyphs" => glyphs_path = PathBuf::from(value),
             "--out" => out_path = PathBuf::from(value),
             "--family" => names.family.clone_from(value),
+            "--plan" => plan_path.clone_from(value),
             other => return Err(format!("unknown option {other:?}\n{USAGE}")),
         }
         index += 2;
@@ -77,6 +80,13 @@ fn build(args: &[String]) -> Result<(), String> {
         })
         .collect();
 
+    let plan = if plan_path.is_empty() {
+        String::new()
+    } else {
+        std::fs::read_to_string(&plan_path)
+            .map_err(|error| format!("reading {plan_path}: {error}"))?
+    };
+
     // The capture records the slant in each glyph's gizmo, so the face's angle
     // comes from the source rather than from a flag.
     let coefficients = captured
@@ -88,9 +98,14 @@ fn build(args: &[String]) -> Result<(), String> {
     // is: the host and wasm32 have different `atan2` in the last bit, and this
     // value reaches the `post` table.
     let italic_angle = lemmata_geom::math::atan2(coefficients[2], coefficients[0]).to_degrees();
-    let metrics = Metrics {
-        italic_angle,
-        ..Metrics::default()
+    // The plan supplies the font's metrics. The capture records its slant in
+    // each glyph's gizmo, so the angle is taken from the source and overwrites
+    // whatever the plan said; once the glyph source responds to a plan, the plan
+    // is the one that decides.
+    let metrics = {
+        let mut metrics = lemmata_plan::from_json(&plan)?.to_font_metrics();
+        metrics.italic_angle = italic_angle;
+        metrics
     };
     // The style is one thing, so the subfamily follows the angle rather than a
     // flag that could disagree with it.
