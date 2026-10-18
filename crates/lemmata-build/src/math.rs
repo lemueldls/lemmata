@@ -269,8 +269,47 @@ fn top_accent_attachment(glyph: &GlyphData) -> i16 {
     f64::midpoint(upper.0, upper.1).round() as i16
 }
 
+/// The glyphs a renderer positions against their ink box rather than the
+/// baseline: the stretchy glyphs and the sizes derived from them.
+///
+/// This matters as soon as a glyph can be taller than the line. Beside a
+/// parenthesis grown to enclose a fraction, a superscript belongs on the line
+/// the rest of the equation sits on, not on the baseline the parenthesis
+/// happens to start at.
+fn extended_shapes(glyphs: &[GlyphData]) -> Vec<GlyphId16> {
+    let bases: Vec<&GlyphData> = glyphs
+        .iter()
+        .filter(|glyph| {
+            glyph
+                .unicodes
+                .iter()
+                .any(|code| crate::variants::STRETCHY.contains(code))
+        })
+        .collect();
+    let mut ids = Vec::new();
+    for (index, glyph) in glyphs.iter().enumerate() {
+        let stretchy = glyph
+            .unicodes
+            .iter()
+            .any(|code| crate::variants::STRETCHY.contains(code));
+        let derived = bases.iter().any(|base| {
+            (0..crate::variants::SCALES.len())
+                .any(|step| crate::variants::variant_name(&base.name, step) == glyph.name)
+        });
+        if !stretchy && !derived {
+            continue;
+        }
+        let Ok(id) = u16::try_from(index + 1) else {
+            continue;
+        };
+        ids.push(GlyphId16::new(id));
+    }
+
+    ids
+}
+
 /// The per-glyph information: italic corrections and top accent attachments for
-/// the math letters.
+/// the math letters, and the coverage of the glyphs a renderer may stretch.
 ///
 /// `glyphs` is the font's glyph order, so a glyph's index plus one is its glyph
 /// id, `.notdef` being zero.
@@ -292,22 +331,25 @@ pub fn glyph_info(glyphs: &[GlyphData]) -> MathGlyphInfo {
         corrections.push(value(italics_correction(glyph)));
         attachments.push(value(top_accent_attachment(glyph)));
     }
-    if ids.is_empty() {
-        return MathGlyphInfo::default();
-    }
     let coverage: CoverageTable = ids.iter().copied().collect();
+    let extended = extended_shapes(glyphs);
 
     MathGlyphInfo {
-        math_italics_correction_info: Some(MathItalicsCorrectionInfo {
-            coverage: coverage.clone().into(),
-            italics_correction: corrections,
-        })
-        .into(),
-        math_top_accent_attachment: Some(MathTopAccentAttachment {
-            top_accent_coverage: coverage.into(),
-            top_accent_attachment: attachments,
-        })
-        .into(),
+        math_italics_correction_info: (!ids.is_empty())
+            .then(|| MathItalicsCorrectionInfo {
+                coverage: coverage.clone().into(),
+                italics_correction: corrections,
+            })
+            .into(),
+        math_top_accent_attachment: (!ids.is_empty())
+            .then(|| MathTopAccentAttachment {
+                top_accent_coverage: coverage.into(),
+                top_accent_attachment: attachments,
+            })
+            .into(),
+        extended_shape_coverage: (!extended.is_empty())
+            .then(|| extended.into_iter().collect::<CoverageTable>())
+            .into(),
         ..MathGlyphInfo::default()
     }
 }

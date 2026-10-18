@@ -477,3 +477,64 @@ fn stretchy_glyphs_have_assemblies() {
     );
     eprintln!("assemblies: {assembled} glyphs, {tolerance} unit joins");
 }
+
+/// `r[math.stretch]`: a glyph a renderer can stretch is an extended shape, so
+/// what sits beside it is positioned against its ink box rather than its
+/// baseline.
+#[test]
+fn stretched_glyphs_are_extended_shapes() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let math = font.math().expect("MATH");
+    let variants = math.math_variants().expect("MathVariants");
+    let coverage = math
+        .math_glyph_info()
+        .expect("MathGlyphInfo")
+        .extended_shape_coverage()
+        .expect("extended shapes")
+        .expect("the table resolves");
+
+    let mut covered = 0usize;
+    for (index, glyph) in captured.iter().enumerate() {
+        if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
+            continue;
+        }
+        let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
+        assert!(
+            coverage.get(id).is_some(),
+            "{} is a stretchy glyph but not an extended shape",
+            glyph.name
+        );
+        covered += 1;
+        // The sizes derived from it are the ones a renderer reaches for when
+        // the base is too short, so they are the ones that most need the ink
+        // box.
+        let construction = variants
+            .glyph_construction(id, StretchAxis::Vertical)
+            .unwrap_or_else(|| panic!("{} has no construction", glyph.name));
+        for record in construction.math_glyph_variant_records() {
+            assert!(
+                coverage
+                    .get(GlyphId::new(u32::from(record.variant_glyph())))
+                    .is_some(),
+                "{}'s derived size is not an extended shape",
+                glyph.name
+            );
+            covered += 1;
+        }
+    }
+
+    assert_eq!(
+        covered,
+        STRETCHY.len() * (1 + lemmata_build::variants::SCALES.len()),
+        "every stretchy glyph and every size derived from it is covered"
+    );
+    // Nothing else is covered: an extended shape changes how a renderer places
+    // what is beside it, so covering an ordinary glyph would move things that
+    // have no reason to move.
+    assert_eq!(coverage.iter().count(), covered);
+    eprintln!("extended shapes: {covered} glyphs");
+}

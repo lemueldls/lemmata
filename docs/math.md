@@ -28,6 +28,8 @@ The clamp matters. An italic `l` has a tail that reaches right at the baseline, 
 
 A top accent attachment is the horizontal midpoint of the upper ink, which is where an accent is centred over a letter.
 
+A third coverage names the glyphs a renderer positions against their ink box rather than the baseline. Those are the stretchy glyphs and the sizes derived from them, 48 in all. Without it, a superscript beside a parenthesis grown to enclose a fraction is aligned with the parenthesis's own baseline instead of the line the rest of the equation sits on.
+
 These are proxies, like the constants. A design pass against a reference math font is what would replace them.
 
 ## Verification
@@ -90,6 +92,8 @@ The sizes are derived rather than drawn. Scaling a glyph in y alone keeps a vert
 
 An assembly is how a renderer goes taller than that: it stacks a bottom piece, repeats a middle one, and caps it with a top piece. The pieces are the glyph cut into three horizontal bands, so the joins are the cuts and the three tile the original outline. They are derived and encoded in the same private-use block as the sizes. The test stacks the parts the way a renderer does and checks that each one's ink spans its declared advance, that consecutive parts cross, and that no join overlaps by more than the stroke width the table names as its minimum.
 
+Every connector is that same minimum, so the pieces have no slack: a renderer reaches a target size by repeating the extender rather than by sliding the joints. A drawn extender with a long straight bar is what would give it that slack.
+
 The band is what makes a piece repeatable, and it is the limit of the approach. A band whose ink is a straight stem stacks on itself, which is what a bracket, a brace or a ceiling does. A band taken from a curved or barred part of a glyph repeats that feature: a radical's extender is a slice of its diagonal, and a summation's is a slice of its middle bar. An extender drawn for each glyph is what would replace them.
 
 ## The browser
@@ -110,4 +114,4 @@ They also have to join the glyph set before anything counts it. Appending them l
 
 The script style `r[math.alphabets]` names is still a gap in the glyph source, and `r[math.script-style]` needs an `ssty` feature, which is a GSUB table the font does not write yet.
 
-Math kerning, the extended shape coverage inside `MathGlyphInfo`, and the horizontal constructions are also unwritten. None is needed by a simple equation.
+Math kerning and the horizontal constructions are also unwritten. Neither is needed by a simple equation.
