@@ -22,8 +22,8 @@
 
 use write_fonts::tables::layout::CoverageTable;
 use write_fonts::tables::math::{
-    Math, MathConstants, MathGlyphConstruction, MathGlyphInfo, MathItalicsCorrectionInfo,
-    MathTopAccentAttachment, MathValueRecord, MathVariants,
+    Math, MathConstants, MathGlyphConstruction, MathGlyphInfo, MathGlyphVariantRecord,
+    MathItalicsCorrectionInfo, MathTopAccentAttachment, MathValueRecord, MathVariants,
 };
 use write_fonts::types::{FWord, GlyphId16, UfWord};
 
@@ -129,10 +129,23 @@ pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
 
     let constructions = ids
         .iter()
-        .map(|_| {
+        .map(|id| {
+            let base = usize::from(id.to_u16()) - 1;
+            let records = (0..crate::variants::SCALES.len())
+                .filter_map(|step| {
+                    let name = crate::variants::variant_name(&glyphs[base].name, step);
+                    let variant = glyphs.iter().position(|other| other.name == name)?;
+                    Some(MathGlyphVariantRecord {
+                        variant_glyph: GlyphId16::new(u16::try_from(variant + 1).ok()?),
+                        advance_measurement: UfWord::new(
+                            metrics.underline_thickness.unsigned_abs(),
+                        ),
+                    })
+                })
+                .collect();
             MathGlyphConstruction {
                 glyph_assembly: None.into(),
-                math_glyph_variant_records: Vec::new(),
+                math_glyph_variant_records: records,
             }
             .into()
         })

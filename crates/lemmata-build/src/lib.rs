@@ -11,6 +11,7 @@ use std::hash::Hash;
 
 pub mod font;
 pub mod math;
+pub mod variants;
 
 /// Hit and miss counters for one table.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

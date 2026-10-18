@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
+use read_fonts::tables::glyf::Glyph as ReadGlyph;
 use read_fonts::tables::math::StretchAxis;
 use read_fonts::types::GlyphId;
 use read_fonts::{FontRef, TableProvider};
@@ -263,5 +264,62 @@ fn stretchy_glyphs_are_covered() {
         "the font lacks these stretchy glyphs: {absent:?}"
     );
     assert_eq!(covered, STRETCHY.len(), "every stretchy glyph is covered");
-    eprintln!("stretchy: {covered} of {} covered", STRETCHY.len());
+
+    // Each construction names its derived sizes, and a derived size is taller
+    // than the glyph it came from. That last check is the one a rendering
+    // harness cannot make: a renderer with no variant draws the base glyph at
+    // the wrong scale rather than falling back, so the font names stay clean.
+    let loca = font.loca(None).expect("loca");
+    let glyf = font.glyf().expect("glyf");
+    let height = |id: GlyphId| -> i32 {
+        let glyph = loca
+            .get_glyf(id, &glyf)
+            .expect("read a glyph")
+            .unwrap_or_else(|| panic!("glyph {id} has no outline"));
+        let ReadGlyph::Simple(simple) = glyph else {
+            panic!("a stretchy glyph is a simple glyph");
+        };
+        let mut low = i32::MAX;
+        let mut high = i32::MIN;
+        for point in simple.points() {
+            low = low.min(i32::from(point.y));
+            high = high.max(i32::from(point.y));
+        }
+        high - low
+    };
+
+    let mut derived = 0usize;
+    for (index, glyph) in captured.iter().enumerate() {
+        if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
+            continue;
+        }
+        let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
+        let construction = variants
+            .glyph_construction(id, StretchAxis::Vertical)
+            .unwrap_or_else(|| panic!("{} has no construction", glyph.name));
+        let records = construction.math_glyph_variant_records();
+        assert_eq!(
+            records.len(),
+            lemmata_build::variants::SCALES.len(),
+            "{} should name one derived size per scale",
+            glyph.name
+        );
+        let base = height(id);
+        for record in records {
+            let variant = record.variant_glyph();
+            assert_ne!(variant, id, "a variant is not the base glyph");
+            let grown = height(GlyphId::new(u32::from(variant)));
+            assert!(
+                grown > base,
+                "{}'s derived size is {grown} tall against a base of {base}",
+                glyph.name
+            );
+            derived += 1;
+        }
+    }
+    assert_eq!(
+        derived,
+        STRETCHY.len() * lemmata_build::variants::SCALES.len()
+    );
+    eprintln!("stretchy: {covered} glyphs covered, {derived} derived sizes");
 }

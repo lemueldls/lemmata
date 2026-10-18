@@ -136,6 +136,14 @@ impl GlyphData {
 /// Returns a message when a contour cannot be written or a table fails to
 /// compile.
 pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<Vec<u8>, String> {
+    // The derived size variants join the set first, before anything counts the
+    // glyphs or indexes into them. Appending them later leaves them past
+    // `maxp.num_glyphs`, where they are ignored until something references one
+    // and the reference is out of range.
+    let mut with_variants = glyphs.to_vec();
+    with_variants.extend(crate::variants::derive(glyphs));
+    let glyphs = with_variants.as_slice();
+
     let mut glyf_builder = GlyfLocaBuilder::new();
     glyf_builder
         .add_glyph(&Glyph::Empty)

@@ -94,9 +94,13 @@ That is the same shape as the script letters in `r[math.alphabets]`: a gap in th
 
 `MathVariants` names the stretchy glyphs, and each construction has no variants and no assembly. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis.
 
-The variants turned out to be derivable rather than drawn. Scaling a glyph in y alone keeps a vertical stroke at its width, since x is untouched, so a parenthesis stretches into something that encloses taller content at the weight the rest of the font is drawn at. That much works: the derived glyphs build, `read-fonts` accepts them, and the Typst harness passes with them in the font.
+The variants are derivable rather than drawn. Scaling a glyph in y alone keeps a vertical stroke at its width, since x is untouched, so a parenthesis stretches into something that encloses taller content at the weight the rest of the font is drawn at. Each stretchy glyph gets two derived sizes, and the test checks each is taller than its base.
 
-What does not work is naming them. A `MathGlyphConstruction` carrying variant records makes Typst reject the whole font with `failed to subset font: malformed font`, while `read-fonts` accepts the same bytes. The glyph ids and `AdvanceMeasurement` were both checked, and neither was the cause. The next step is to run `ots-sanitize` over a build that has the records, since it names a malformed table where a renderer only shrugs. `nix develop` provides it.
+Two things went wrong on the way and both are worth keeping.
+
+The derived glyphs have to be encoded, at U+F000 and up. They are not characters, so nothing types them, but a subsetter keeps what is reachable and drops what is not: a variant named only by the MATH table disappears and leaves the table pointing at nothing. Iosevka encodes its own derived texture variants in the same block.
+
+They also have to join the glyph set before anything counts it. Appending them later leaves them past `maxp.num_glyphs`, where they are ignored until something references one and the reference is out of range. That was the bug: `ots-sanitize` said `bad glyph ID: 1593`, one past the count, and a renderer only said `malformed font`. A renderer shrugs where the sanitizer names the number.
 
 The assemblies are further off. An assembly joins pieces along a connector, and the pieces are glyphs the font does not have: a parenthesis is one curve with no straight middle to cut an extender out of.
 
