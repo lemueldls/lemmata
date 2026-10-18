@@ -99,3 +99,15 @@ What the numbers do say. The `g` gap is the same against either native, so the w
 Where that leaves it. Float math is ruled out for the `g` gap, because routing every transcendental we call, plus all of kurbo's, through `libm` did not move it, and neither did the build profile. Pointer width is ruled out by the table above. What remains is a call or a `cfg(target_arch)` path that still resolves differently on wasm32 specifically, and the cheapest way to find it is the sweep that found the first set: hash a range of inputs for the float functions not yet checked, `asin`, `acos`, `atan`, `sinh`, `cosh`, `cbrt`, `exp2`, `log10`, on both targets and see which one differs. That is a small program and it localises the same way.
 
 The vendored kurbo is unrelated to the measured gap, and the honest reading is that it should be reverted unless it is wanted for the determinism property on its own merits.
+
+## The bisect places it in the expansion
+
+The pipeline from a captured tree to a font has four stages worth separating: the spiro expansion, the solve, the overlap resolution, and the quadify plus the writer. `lemmata_web` grew a temporary `expansion_report` that hashes the two expanded sides of every glyph, and the browser diffs it against the host's.
+
+Ten of the seventy-one glyphs differ at the expansion, the first stage after the tree. The named ones are `k`, `s`, `dollar`, `y`, `two.lnum` and `three.lnum`.
+
+That is a large narrowing. The divergence is not in the quadifier, not in the font writer, not in overlap resolution, and not in the boolean engine: all of those run after the expansion and cannot introduce it. What remains is `lemmata_geom`'s expansion path, which is our own code, where every transcendental already goes through `lemmata_geom::math` and the remaining float operations are exact.
+
+So it is not float math, which the earlier experiments had already suggested three times, and it is not the pointer width, which the i686 comparison ruled out for the arcs. It is something structural in the expansion, and it affects ten glyphs out of seventy-one rather than all of them, which is what a tie or a threshold being crossed looks like rather than an arithmetic difference.
+
+The next step is to print the knot values of one of those ten on both targets rather than hashing them. A hash says they differ; the values say by how much and where, and that is what names the line.
