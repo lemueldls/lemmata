@@ -16,7 +16,7 @@ fn capture_path() -> PathBuf {
         || {
             Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("../..")
-                .join("target/glyphs.bin")
+                .join("web/public/glyphs.bin")
         },
         PathBuf::from,
     )

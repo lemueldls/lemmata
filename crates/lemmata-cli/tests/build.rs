@@ -32,7 +32,7 @@ fn workspace_path(relative: &str) -> PathBuf {
 
 fn dump_path() -> PathBuf {
     std::env::var_os("LEMMATA_GLYPH_DUMP")
-        .map_or_else(|| workspace_path("target/glyphs.bin"), PathBuf::from)
+        .map_or_else(|| workspace_path("web/public/glyphs.bin"), PathBuf::from)
 }
 
 fn glyph_data(captured: &[Glyph]) -> Vec<GlyphData> {

@@ -24,7 +24,7 @@ fn workspace(relative: &str) -> PathBuf {
 
 fn capture_path() -> PathBuf {
     std::env::var_os("LEMMATA_GLYPH_DUMP")
-        .map_or_else(|| workspace("target/glyphs.bin"), PathBuf::from)
+        .map_or_else(|| workspace("web/public/glyphs.bin"), PathBuf::from)
 }
 
 fn sha256(bytes: &[u8]) -> String {

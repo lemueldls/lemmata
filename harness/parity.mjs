@@ -22,7 +22,7 @@ const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 const golden = JSON.parse(readFileSync(join(root, "golden/parity.json"), "utf8"));
 const capture = readFileSync(
-  process.env.LEMMATA_GLYPH_DUMP ?? join(root, "target/glyphs.bin"),
+  process.env.LEMMATA_GLYPH_DUMP ?? join(root, "web/public/glyphs.bin"),
 );
 
 const recorded = golden.capture;

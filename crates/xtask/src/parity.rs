@@ -24,7 +24,7 @@ fn root() -> PathBuf {
 
 fn capture_path() -> PathBuf {
     std::env::var_os("LEMMATA_GLYPH_DUMP")
-        .map_or_else(|| root().join("target/glyphs.bin"), PathBuf::from)
+        .map_or_else(|| root().join("web/public/glyphs.bin"), PathBuf::from)
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
@@ -93,8 +93,10 @@ pub fn regen() -> Result<(), String> {
             "--offline",
             "--",
             "build",
-            "--out",
+            "--glyphs",
         ])
+        .arg(capture_path())
+        .arg("--out")
         .arg(&built))?;
 
     // The upstream commit is not this command's to choose, so it is carried

@@ -12,7 +12,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const capture = readFileSync(join(root, "target/glyphs.bin"));
+const capture = readFileSync(join(root, "web/public/glyphs.bin"));
 const require = createRequire(import.meta.url);
 const { build_font, default_plan, to_woff2 } = require(
   join(root, "target/lemmata-node/lemmata_web.js"),
