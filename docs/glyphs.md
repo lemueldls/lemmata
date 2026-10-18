@@ -60,16 +60,16 @@ It survived every earlier test because of coverage. `tests/fairize.rs` and `test
 ## The lower-a variants
 
 `lower-a.ptl` builds thirteen `a` variants, a half-height `aHalf` for each
-serifless double-storey one, and a cap-height `aCap`. The capture holds fourteen
-of them and all fourteen are ported and verified: their bi-knots, expansions and
-outlines match the build's exactly, 507 knots, worst deviation zero.
+serifless double-storey one, and a cap-height `aCap` for each single-storey one.
+The capture holds every one, and the port builds and verifies all sixty: their
+bi-knots, expansions and outlines match the build's exactly, 2057 knots, worst
+deviation zero.
 
-The file's bodies are all ported. `DoubleStorey` carries `HookAndBar` and `Arc`,
-`SingleStorey` carries five bodies over five bars, and `CrossingBody` is
-`a.crossing`. The combinations the capture does not hold are built from the same
-primitives but have no oracle, so they are unverified. The derived glyphs
-(`aSwash`, `aRetroflexHook`, the script forms, `mathbb/a` and the accented
-compositions) need shapes outside this file and are not ported.
+`DoubleStorey` carries all three hook styles the variant table selects and the
+seven bodies over them, `SingleStorey` carries five bodies over five bars, and
+`CrossingBody` is `a.crossing`. The derived glyphs (`aSwash`,
+`aRetroflexHook`, the script forms, `mathbb/a` and the accented compositions)
+need shapes outside this file and are not ported.
 
 Three things about the work are worth writing down, because reading the source
 misled me and measuring did not.

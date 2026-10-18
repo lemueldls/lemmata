@@ -96,7 +96,11 @@ It skips when Typst is not installed, like the tests that skip without a capture
 
 The sizes are derived rather than drawn, and the two families grow differently. A delimiter stretches: a parenthesis is a curve that gets taller while the stroke keeps its width, so scaling y alone is what a taller one looks like. A large operator is not stretched but set at a larger size, so its display form is a scaled drawing, wider as well as taller, and its advance grows with it or it would run into its neighbour. Deriving a taller sigma without widening it is what left it looking thin at display size.
 
-Each stretchy glyph gets two, at 1.5 and 2 times its own size. The test checks that each is taller than its base, that a large operator is wider too, and that a delimiter's width is unchanged.
+A delimiter gets two, at 1.5 and 2 times its own size. A large operator gets three, because a display operator is set larger than a stretched delimiter and the renderer can only pick from what it is given: at twice its size a summation is no taller than the integral beside it, which is what left the integral looking no bigger than its text size. `displayOperatorMinHeight` sits at 1.7 em, above the second scale, so a display operator picks the third.
+
+A grown operator's cell grows with it, and the drawing moves by half the difference so that it stays centred in the new cell. Scaled about the old cell's centre alone its ink starts left of the new origin, which puts the operator off-centre in its line and its limits off-centre over it.
+
+The test checks that each size is taller than its base, that a large operator is wider too, that a delimiter's width is unchanged, and that every derived size is named by the table and covered as an extended shape.
 
 An assembly is how a renderer goes taller than that: it stacks a bottom piece, repeats a middle one, and caps it with a top piece. The pieces are the glyph cut into three horizontal bands, so the joins are the cuts and the three tile the original outline. They are derived and encoded in the same private-use block as the sizes. The test stacks the parts the way a renderer does and checks that each one's ink spans its declared advance, that consecutive parts cross, that no join overlaps by more than the stroke width the table names as its minimum, and that the middle piece repeats without stepping.
 

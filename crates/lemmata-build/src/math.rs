@@ -119,8 +119,11 @@ pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
         // A delimited expression shorter than this is set as a sub-formula.
         delimited_sub_formula_min_height: positive(em * 1.3),
         // What a large operator grows to in display style. Reaching it is what
-        // finds the derived size variants, and then the assembly.
-        display_operator_min_height: positive(em * 1.3),
+        // finds the derived size variants, and then the assembly. It sits above
+        // the second scale so that a display operator picks the third: at two
+        // times an operator is only as tall as the delimiters beside it, which
+        // is what left the integral looking no taller than its own text size.
+        display_operator_min_height: positive(em * 1.7),
         math_leading: at(154.0),
         axis_height: at(250.0),
         // The one pair the specification defines against this font rather than
@@ -206,7 +209,13 @@ pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
         .iter()
         .map(|id| {
             let base = usize::from(id.to_u16()) - 1;
-            let records = (0..crate::variants::SCALES.len())
+            // A large operator carries one more size than a delimiter, so the
+            // list is the glyph's own rather than the delimiter's.
+            let large = glyphs[base]
+                .unicodes
+                .iter()
+                .any(|code| crate::variants::LARGE_OPERATORS.contains(code));
+            let records = (0..crate::variants::scales(large).len())
                 .filter_map(|step| {
                     let name = crate::variants::variant_name(&glyphs[base].name, step);
                     let variant = glyphs.iter().position(|other| other.name == name)?;
@@ -364,6 +373,11 @@ fn top_accent_attachment(glyph: &GlyphData) -> i16 {
 /// the rest of the equation sits on, not on the baseline the parenthesis
 /// happens to start at.
 fn extended_shapes(glyphs: &[GlyphData]) -> Vec<GlyphId16> {
+    // A large operator carries one more size than a delimiter, so the set the
+    // coverage names is the union rather than one glyph's list.
+    let steps = crate::variants::LARGE_SCALES
+        .len()
+        .max(crate::variants::SCALES.len());
     let bases: Vec<&GlyphData> = glyphs
         .iter()
         .filter(|glyph| {
@@ -380,8 +394,7 @@ fn extended_shapes(glyphs: &[GlyphData]) -> Vec<GlyphId16> {
             .iter()
             .any(|code| crate::variants::STRETCHY.contains(code));
         let derived = bases.iter().any(|base| {
-            (0..crate::variants::SCALES.len())
-                .any(|step| crate::variants::variant_name(&base.name, step) == glyph.name)
+            (0..steps).any(|step| crate::variants::variant_name(&base.name, step) == glyph.name)
         });
         if !stretchy && !derived {
             continue;

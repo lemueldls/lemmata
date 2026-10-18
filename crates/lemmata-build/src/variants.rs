@@ -20,8 +20,21 @@ pub const STRETCHY: &[u32] = &[
 /// the capture carries.
 pub const LARGE_OPERATORS: &[u32] = &[0x220F, 0x2211, 0x222B];
 
-/// The scales a stretchy glyph is derived at, beyond its own size.
+/// The scales a delimiter is derived at, beyond its own size.
 pub const SCALES: &[f64] = &[1.5, 2.0];
+
+/// The scales a large operator is derived at.
+///
+/// One further than a delimiter gets, because a display operator is set larger
+/// than a stretched delimiter and the renderer can only pick from what it is
+/// given. `displayOperatorMinHeight` decides which of these it picks.
+pub const LARGE_SCALES: &[f64] = &[1.5, 2.0, 2.25];
+
+/// The scales a glyph is derived at.
+#[must_use]
+pub const fn scales(large: bool) -> &'static [f64] {
+    if large { LARGE_SCALES } else { SCALES }
+}
 
 /// Where the derived variants are encoded.
 ///
@@ -57,6 +70,10 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
             .iter()
             .any(|code| LARGE_OPERATORS.contains(code));
         let centre_x = f64::from(glyph.advance) / 2.0;
+        // A grown operator's cell is wider, so the drawing has to move with it:
+        // scaled about the old cell's centre alone, its ink would start left of
+        // the new origin and the operator would sit off-centre in the line.
+        let scales = scales(large);
         let (low, high) = glyph
             .contours
             .iter()
@@ -68,7 +85,7 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
             continue;
         }
         let centre = f64::midpoint(low, high);
-        for (index, scale) in SCALES.iter().enumerate() {
+        for (index, scale) in scales.iter().enumerate() {
             let contours = glyph
                 .contours
                 .iter()
@@ -77,7 +94,9 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
                         .iter()
                         .map(|point| lemmata_geom::QuadifyPoint {
                             x: if large {
-                                centre_x + (point.x - centre_x) * scale
+                                centre_x
+                                    + (point.x - centre_x) * scale
+                                    + f64::from(glyph.advance) * (scale - 1.0) / 2.0
                             } else {
                                 point.x
                             },

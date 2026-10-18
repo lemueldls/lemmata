@@ -318,10 +318,17 @@ fn stretchy_glyphs_are_covered() {
         let construction = variants
             .glyph_construction(id, StretchAxis::Vertical)
             .unwrap_or_else(|| panic!("{} has no construction", glyph.name));
+        // A large operator is set bigger rather than stretched, so it carries
+        // one more size than a delimiter does.
+        let large = glyph
+            .unicodes
+            .iter()
+            .any(|code| lemmata_build::variants::LARGE_OPERATORS.contains(code));
+        let scales = lemmata_build::variants::scales(large);
         let records = construction.math_glyph_variant_records();
         assert_eq!(
             records.len(),
-            lemmata_build::variants::SCALES.len(),
+            scales.len(),
             "{} should name one derived size per scale",
             glyph.name
         );
@@ -338,10 +345,6 @@ fn stretchy_glyphs_are_covered() {
             // A large operator is set bigger, so its display form is wider as
             // well as taller. A delimiter only stretches, and the stroke keeps
             // the width it was drawn at.
-            let large = glyph
-                .unicodes
-                .iter()
-                .any(|code| lemmata_build::variants::LARGE_OPERATORS.contains(code));
             let narrow = width(id);
             let wide = width(GlyphId::new(u32::from(variant)));
             if large {
@@ -361,10 +364,14 @@ fn stretchy_glyphs_are_covered() {
             derived += 1;
         }
     }
-    assert_eq!(
-        derived,
-        STRETCHY.len() * lemmata_build::variants::SCALES.len()
-    );
+    let expected: usize = STRETCHY
+        .iter()
+        .map(|code| {
+            lemmata_build::variants::scales(lemmata_build::variants::LARGE_OPERATORS.contains(code))
+                .len()
+        })
+        .sum();
+    assert_eq!(derived, expected);
     eprintln!("stretchy: {covered} glyphs covered, {derived} derived sizes");
 }
 
@@ -620,9 +627,16 @@ fn stretched_glyphs_are_extended_shapes() {
         }
     }
 
+    let sizes: usize = STRETCHY
+        .iter()
+        .map(|code| {
+            lemmata_build::variants::scales(lemmata_build::variants::LARGE_OPERATORS.contains(code))
+                .len()
+        })
+        .sum();
     assert_eq!(
         covered,
-        STRETCHY.len() * (1 + lemmata_build::variants::SCALES.len()),
+        STRETCHY.len() + sizes,
         "every stretchy glyph and every size derived from it is covered"
     );
     // Nothing else is covered: an extended shape changes how a renderer places
