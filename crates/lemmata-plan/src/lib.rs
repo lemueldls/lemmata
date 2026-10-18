@@ -18,6 +18,33 @@
 use lemmata_build::font::Metrics;
 use serde_json::Value;
 
+/// The spacing a font is drawn at.
+///
+/// It selects which capture the caller supplies, because the spacing is a
+/// property of the drawings rather than of the advances: Iosevka draws each
+/// glyph into a frame whose width comes from its letter class, so a
+/// quasi-proportional face is a second build and not a second set of advances
+/// over the same outlines. `docs/plan.md` records the measurement.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Spacing {
+    /// The monospace face, one advance for every glyph.
+    Normal,
+    /// Each glyph drawn into a frame the width of its letter class, so `i` is
+    /// narrow and `m` is wide.
+    QuasiProportional,
+}
+
+impl Spacing {
+    /// The name a plan writes.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Normal => "normal",
+            Self::QuasiProportional => "quasi-proportional",
+        }
+    }
+}
+
 /// What a caller chooses about the font.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Plan {
@@ -39,6 +66,8 @@ pub struct Plan {
     pub weight_class: u16,
     pub width_class: u16,
     pub italic_angle: f64,
+    /// The spacing the outlines were drawn at.
+    pub spacing: Spacing,
     /// The character variants the plan selects, by group and variant name.
     ///
     /// Iosevka names these in kebab case under `variants.design`, and the glyph
@@ -70,6 +99,7 @@ impl Default for Plan {
             weight_class: 400,
             width_class: 5,
             italic_angle: 0.0,
+            spacing: Spacing::Normal,
             variants: Vec::new(),
         }
     }
@@ -135,6 +165,13 @@ pub fn from_json(text: &str) -> Result<Plan, String> {
         plan.italic_angle = angle
             .as_f64()
             .ok_or_else(|| "italicAngle must be a number".to_string())?;
+    }
+    if let Some(spacing) = object.get("spacing") {
+        plan.spacing = match spacing.as_str() {
+            Some("normal") => Spacing::Normal,
+            Some("quasi-proportional") => Spacing::QuasiProportional,
+            _ => return Err("spacing must be \"normal\" or \"quasi-proportional\"".to_string()),
+        };
     }
     if let Some(variants) = object.get("variants") {
         let variants = variants

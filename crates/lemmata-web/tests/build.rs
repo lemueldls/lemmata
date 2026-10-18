@@ -94,3 +94,73 @@ fn a_plan_reaches_a_character_variant() {
     );
     eprintln!("web variants: {}", listed.len());
 }
+
+/// The spacing a plan names selects the outlines, and the quasi-proportional
+/// capture draws a proportional face.
+#[test]
+fn a_quasi_proportional_capture_is_proportional() {
+    let Ok(mono) = fs::read(capture_path()) else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let quasi_path = std::env::var_os("LEMMATA_QUASI_DUMP").map_or_else(
+        || {
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .join("web/public/glyphs-quasi.bin")
+        },
+        PathBuf::from,
+    );
+    let Ok(quasi) = fs::read(quasi_path) else {
+        eprintln!("skipping: no quasi-proportional capture");
+        return;
+    };
+
+    // The plan takes the name, and refuses one it cannot serve.
+    assert_eq!(
+        lemmata_plan::from_json(r#"{"spacing": "quasi-proportional"}"#)
+            .expect("parse")
+            .spacing,
+        lemmata_plan::Spacing::QuasiProportional
+    );
+    assert!(lemmata_plan::from_json(r#"{"spacing": "proportional"}"#).is_err());
+
+    // The two captures are the same set drawn differently, so the advances are
+    // what separates them: one for every glyph, against one per letter class.
+    let advances = |capture: &[u8]| -> Vec<u16> {
+        let bytes = lemmata_web::build(capture, "").expect("build");
+        let font = read_fonts::FontRef::new(&bytes).expect("reopen");
+        let cmap = font.cmap().expect("cmap");
+        let hmtx = font.hmtx().expect("hmtx");
+
+        ['i', 'm']
+            .iter()
+            .map(|letter| {
+                let id = cmap
+                    .map_codepoint(u32::from(*letter))
+                    .unwrap_or_else(|| panic!("{letter} is mapped"));
+                hmtx.advance(id).expect("an advance")
+            })
+            .collect()
+    };
+    let [mono_i, mono_m] = advances(&mono)[..] else {
+        panic!("two advances")
+    };
+    let [quasi_i, quasi_m] = advances(&quasi)[..] else {
+        panic!("two advances")
+    };
+    assert_eq!(
+        mono_i, mono_m,
+        "the monospace face gives every glyph one cell"
+    );
+    assert!(
+        quasi_m > quasi_i,
+        "the proportional face should give `m` more room than `i`: {quasi_m} against {quasi_i}"
+    );
+    assert_eq!(
+        (quasi_i, quasi_m),
+        (333, 750),
+        "the letter classes are Iosevka's: `i` at two thirds of the cell, `m` at one and a half"
+    );
+    eprintln!("spacing: i {quasi_i}, m {quasi_m} against {mono_i} for both");
+}

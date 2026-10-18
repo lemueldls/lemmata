@@ -69,6 +69,12 @@ zero.lnum'
 npm run build -- ttf-unhinted::RefA
 ```
 
+A second capture of the same set at `spacing = "quasi-proportional"` is what
+gives the site a proportional face. The spacing is a property of the drawings,
+so it is a second build rather than a second set of advances:
+`web/public/glyphs-quasi.bin` is the site's set drawn that way, and
+`docs/plan.md` records what changes.
+
 The plan must hold only the upright slope. `reference/private-build-plans.toml`
 gives RefA an italic slope too, both are 500 units wide, and both pass the width
 guard, so the dump lands on whichever the build writes last. Build a plan with

@@ -60,13 +60,14 @@ pub fn build_font(capture: &[u8], plan: &str) -> Result<Vec<u8>, JsValue> {
 pub fn default_plan() -> String {
     let plan = lemmata_plan::Plan::default();
     format!(
-        "{{\n  \"capHeight\": {},\n  \"xHeight\": {},\n  \"ascender\": {},\n  \"descender\": {},\n  \"italicAngle\": {},\n  \"weight\": {}\n}}",
+        "{{\n  \"capHeight\": {},\n  \"xHeight\": {},\n  \"ascender\": {},\n  \"descender\": {},\n  \"italicAngle\": {},\n  \"weight\": {},\n  \"spacing\": \"{}\"\n}}",
         plan.cap_height,
         plan.x_height,
         plan.ascender,
         plan.descender,
         plan.italic_angle,
-        plan.weight_class
+        plan.weight_class,
+        plan.spacing.name()
     )
 }
 

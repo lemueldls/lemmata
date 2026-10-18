@@ -8,6 +8,12 @@ useHead({ title: "Generate" });
 
 const { plan, status, state, download, downloadName, bytes, busy, run } =
   useBuild();
+const { spacing: currentSpacing, setSpacing } = usePlan();
+
+// The two spacings are two builds, so this picks the outlines the generator
+// hands the builder. The plan records the choice, which is why it is set there
+// rather than held here.
+const SPACINGS = ["normal", "quasi-proportional"];
 
 const specimen = ref<HTMLElement | null>(null);
 
@@ -51,6 +57,18 @@ watch(bytes, async (font) => {
       <a class="btn" id="download" :href="download" :download="downloadName" :hidden="!download">
         Download
       </a>
+    </div>
+    <div class="row">
+      <button
+        v-for="name in SPACINGS"
+        :key="name"
+        class="btn"
+        type="button"
+        :aria-pressed="currentSpacing === name"
+        @click="setSpacing(name)"
+      >
+        {{ name }}
+      </button>
     </div>
     <textarea id="plan" v-model="plan" rows="8" spellcheck="false" />
     <pre id="status" :data-state="state">{{ status }}</pre>

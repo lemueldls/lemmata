@@ -6,29 +6,25 @@
 // the list follows the glyphs rather than a table written into the page.
 import init, { default_plan, variants_of } from "lemmata-web";
 
+/// Where the outlines for each spacing live.
+///
+/// The spacing is a property of the drawings rather than of the advances:
+/// Iosevka draws each glyph into a frame whose width comes from its letter
+/// class, so the quasi-proportional face is a second build and a second
+/// capture. The plan says which one it wants and this is what that means.
+const DEFAULT_CAPTURE = "/glyphs.bin";
+const CAPTURES: Record<string, string> = {
+  normal: DEFAULT_CAPTURE,
+  "quasi-proportional": "/glyphs-quasi.bin",
+};
+
 const state = reactive({
   plan: "",
-  capture: null as Uint8Array | null,
+  captures: new Map<string, Uint8Array>(),
   ready: false,
 });
 
-let loading: Promise<void> | null = null;
-
-/// Reads the wasm, the default plan and the capture, once.
-///
-/// Called by anything that needs them, and safe to call from more than one
-/// place: the second caller awaits the first load rather than starting another.
-function ensure(): Promise<void> {
-  loading ??= (async () => {
-    await init();
-    state.plan = default_plan();
-    const response = await fetch("/glyphs.bin");
-    state.capture = new Uint8Array(await response.arrayBuffer());
-    state.ready = true;
-  })();
-
-  return loading;
-}
+let started: Promise<void> | null = null;
 
 /// The plan as the page edits it: the text the generator is handed, so what the
 /// page shows and what the builder reads cannot drift.
@@ -43,13 +39,50 @@ function parsed(): Record<string, unknown> {
   return state.plan.trim() ? JSON.parse(state.plan) : {};
 }
 
+/// The spacing the plan asks for, defaulting the way the builder does.
+function spacing(): string {
+  return (parsed().spacing as string) ?? "normal";
+}
+
+/// The outlines the current spacing needs, fetched once per spacing.
+async function load(which: string): Promise<void> {
+  if (state.captures.has(which)) return;
+  const response = await fetch(CAPTURES[which] ?? DEFAULT_CAPTURE);
+  state.captures.set(which, new Uint8Array(await response.arrayBuffer()));
+}
+
+const capture = computed(() => state.captures.get(spacing()) ?? null);
+
+/// Reads the wasm, the default plan and the capture the plan asks for.
+///
+/// Safe to call from more than one place and after the plan changes: the wasm
+/// loads once and the capture loads once per spacing.
+async function ensure(): Promise<void> {
+  started ??= (async () => {
+    await init();
+    state.plan = default_plan();
+    state.ready = true;
+  })();
+  await started;
+  await load(spacing());
+}
+
+/// Sets the spacing, which is also what decides the capture.
+async function setSpacing(which: string): Promise<void> {
+  const document = parsed();
+  document.spacing = which;
+  state.plan = JSON.stringify(document, null, 2);
+  await load(which);
+}
+
 /// The variants the capture holds for a group, as the names a plan takes.
 ///
 /// The group's own drawing is not in the list: a plan gets it by saying nothing.
 function variants(group: string): string[] {
-  if (!state.capture) return [];
+  const bytes = capture.value;
+  if (!bytes) return [];
 
-  return JSON.parse(variants_of(state.capture, group)) as string[];
+  return JSON.parse(variants_of(bytes, group)) as string[];
 }
 
 /// The variant a group is set to, or the empty string for the capture's drawing.
@@ -72,8 +105,10 @@ function choose(group: string, variant: string): void {
 export function usePlan() {
   return {
     plan,
-    capture: computed(() => state.capture),
+    capture,
     ready: computed(() => state.ready),
+    spacing: computed(spacing),
+    setSpacing,
     ensure,
     variants,
     chosen,

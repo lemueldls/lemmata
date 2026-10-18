@@ -14,6 +14,25 @@ The boundary format is JSON, because the page sends an object and `serde_json` i
 
 The CLI takes `--plan <file>` and the page has a text area holding the plan. Both hand it to the same `lemmata_plan::from_json`, and any key either omits takes its default, so a control only has to send what it changed.
 
+## Spacing
+
+`spacing` takes `normal` or `quasi-proportional`, and it selects which capture the caller supplies rather than changing the font the builder writes. The spacing is a property of the drawings: Iosevka draws each glyph into a frame whose width comes from its letter class, so the two are separate builds.
+
+Measured against the monospace build of the same set:
+
+| glyph | advance | ink | outline |
+| --- | --- | --- | --- |
+| `i`, `l` | 500 → 333 | 350 → 259 | redrawn |
+| `m` | 500 → 750 | 398 → 622 | redrawn |
+| `M`, `W` | 500 → 667 | 398 → 539 | redrawn |
+| `x`, `a` | 500 → 500 | unchanged | byte-identical |
+| `period` | 500 → 333 | 156 → 156 | advance only |
+| `space` | 500 → 292 | — | — |
+
+The class ratios come from `params/parameters.toml`'s `spacing-quasi-proportional` table: `advanceScaleMM` 1.5, `M` 1.333, `T` 1.167, `F` 0.833, `I` 0.667, `II` 0.5, `Sp` 0.583. A plan chooses the preset and not the ratios. `metricOverride` is the only way to move one, and its documented table lists just `advanceScaleSp` of the seven: setting `advanceScaleSp = 1.0` moves `space` from 292 to 500, and setting `advanceScaleM` or `advanceScaleI` does nothing at all, silently, whether it is written as a plan key or under `metricOverride`.
+
+So a page offers the two presets and cannot offer a slider. `web/public/glyphs-quasi.bin` is the same set drawn at the second preset, and `lemmata-web`'s test asserts the classes: `i` at 333 and `m` at 750 against 500 for both.
+
 ## What it does not reach
 
 Outlines, except through the variants. The shapes come from the recorded glyph capture, which is one face at one weight, so a plan changes the font's tables and not its drawing, and a variant choice is a choice among the drawings the capture already carries.

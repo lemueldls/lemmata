@@ -69,6 +69,10 @@ export function useBuild(): Build {
     status.value = "Building…";
     state.value = "note";
     try {
+      // The capture follows the plan's spacing, so it is read here rather than
+      // when the page mounted: a plan edited to another spacing needs the other
+      // build's outlines.
+      await ensure();
       const built = await build(plan.value);
       const font = built.bytes ?? new Uint8Array();
       bytes.value = font;
