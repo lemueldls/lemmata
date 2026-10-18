@@ -92,13 +92,13 @@ pub fn from_json(text: &str) -> Result<Plan, String> {
                 .ok_or_else(|| format!("{key} must be a whole number")),
         }
     };
-    let mut set_i16 = |key: &str, target: &mut i16| -> Result<(), String> {
+    let set_i16 = |key: &str, target: &mut i16| -> Result<(), String> {
         if let Some(value) = integer(key)? {
             *target = i16::try_from(value).map_err(|_| format!("{key} is out of range"))?;
         }
         Ok(())
     };
-    let mut set_u16 = |key: &str, target: &mut u16| -> Result<(), String> {
+    let set_u16 = |key: &str, target: &mut u16| -> Result<(), String> {
         if let Some(value) = integer(key)? {
             *target = u16::try_from(value).map_err(|_| format!("{key} is out of range"))?;
         }
@@ -133,7 +133,7 @@ pub fn from_json(text: &str) -> Result<Plan, String> {
 impl Plan {
     /// The values the writer puts in the font tables.
     #[must_use]
-    pub fn to_font_metrics(&self) -> Metrics {
+    pub const fn to_font_metrics(&self) -> Metrics {
         Metrics {
             units_per_em: self.units_per_em,
             ascender: self.ascender,
