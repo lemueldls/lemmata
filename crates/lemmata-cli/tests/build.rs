@@ -395,6 +395,51 @@ fn math_table_round_trips() {
     );
 }
 
+/// `r[build.formats]`: a native build emits WOFF2, and the container is one a
+/// sanitizer accepts rather than only one with the right magic.
+#[test]
+fn woff2_is_emitted_and_accepted() {
+    let Some((bytes, _)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let compressed = lemmata_build::font::woff2(&bytes).expect("compress the font");
+    assert_eq!(&compressed[..4], b"wOF2", "the container names itself");
+    assert!(
+        compressed.len() < bytes.len(),
+        "compression is the point: {} bytes from {}",
+        compressed.len(),
+        bytes.len()
+    );
+
+    if Command::new("ots-sanitize")
+        .arg("--version")
+        .output()
+        .is_err()
+    {
+        eprintln!("skipping: ots-sanitize is not installed");
+        return;
+    }
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("target/ots-sanitize-check.woff2");
+    std::fs::write(&path, &compressed).expect("write the container");
+    let output = Command::new("ots-sanitize")
+        .arg(&path)
+        .output()
+        .expect("run ots-sanitize");
+    assert!(
+        output.status.success(),
+        "ots-sanitize rejected the WOFF2:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    eprintln!(
+        "woff2: {} bytes from {}, and ots-sanitize accepts it",
+        compressed.len(),
+        bytes.len()
+    );
+}
+
 /// `r[pin.exact]`: every release-candidate dependency is pinned exactly, and
 /// every pin has a row in `docs/versions.md`.
 #[test]
@@ -435,9 +480,9 @@ fn release_candidates_are_pinned_exactly() {
         // The record is what a bump change edits, so a pin with no row is a
         // version that moved without the record moving with it.
         let version = value.trim_start_matches('=');
-        let recorded = record.lines().any(|row| {
-            row.contains(&format!("| {name} |")) && row.contains(version)
-        });
+        let recorded = record
+            .lines()
+            .any(|row| row.contains(&format!("| {name} |")) && row.contains(version));
         if !recorded {
             unrecorded.push(format!("{name} {version}"));
         }

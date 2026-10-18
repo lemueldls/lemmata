@@ -40,7 +40,8 @@ const USAGE: &str = "\
 Usage: lemmata build [--glyphs <capture>] [--out <font.ttf>] [--family <name>]
 
   --glyphs  glyph capture to read (default target/glyphs.bin)
-  --out     font to write (default target/Lemmata-Regular.ttf)
+  --out     font to write; a .woff2 extension compresses it (default
+            target/Lemmata-Regular.ttf)
   --family  family name for the output font (default Lemmata)
   --plan    JSON plan for the font's metrics (default: the reference plan)";
 
@@ -119,6 +120,16 @@ fn build(args: &[String]) -> Result<(), String> {
     };
 
     let bytes = lemmata_build::font::build(&glyphs, &metrics, &names)?;
+    // The extension decides the container. A `.woff2` is the same font
+    // compressed, which is what a page serves and what a subsetter reads.
+    let compressed = out_path
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("woff2"));
+    let bytes = if compressed {
+        lemmata_build::font::woff2(&bytes)?
+    } else {
+        bytes
+    };
     std::fs::write(&out_path, &bytes)
         .map_err(|error| format!("writing {}: {error}", out_path.display()))?;
     // The font carries `.notdef`, the captured glyphs, and the derived ones:

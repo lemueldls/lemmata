@@ -443,6 +443,19 @@ pub(crate) fn glyph_path(contours: &[Vec<QuadifyPoint>]) -> BezPath {
     path
 }
 
+/// Compresses a built font to WOFF2.
+///
+/// The same font in the container a page serves, and the one a subsetter reads.
+/// The quality is the crate's default, which is its best.
+///
+/// # Errors
+///
+/// Returns a message when the container cannot be built.
+pub fn woff2(ttf: &[u8]) -> Result<Vec<u8>, String> {
+    ttf2woff2::encode(ttf, ttf2woff2::BrotliQuality::default())
+        .map_err(|error| format!("woff2: {error}"))
+}
+
 /// The copyright the license requires. The glyphs derive from upstream, so the
 /// notice is upstream's.
 const COPYRIGHT: &str =

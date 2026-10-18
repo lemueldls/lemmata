@@ -31,6 +31,11 @@ wasm-bindgen = "=0.2.129"
 # platform's. Its `std` feature stays on because write-fonts enables it, and
 # that is fine: the point is that `libm` now wins. docs/wasm-smoke.md has the
 # upstream note that would retire this patch.
+# The browser compresses one too, so brotli's portable float path is on: the
+# default uses the platform's arithmetic and the bytes would differ across
+# targets, which is the same trap the font bytes were caught by.
+ttf2woff2 = { version = "0.14.0", default-features = false, features = ["portable-float"] }
+
 [patch.crates-io]
 kurbo = { path = "vendor/kurbo" }
 

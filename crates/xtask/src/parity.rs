@@ -151,6 +151,11 @@ pub fn check() -> Result<(), String> {
     run(Command::new("node")
         .current_dir(root())
         .arg("harness/parity.mjs"))?;
+    // The same package compresses a font for the browser, which is the option
+    // `r[build.formats]` asks to have verified rather than assumed.
+    run(Command::new("node")
+        .current_dir(root())
+        .arg("harness/woff2.mjs"))?;
 
     // The browser half reads the built site, so the package it embeds and the
     // site around it are rebuilt here too. Leaving either to a manual step is

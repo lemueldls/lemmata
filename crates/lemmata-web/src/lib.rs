@@ -69,6 +69,16 @@ pub fn default_plan() -> String {
     )
 }
 
+/// Compresses a built font to WOFF2, which is what a page wants to serve.
+///
+/// # Errors
+///
+/// Returns the message when the container cannot be built.
+#[wasm_bindgen]
+pub fn to_woff2(font: &[u8]) -> Result<Vec<u8>, JsValue> {
+    lemmata_build::font::woff2(font).map_err(|error| JsValue::from_str(&error))
+}
+
 /// The name the page offers the download under.
 #[must_use]
 #[wasm_bindgen]
