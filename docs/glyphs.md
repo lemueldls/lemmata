@@ -56,3 +56,15 @@ The budget is calibrated to that, not chosen. The deviation is 0.075 px at 16 pp
 The six glyphs that still differ have one cause, and it is upstream's own artifact. Its rebuild emits a straight line for any polygon edge it cannot match to a source arc, and grid snapping leaves edges a hundredth of a unit long. Fairization classifies a junction as a corner when one side is straight and the other is not, so such an edge splits a run. On `s` the peak at (251, 528) carries one, and upstream's run breaks into two where ours stays whole. Reproducing that means reproducing the snapping and the segment table, which is the one part of typo-geom's clipper we substitute.
 
 It survived every earlier test because of coverage. `tests/fairize.rs` and `tests/quadify.rs` each check one half of the step on their own corpora and both are exact, and a boundary comparison that tolerates seams hid the structural difference. The glyph arcs are now in `corpus/fairize.json` as seven minimal reproductions, so the fairize half is pinned against upstream directly.
+
+## The lower-a variants
+
+`lower-a.ptl` builds thirteen `a` variants, and the capture holds all thirteen. Three are ported and verified. The rest need six shared shapes that are not: `Arch.adjust-x.top`, `HSerif.rt`, `ArcStartSerif.InwardL`, `VBar.l`, the `arcvh` and `archv` blends, and `bezControls`.
+
+Two things about that work are worth writing down, because reading the source misled me twice and measuring did not.
+
+**`arcvh` and `archv` are blends, not knots.** A shape that writes `archv` where a bare `g4` knot looks equivalent will have the right number of *items* and the wrong number of *knots*: the blend expands into the pair the solver reads. Emitting `kit.archv(None, None)` instead of a knot is what took `RightwardTailedBar` from five knots to the capture's nine.
+
+**The capture holds the flipped shape.** `OBarRight.earlessCorner` reaches its outline through `OBarLeft.toothlessCorner`, which is itself `OBarLeft.earlessCorner` flipped, so the nesting reads as two flips and the shape as unflipped. The capture says otherwise: its first knot for `a.singleStoreyFlatTopSerifless` is `(64.01, 0.00)`, which is the *top* knot of an unflipped corner seen through one flip, not the `yend` knot the source suggests. Dumping the capture's knots and aligning them against the port's is the way to settle it, and it is how the `SmoothA` bug and the `archv` bug were both found.
+
+The remaining two constants are the tail's `hookTurn`, where the port reads `AdviceStroke 16` as taking an extra scalar of one and the capture says otherwise, and the earless corner's `yend`, where the capture's `tiny` says the arch depth that reaches it is zero rather than the `smallArchDepth` of two hundred the plan carries.
