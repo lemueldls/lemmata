@@ -8,15 +8,21 @@ Iosevka ships none. The reference builds carry fourteen tables (`DSIG GDEF GPOS 
 
 `crates/lemmata-build/src/math.rs` writes `MathConstants`. It is the first of the table's three parts and the only one that needs no math glyphs, which is what made it a clean starting point.
 
-The specification treats a constant of zero as "not specified, use the renderer's default". A profile therefore only names the constants it has an opinion about, and everything else stays zero. The profile sets the two script-scale percentages, which must be non-zero or a renderer scales by zero and draws nothing. The rest follow from the font's own measurements:
+The specification treats a constant of zero as "not specified, use the renderer's default", and a renderer that reads it literally then places scripts on the baseline and never grows a display operator. Leaving one at zero is not neutral, so every constant the specification describes is written, from two sources.
+
+Most of them the specification gives a formula for, in multiples of the rule thickness: a fraction's numerator sits one rule above its bar and three in display style, a stack's gap is three rules and seven, a radical's gap is one and a quarter. The rest are design values, and those come from New Computer Modern Math. It is set at the same 1000 units per em, so its numbers are ours as they stand. Scaling them by the ratio of the two x-heights is the mistake to avoid: this font's x-height is much the larger, and scaling made every fraction taller, which made every delimiter stretch further to enclose one.
 
 | constant | from |
 | --- | --- |
-| `axis_height` | half the x-height |
-| `accent_base_height`, `flattened_accent_base_height` | the cap height |
-| the four rule thicknesses | the underline thickness, standing in for a stroke width the plan does not carry yet |
+| the shifts, gaps and limit distances | New Computer Modern Math, at the same 1000 units per em |
+| the rule thicknesses and the gaps around bars, fractions and stacks | the underline thickness, which the specification measures them in |
+| `accent_base_height` | the x-height plus overshoot, which is the one the specification defines against this font |
+| `flattened_accent_base_height` | the cap height |
+| `delimited_sub_formula_min_height`, `display_operator_min_height` | 1.3 em |
 
-These are plumbing, not typography. They make the table exist and parse. A design pass over a reference math font, Latin Modern Math or STIX Two Math, is what would replace them.
+The values are floors rather than the last word. A renderer also clears the base it places a script against, and that rule reads this font's own x-height, so a shift that is too small here is still raised there.
+
+Two defects followed from leaving those at zero, both visible in a Typst render of the corpus: superscripts sat on the baseline because `superscriptShiftUp` was zero, and a display summation and integral stayed at text size because `displayOperatorMinHeight` was. A renderer that substitutes its own default for a zero hides the difference; Typst reads the constant as written.
 
 ## Per-glyph information
 
@@ -94,7 +100,9 @@ An assembly is how a renderer goes taller than that: it stacks a bottom piece, r
 
 Every connector is that same minimum, so the pieces have no slack: a renderer reaches a target size by repeating the extender rather than by sliding the joints. A drawn extender with a long straight bar is what would give it that slack.
 
-The band is what makes a piece repeatable, so the derivation measures it: it cuts the band, compares the ink along the two cut edges, and keeps the band only if they line up within the overlap the join uses. The middle is tried first. A radical's arm joins its stem near the bottom, so the middle of that glyph holds both strokes and repeating it would stack both; moving the band up and narrowing it leaves the stem on its own. The test reports the worst seam across the sixteen, 38 units against the 50 the join allows, and a glyph whose band never got there would be left without an assembly rather than given one that steps.
+The band is what makes a piece repeatable, so the derivation measures it: it slices the band at three heights, compares the ink's horizontal extent across them, and keeps the straightest of a few candidate bands. Measuring only the two cut edges is not enough, and that is the trap. A brace's middle holds its point, so both ends sit on the stem and agree while the ink bulges out and back between them, and the piece scallops wherever the point repeats. The band moves up and narrows until it is a stroke, which is what a radical's arm and a brace's point both need.
+
+Three glyphs have no band that gets there, and the test names them rather than giving them an assembly that repeats a feature. A summation's middle holds its crossbar and an angle bracket's holds its vertex, so the piece would stack those instead of a stroke. They need a drawn extender. The other thirteen join along the stroke width, and the worst repeat seam is 41 units against the 50 the join allows.
 
 ## The browser
 

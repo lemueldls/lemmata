@@ -308,18 +308,21 @@ fn math_table_round_trips() {
         i32::from(profile.script_script_percent_scale_down)
     );
 
-    // The rest follow from the font's measurements.
-    assert_eq!(
-        constants.constant(MathConstant::AxisHeight),
-        i32::from(metrics.x_height / 2)
-    );
-    assert_eq!(
-        constants.constant(MathConstant::AccentBaseHeight),
-        i32::from(metrics.cap_height)
+    // The rest follow from the font's measurements: the design values are
+    // ratios of the x-height and the rest are multiples of the rule thickness.
+    let stroke = i32::from(metrics.underline_thickness);
+    let axis = constants.constant(MathConstant::AxisHeight);
+    assert!(
+        axis > 0 && axis < i32::from(metrics.x_height),
+        "the math axis sits below the x-height, and is {axis}"
     );
     assert_eq!(
         constants.constant(MathConstant::FlattenedAccentBaseHeight),
         i32::from(metrics.cap_height)
+    );
+    assert!(
+        constants.constant(MathConstant::AccentBaseHeight) > i32::from(metrics.x_height),
+        "an accent base clears the x-height"
     );
     for rule in [
         MathConstant::FractionRuleThickness,
@@ -329,13 +332,48 @@ fn math_table_round_trips() {
     ] {
         assert_eq!(
             constants.constant(rule),
-            i32::from(metrics.underline_thickness),
+            stroke,
             "{rule:?} is drawn at the stroke width"
         );
     }
+    assert_eq!(
+        constants.constant(MathConstant::StackGapMin),
+        stroke * 3,
+        "a stack's gap is three rules"
+    );
+    assert_eq!(
+        constants.constant(MathConstant::StackDisplayStyleGapMin),
+        stroke * 7,
+        "and seven in display style"
+    );
 
-    // A constant the profile leaves at zero stays zero: the renderer decides.
-    assert_eq!(constants.constant(MathConstant::MathLeading), 0);
+    // The ones a renderer reads literally rather than substituting a default
+    // for. A zero superscript shift leaves a script on the baseline, and a zero
+    // operator height means a display operator is never grown.
+    for constant in [
+        MathConstant::SuperscriptShiftUp,
+        MathConstant::SuperscriptShiftUpCramped,
+        MathConstant::SubscriptShiftDown,
+        MathConstant::SubSuperscriptGapMin,
+        MathConstant::UpperLimitGapMin,
+        MathConstant::LowerLimitGapMin,
+        MathConstant::FractionNumeratorDisplayStyleShiftUp,
+        MathConstant::RadicalDisplayStyleVerticalGap,
+    ] {
+        assert_ne!(
+            constants.constant(constant),
+            0,
+            "{constant:?} must not be zero"
+        );
+    }
+    assert!(
+        constants.constant(MathConstant::DisplayOperatorMinHeight) > 0,
+        "a display operator has to be able to grow"
+    );
+    assert!(
+        constants.constant(MathConstant::DelimitedSubFormulaMinHeight) > 0,
+        "a delimited expression has to be able to be a sub-formula"
+    );
 
     // r[math.table]: mandatory-nonzero constants are nonzero.
     for constant in [

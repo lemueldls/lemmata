@@ -10,10 +10,10 @@
 //! Iosevka ships no MATH table, so it draws no assembly pieces.
 //!
 //! The band is what makes a piece repeatable, so the cut is measured: a band is
-//! kept only when the ink along its two cut edges lines up within the overlap
-//! the join uses. The middle is tried first, and the later candidates move up
-//! and narrow, which is what a glyph whose lower middle carries a second stroke
-//! needs. See `docs/math.md`.
+//! kept only when its ink stays within the overlap the join uses, across its
+//! whole height rather than at its two ends. The straightest of the candidate
+//! bands wins, which is what moves the cut off a radical's arm and off a
+//! brace's point. See `docs/math.md`.
 
 use kurbo::{Rect, Shape};
 use lemmata_geom::QuadifyPoint;
@@ -87,32 +87,50 @@ fn grounded(contours: Vec<Vec<QuadifyPoint>>) -> Vec<Vec<QuadifyPoint>> {
         .collect()
 }
 
-/// How far a band's ink is offset sideways between its two ends.
-///
-/// Zero means the band stacks on itself exactly. Anything larger is a step every
-/// time the piece repeats, so it is also the amount the join has to hide.
-fn seam(contours: &[Vec<QuadifyPoint>]) -> f64 {
-    let full = contours
+/// The horizontal extent of a piece's ink.
+fn x_range(contours: &[Vec<QuadifyPoint>]) -> Option<(f64, f64)> {
+    let low = contours
         .iter()
         .flatten()
-        .fold(0.0_f64, |high, point| high.max(point.y));
-    let (mut low_min, mut low_max) = (f64::INFINITY, f64::NEG_INFINITY);
-    let (mut high_min, mut high_max) = (f64::INFINITY, f64::NEG_INFINITY);
-    for point in contours.iter().flatten() {
-        if point.y <= 0.5 {
-            low_min = low_min.min(point.x);
-            low_max = low_max.max(point.x);
-        }
-        if point.y >= full - 0.5 {
-            high_min = high_min.min(point.x);
-            high_max = high_max.max(point.x);
-        }
-    }
-    if !low_min.is_finite() || !high_min.is_finite() {
-        return f64::INFINITY;
+        .fold(f64::INFINITY, |low, point| low.min(point.x));
+    let high = contours
+        .iter()
+        .flatten()
+        .fold(f64::NEG_INFINITY, |high, point| high.max(point.x));
+
+    (low.is_finite() && high.is_finite()).then_some((low, high))
+}
+
+/// How far a band's ink wanders sideways over its height.
+///
+/// A piece that stacks on itself has to be a bar, so this is what decides
+/// whether a band can repeat, and zero means it repeats exactly. Comparing only
+/// the two ends is not enough: a brace's middle holds its point, and the ink
+/// bulges out and back within the band while both ends sit on the stem, so the
+/// ends agree and the piece still scallops. The middle is sampled for that
+/// reason.
+fn spread(glyph: &GlyphData, low: f64, high: f64) -> f64 {
+    let middle = f64::midpoint(low, high);
+    let mut ranges = Vec::new();
+    for probe in [low, middle - 2.0, high - 4.0] {
+        let Some(range) = x_range(&slice(glyph, probe, probe + 4.0)) else {
+            return f64::INFINITY;
+        };
+        ranges.push(range);
     }
 
-    (high_min - low_min).abs().max((high_max - low_max).abs())
+    // The largest disagreement between the probes, at the left edge of the ink
+    // and at the right.
+    let across = |index: usize| {
+        let values: Vec<f64> = ranges
+            .iter()
+            .map(|range| if index == 0 { range.0 } else { range.1 })
+            .collect();
+        values.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            - values.iter().copied().fold(f64::INFINITY, f64::min)
+    };
+
+    across(0).max(across(1))
 }
 
 /// The pieces for every stretchy glyph, encoded from `first_code` upward.
@@ -140,8 +158,10 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
         };
         let height = f64::from(y_max - y_min);
 
-        // Whole-unit cuts keep the joins on the grid the writer rounds to.
-        let mut cut: Option<(f64, f64)> = None;
+        // Whole-unit cuts keep the joins on the grid the writer rounds to. The
+        // straightest band wins rather than the first that fits, so a glyph
+        // whose middle carries something else moves off it.
+        let mut best: Option<(f64, f64, f64)> = None;
         for (centre, fraction) in BANDS {
             let low = height
                 .mul_add(centre - fraction / 2.0, f64::from(y_min))
@@ -149,15 +169,20 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
             let high = height
                 .mul_add(centre + fraction / 2.0, f64::from(y_min))
                 .round();
-            let band = grounded(slice(glyph, low, high));
-            if !band.is_empty() && seam(&band) <= tolerance {
-                cut = Some((low, high));
-                break;
+            let wander = spread(glyph, low, high);
+            if best.is_none_or(|(current, ..)| wander < current) {
+                best = Some((wander, low, high));
             }
         }
-        let Some((low, high)) = cut else {
+        let Some((wander, low, high)) = best else {
             continue;
         };
+        // A band that wanders further than the overlap it joins along cannot
+        // repeat, and a glyph whose every band does leaves the table without an
+        // assembly rather than with one that scallops.
+        if wander > tolerance {
+            continue;
+        }
 
         // The outer bands reach past the ink so that only the inner cut decides
         // where they end.

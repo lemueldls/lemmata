@@ -13,9 +13,11 @@
 //! renderer's default", so a profile only names the constants it has an opinion
 //! about. Everything else stays zero and the renderer decides.
 //!
-//! The values here are plumbing, not typography. They follow from the font's own
-//! measurements, which is enough to make the table exist and parse, and a design
-//! pass over a reference math font is what would replace them.
+//! The constants are derived rather than designed: the specification gives a
+//! formula for most of them, and the rest are ratios of the x-height taken from
+//! a reference math font. Leaving one at zero is not neutral, because a renderer
+//! that reads it literally places scripts on the baseline and never grows a
+//! display operator.
 
 #![allow(clippy::cast_possible_truncation)]
 
@@ -62,6 +64,19 @@ impl MathProfile {
     }
 }
 
+/// Rounds a computed value into the 16-bit field the table stores.
+fn units(value: f64) -> i16 {
+    value
+        .round()
+        .clamp(f64::from(i16::MIN), f64::from(i16::MAX)) as i16
+}
+
+/// The same, for the fields that are unsigned.
+#[allow(clippy::cast_sign_loss)]
+fn positive(value: f64) -> UfWord {
+    UfWord::new(value.round().clamp(0.0, f64::from(u16::MAX)) as u16)
+}
+
 /// A constant in design units, with no device table.
 fn value(units: i16) -> MathValueRecord {
     MathValueRecord {
@@ -71,24 +86,96 @@ fn value(units: i16) -> MathValueRecord {
 }
 
 /// The constants, from the font's measurements and the profile.
+///
+/// A constant of zero means "not specified, use your own", and a renderer that
+/// reads it literally then places scripts on the baseline and never grows a
+/// display operator. So every constant the specification describes is written,
+/// from two sources.
+///
+/// Most are multiples of the rule thickness, because the specification gives a
+/// formula for them in those terms: a fraction's numerator sits one rule above
+/// its bar and three in display style, a stack's gap is three rules and seven, a
+/// radical's gap is one and a quarter. The rest are design values taken from New
+/// Computer Modern Math, which is set at the same 1000 units per em, so its
+/// numbers are ours as they stand. They are floors, not the last word: a
+/// renderer also clears the base it is placing a script against, and that rule
+/// reads this font's own x-height.
 #[must_use]
 pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
-    let stroke = metrics.underline_thickness;
+    let em = f64::from(metrics.units_per_em);
+    // The rule the specification measures its gaps against. A minus sign would
+    // do as well; the underline is the stroke width the plan already carries.
+    let rule = f64::from(metrics.underline_thickness.unsigned_abs());
+
+    // A multiple of the rule thickness.
+    let of_rule = |multiple: f64| value(units(rule * multiple));
+    // A whole number of design units, which the reference font set at the same
+    // em already carries.
+    let at = |design: f64| value(units(design));
+
     MathConstants {
         script_percent_scale_down: profile.script_percent_scale_down,
         script_script_percent_scale_down: profile.script_script_percent_scale_down,
-        // The math axis sits halfway up the x-height in every text face.
-        axis_height: value(metrics.x_height / 2),
-        // Accents stack from the cap height.
-        accent_base_height: value(metrics.cap_height),
-        flattened_accent_base_height: value(metrics.cap_height),
-        // A rule is drawn at the stroke width, which the underline stands in
-        // for until the plan carries one.
-        fraction_rule_thickness: value(stroke),
-        overbar_rule_thickness: value(stroke),
-        underbar_rule_thickness: value(stroke),
-        radical_rule_thickness: value(stroke),
-        ..MathConstants::default()
+        // A delimited expression shorter than this is set as a sub-formula.
+        delimited_sub_formula_min_height: positive(em * 1.3),
+        // What a large operator grows to in display style. Reaching it is what
+        // finds the derived size variants, and then the assembly.
+        display_operator_min_height: positive(em * 1.3),
+        math_leading: at(154.0),
+        axis_height: at(250.0),
+        // The one pair the specification defines against this font rather than
+        // against the rule: an accent base is the x-height plus overshoot, and
+        // flattening starts at the cap height.
+        accent_base_height: at(f64::from(metrics.x_height) * 1.044),
+        flattened_accent_base_height: at(f64::from(metrics.cap_height)),
+        subscript_shift_down: at(247.0),
+        subscript_top_max: at(344.0),
+        subscript_baseline_drop_min: at(200.0),
+        superscript_shift_up: at(363.0),
+        superscript_shift_up_cramped: at(289.0),
+        superscript_bottom_min: at(108.0),
+        superscript_baseline_drop_max: at(250.0),
+        superscript_bottom_max_with_subscript: at(344.0),
+        sub_superscript_gap_min: of_rule(4.0),
+        space_after_script: at(56.0),
+        upper_limit_gap_min: at(200.0),
+        upper_limit_baseline_rise_min: at(111.0),
+        lower_limit_gap_min: at(167.0),
+        lower_limit_baseline_drop_min: at(600.0),
+        stack_top_shift_up: at(444.0),
+        stack_top_display_style_shift_up: at(677.0),
+        stack_bottom_shift_down: at(345.0),
+        stack_bottom_display_style_shift_down: at(686.0),
+        stack_gap_min: of_rule(3.0),
+        stack_display_style_gap_min: of_rule(7.0),
+        stretch_stack_top_shift_up: at(111.0),
+        stretch_stack_bottom_shift_down: at(600.0),
+        stretch_stack_gap_above_min: at(200.0),
+        stretch_stack_gap_below_min: at(167.0),
+        fraction_numerator_shift_up: at(394.0),
+        fraction_numerator_display_style_shift_up: at(677.0),
+        fraction_denominator_shift_down: at(345.0),
+        fraction_denominator_display_style_shift_down: at(686.0),
+        fraction_numerator_gap_min: of_rule(1.0),
+        fraction_num_display_style_gap_min: of_rule(3.0),
+        fraction_rule_thickness: of_rule(1.0),
+        fraction_denominator_gap_min: of_rule(1.0),
+        fraction_denom_display_style_gap_min: of_rule(3.0),
+        skewed_fraction_horizontal_gap: at(350.0),
+        skewed_fraction_vertical_gap: at(96.0),
+        overbar_vertical_gap: of_rule(3.0),
+        overbar_rule_thickness: of_rule(1.0),
+        overbar_extra_ascender: of_rule(1.0),
+        underbar_vertical_gap: of_rule(3.0),
+        underbar_rule_thickness: of_rule(1.0),
+        underbar_extra_descender: of_rule(1.0),
+        radical_vertical_gap: of_rule(1.25),
+        radical_display_style_vertical_gap: at(f64::from(metrics.x_height).mul_add(0.25, rule)),
+        radical_rule_thickness: of_rule(1.0),
+        radical_extra_ascender: of_rule(1.0),
+        radical_kern_before_degree: at(em * 5.0 / 18.0),
+        radical_kern_after_degree: at(-em * 10.0 / 18.0),
+        radical_degree_bottom_raise_percent: 60,
     }
 }
 
