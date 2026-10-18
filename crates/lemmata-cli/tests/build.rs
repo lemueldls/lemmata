@@ -395,6 +395,43 @@ fn math_table_round_trips() {
     );
 }
 
+/// `r[port.upstream-tag]`: the pinned upstream tag is stamped into the font, and
+/// the stamp names the same commit the parity fingerprint was generated from.
+#[test]
+fn upstream_tag_is_stamped() {
+    let Some((bytes, _)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let name = font.name().expect("name");
+    let string_data = name.string_data();
+    let description = name
+        .name_record()
+        .iter()
+        .find(|record| record.name_id() == NameId::DESCRIPTION && record.platform_id() == 3)
+        .and_then(|record| record.string(string_data).ok())
+        .expect("the font describes its glyph source");
+
+    // The fingerprint records the commit the pair was built from, so the stamp
+    // and the record have to agree or one of them is describing another build.
+    let golden = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../golden/parity.json"),
+    )
+    .expect("read the parity fingerprint");
+    let upstream = golden
+        .split("\"upstream\": \"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .expect("the fingerprint records an upstream commit");
+
+    assert!(
+        description.to_string().contains(upstream),
+        "the font says {description:?} and the fingerprint was built from {upstream}"
+    );
+    eprintln!("upstream: {description}");
+}
+
 /// The style bits follow the italic angle, which is the one place the style is
 /// decided. A renderer picks an italic face by these bits, so they have to
 /// agree with the angle the glyphs were drawn at.

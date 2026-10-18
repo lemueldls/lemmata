@@ -23,3 +23,9 @@ Built from a copy of the pinned tree in a scratch directory:
 Unhinted target: `ttfautohint` is not installed on this machine, and hinting is not part of the comparison.
 
 The four resulting TTFs (`RefA-Regular`, `RefA-Extended`, `RefB-Bold`, `RefB-Extended`) were copied to `target/reference/`, which is outside version control. `cargo test -p lemmata-oracle` reads them from there, or from `LEMMATA_REFERENCE_DIR`.
+
+## The stamp
+
+Every font built from the pinned tree carries it in nameID 10, the description record: the tag a person reads and the commit a build can check, as `Glyph source: Iosevka 34.9.0, commit 2487637b...`. `crates/lemmata-cli/tests/build.rs` holds that commit against `golden/parity.json`, which records the commit its pair was built from, so the stamp cannot come to describe a different build than the fingerprint does.
+
+Release artifacts are the other half of `r[port.upstream-tag]` and there is no release pipeline to stamp yet.

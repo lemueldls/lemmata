@@ -455,6 +455,14 @@ const LICENSE_DESCRIPTION: &str =
 /// Where the license lives, for nameID 14.
 const LICENSE_URL: &str = "https://openfontlicense.org";
 
+/// The upstream release the glyphs come from, for nameID 10.
+///
+/// The tag is what a person reads and the commit is what a build can check. The
+/// structure suite holds the commit against `golden/parity.json`, so the record
+/// in the font cannot drift from the build it describes.
+const UPSTREAM: &str =
+    "Glyph source: Iosevka 34.9.0, commit 2487637bb71f41b2a66134afd9faa6c316e5a438";
+
 fn build_name_table(names: &Names, metrics: &Metrics) -> Name {
     let full_name = format!("{} {}", names.family, names.subfamily);
     let postscript_name = format!("{}-{}", names.family, names.subfamily);
@@ -478,6 +486,9 @@ fn build_name_table(names: &Names, metrics: &Metrics) -> Name {
         (NameId::COPYRIGHT_NOTICE, COPYRIGHT.to_string()),
         (NameId::LICENSE_DESCRIPTION, LICENSE_DESCRIPTION.to_string()),
         (NameId::LICENSE_URL, LICENSE_URL.to_string()),
+        // The glyph source, so a font in the wild says what it was built from
+        // rather than only what it is called.
+        (NameId::DESCRIPTION, UPSTREAM.to_string()),
     ];
     let mut name_record = Vec::new();
     for (name_id, value) in records {
