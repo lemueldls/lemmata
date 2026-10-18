@@ -509,11 +509,12 @@ fn stretchy_glyphs_have_assemblies() {
         assembled += 1;
     }
 
-    // A glyph whose middle is not a bar has no band that repeats: a summation's
-    // middle holds its crossbar, and an angle bracket's holds its vertex, so the
-    // piece would stack the feature rather than a stroke. They need a drawn
-    // extender, and the test names them rather than accepting one that scallops.
-    let pinned = [0x2211_u32, 0x27E8, 0x27E9];
+    // A glyph whose middle is not a bar has no band that repeats. A summation's
+    // middle holds its crossbar, an angle bracket's holds its vertex, a brace's
+    // holds its point and a radical's is a diagonal, so the piece would stack
+    // the feature rather than a stroke. They need a drawn extender, and the test
+    // names them rather than accepting one that scallops.
+    let pinned = [0x007B_u32, 0x007D, 0x2211, 0x221A, 0x27E8, 0x27E9];
     without.sort_unstable();
     assert_eq!(
         without, pinned,

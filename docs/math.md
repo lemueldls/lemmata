@@ -100,9 +100,11 @@ An assembly is how a renderer goes taller than that: it stacks a bottom piece, r
 
 Every connector is that same minimum, so the pieces have no slack: a renderer reaches a target size by repeating the extender rather than by sliding the joints. A drawn extender with a long straight bar is what would give it that slack.
 
-The band is what makes a piece repeatable, so the derivation measures it: it slices the band at three heights, compares the ink's horizontal extent across them, and keeps the straightest of a few candidate bands. Measuring only the two cut edges is not enough, and that is the trap. A brace's middle holds its point, so both ends sit on the stem and agree while the ink bulges out and back between them, and the piece scallops wherever the point repeats. The band moves up and narrows until it is a stroke, which is what a radical's arm and a brace's point both need.
+The band is what makes a piece repeatable, so the derivation measures it: it slices the band at three heights and compares the ink's horizontal extent across them. Measuring only the two cut edges is not enough, and that is the trap. A brace's middle holds its point, so both ends sit on the stem and agree while the ink bulges out and back between them, and the piece scallops wherever the point repeats.
 
-Three glyphs have no band that gets there, and the test names them rather than giving them an assembly that repeats a feature. A summation's middle holds its crossbar and an angle bracket's holds its vertex, so the piece would stack those instead of a stroke. They need a drawn extender. The other thirteen join along the stroke width, and the worst repeat seam is 41 units against the 50 the join allows.
+The middle is tried first and taken as soon as it is straight enough, at half the stroke width. Moving the band up is only for a glyph whose middle cannot repeat, and it is not free: the piece below the band then holds more of the glyph than the piece above, so a brace's point lands at the bottom of the assembly instead of in the middle. Trying the straightest band first was that mistake, and it unbalanced every glyph it touched.
+
+Six glyphs have no band that repeats and the test names them rather than giving them an assembly that stacks a feature: a summation's middle holds its crossbar, an angle bracket's holds its vertex, a brace's holds its point, and a radical's is a diagonal. They need a drawn extender. The other ten are the parentheses, brackets, ceilings, floors, integral and product, and they repeat within two units against the twenty-five the band allows.
 
 ## The browser
 

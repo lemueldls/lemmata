@@ -135,15 +135,16 @@ fn spread(glyph: &GlyphData, low: f64, high: f64) -> f64 {
 
 /// The pieces for every stretchy glyph, encoded from `first_code` upward.
 ///
-/// `overlap` is the connector the assembly joins along, which is also the step a
-/// piece may take where it repeats: a step no larger than the overlap is covered
-/// by the neighbouring piece's ink.
+/// `overlap` bounds how far a band's ink may wander over its height before the
+/// piece is judged unable to repeat. It is half the connector the assembly joins
+/// along, because a wander shows at the join as well as at the repeat, and a
+/// step the neighbouring piece's ink does not cover is visible.
 ///
 /// The caller owns `first_code`, because the pieces share the private-use block
 /// with the size variants and two derived glyphs must not share a code.
 #[must_use]
 pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphData> {
-    let tolerance = f64::from(overlap);
+    let tolerance = f64::from(overlap) / 2.0;
     let mut pieces: Vec<GlyphData> = Vec::new();
     for glyph in glyphs {
         if !glyph
@@ -159,9 +160,12 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
         let height = f64::from(y_max - y_min);
 
         // Whole-unit cuts keep the joins on the grid the writer rounds to. The
-        // straightest band wins rather than the first that fits, so a glyph
-        // whose middle carries something else moves off it.
-        let mut best: Option<(f64, f64, f64)> = None;
+        // middle is tried first and taken as soon as it is straight enough,
+        // because moving the band up leaves the piece below it holding more of
+        // the glyph than the piece above: a brace's point then lands at the
+        // bottom of the assembly instead of in the middle. A later candidate is
+        // only for a glyph whose middle carries something that cannot repeat.
+        let mut cut: Option<(f64, f64)> = None;
         for (centre, fraction) in BANDS {
             let low = height
                 .mul_add(centre - fraction / 2.0, f64::from(y_min))
@@ -169,20 +173,14 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
             let high = height
                 .mul_add(centre + fraction / 2.0, f64::from(y_min))
                 .round();
-            let wander = spread(glyph, low, high);
-            if best.is_none_or(|(current, ..)| wander < current) {
-                best = Some((wander, low, high));
+            if spread(glyph, low, high) <= tolerance {
+                cut = Some((low, high));
+                break;
             }
         }
-        let Some((wander, low, high)) = best else {
+        let Some((low, high)) = cut else {
             continue;
         };
-        // A band that wanders further than the overlap it joins along cannot
-        // repeat, and a glyph whose every band does leaves the table without an
-        // assembly rather than with one that scallops.
-        if wander > tolerance {
-            continue;
-        }
 
         // The outer bands reach past the ink so that only the inner cut decides
         // where they end.
