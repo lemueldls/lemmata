@@ -27,7 +27,10 @@ math {
   --faint: #626b7d;
   --rule: #1e222b;
   --rule-2: #2c313c;
-  --accent: #9d8cff;
+  /* The accent is for machine output and nothing else: hashes, counts, timings
+     and status lines. It reads as verified, which is the claim the numbers make,
+     and it pairs with the red below the way a light does with its switch. */
+  --accent: #86d98f;
   --bad: #ff9d9d;
   --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
 
@@ -64,7 +67,7 @@ math {
   --faint: #8b929c;
   --rule: #e3e1da;
   --rule-2: #cdcbc3;
-  --accent: #5b46d6;
+  --accent: #1f7a3d;
   --bad: #b3261e;
   --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
 }
@@ -103,7 +106,7 @@ a {
 }
 
 a:hover {
-  text-decoration-color: var(--accent);
+  text-decoration-color: var(--ink);
 }
 
 h1,
@@ -156,10 +159,19 @@ code {
   min-height: 56px;
 }
 
+/* The mark and the name are one link, the way a masthead works. */
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
   letter-spacing: -0.01em;
   text-decoration: none;
+}
+
+.brand svg {
+  flex: none;
+  color: var(--ink);
 }
 
 .masthead nav {
@@ -277,8 +289,7 @@ kbd {
 }
 
 .btn--primary:hover {
-  border-color: var(--accent);
-  background: var(--accent);
+  opacity: 0.9;
 }
 
 .status {

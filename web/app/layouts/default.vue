@@ -28,13 +28,17 @@ useHead({
         'document.documentElement.dataset.theme = stored ?? system;',
     },
   ],
+  link: [{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }],
 });
 </script>
 
 <template>
   <header class="masthead">
     <div class="wrap masthead__inner">
-      <NuxtLink class="brand" to="/">Lemmata</NuxtLink>
+      <NuxtLink class="brand" to="/">
+        <LogoMark />
+        Lemmata
+      </NuxtLink>
       <nav>
         <NuxtLink to="/generate/">Generator</NuxtLink>
         <NuxtLink to="/math/">Equations</NuxtLink>
