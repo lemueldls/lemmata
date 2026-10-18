@@ -27,3 +27,14 @@ $ (a + b)/c <= sqrt(x^2 + y^2) $
 $ lim_(x -> 0) sin(x)/x = 1 $
 
 $ alpha + beta = gamma $
+
+// These four need a delimiter or a radical taller than its base glyph, which is
+// what the size variants and the assemblies are for.
+
+$ sqrt(1/2) $
+
+$ (1/2) $
+
+$ [1/2] $
+
+$ {1/2} $
