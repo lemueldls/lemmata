@@ -86,4 +86,6 @@ The capture's ring for `a.singleStoreyFlatTopSerifless` has twenty-three knots, 
 
 The first and last knots pin it: `yend` is zero, and `left + TINY` is 126.20 while the bar sits at 397.15, so the ring's `left` is not the glyph's sidebearing and its `top` is not the x-height. The four numbers a variant needs are all in that list, which is why dumping the ring is cheaper than porting the body and aligning twenty-three knots at a time.
 
+The list also says the knots are already transformed. `collect_di_spiro` walks only `Combine` and `Boolean`, and it reaches this node, so the node is not wrapped in a `Transformed`: `composite-proc` bakes `FlipAround` into the knots it produces. Applying a flip in the port on top of that is a flip too many, which is what put the first knot at 126.20 instead of 64.01.
+
 The remaining two constants are the tail's `hookTurn`, where the port reads `AdviceStroke 16` as taking an extra scalar of one and the capture says otherwise, and the earless corner's `yend`, where the capture's `tiny` says the arch depth that reaches it is zero rather than the `smallArchDepth` of two hundred the plan carries.
