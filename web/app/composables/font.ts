@@ -74,12 +74,47 @@ async function download(
   return bytes;
 }
 
+/// Where the family was declared, and what the page falls back to when it
+/// cannot read the stylesheet.
+const DECLARED = "/fonts/lemmata.ttf";
+
+/// Where the stylesheet says a family is served from.
+///
+/// The fonts module treats the location of a font file as an implementation
+/// detail rather than a URL contract, so the page asks the CSS instead of
+/// assuming a path. The bytes hashed then are the bytes the browser is about to
+/// render with, wherever the build decided to put them.
+function servedUrl(family: string): string | null {
+  if (!import.meta.client) return null;
+  for (const sheet of document.styleSheets) {
+    let rules: CSSRuleList | null = null;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      // A cross-origin sheet cannot be read. Ours is inlined in the head.
+      continue;
+    }
+    for (const rule of rules ?? []) {
+      if (!(rule instanceof CSSFontFaceRule)) continue;
+      const name = rule.style.fontFamily.replace(/['"]/g, "");
+      if (name !== family) continue;
+      const match = /url\((['"]?)([^'")]+)\1\)/.exec(
+        rule.style.getPropertyValue("src"),
+      );
+      if (match?.[2]) return match[2];
+    }
+  }
+
+  return null;
+}
+
 async function load(): Promise<void> {
   const started = performance.now();
   try {
     // The file the module serves, which is the one the browser was given for the
     // preload, so the bytes hashed here are the bytes being rendered with.
-    const response = await fetch("/fonts/lemmata.ttf");
+    const url = servedUrl("Lemmata") ?? DECLARED;
+    const response = await fetch(url);
     const bytes = await download(response, 0.78);
     state.progress = 0.82;
 
