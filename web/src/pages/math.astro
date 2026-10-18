@@ -36,6 +36,8 @@ import Base from "../layouts/Base.astro";
        `block math` the user agent stylesheet gives a `math[display="block"]`
        and lay every token out on a line of its own; the attribute on each
        `math` element is what puts it on its own line. */
+    /* The family reaches the equations because `site.css` puts `math` back to
+       inheriting; the user agent rule would otherwise override it. */
     #equations { font-family: Lemmata, serif; font-size: 24px; }
     #equations math { margin: 0.5rem 0; }
     #status { color: var(--accent); font-size: var(--step--1); }

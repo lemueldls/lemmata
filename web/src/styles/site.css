@@ -9,6 +9,14 @@
  * `data-face="ready"` is what a page sets once it has registered its font.
  */
 
+/* MathML's user agent stylesheet sets `font-family: math` on the `math` element
+   itself, which beats inheritance from whatever holds it. So a page that sets a
+   face on a container gets that face everywhere except the equations, silently.
+   This puts inheritance back, and then the container decides as usual. */
+math {
+  font-family: inherit;
+}
+
 :root {
   color-scheme: dark;
 
@@ -544,6 +552,12 @@ kbd {
     transparent 1px var(--cell)
   );
   mask-image: linear-gradient(180deg, #000 10%, transparent 96%);
+}
+
+/* The math face is built separately from the prose face and registered under
+   its own name, so the equation section asks for it by name. */
+.equation {
+  font-family: "Lemmata Math", var(--mono);
 }
 
 .wordmark {
