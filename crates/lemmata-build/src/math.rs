@@ -214,7 +214,7 @@ pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
             let large = glyphs[base]
                 .unicodes
                 .iter()
-                .any(|code| crate::variants::LARGE_OPERATORS.contains(code));
+                .any(|code| crate::variants::OPERATORS.contains(code));
             let records = (0..crate::variants::scales(large).len())
                 .filter_map(|step| {
                     let name = crate::variants::variant_name(&glyphs[base].name, step);
@@ -375,7 +375,7 @@ fn top_accent_attachment(glyph: &GlyphData) -> i16 {
 fn extended_shapes(glyphs: &[GlyphData]) -> Vec<GlyphId16> {
     // A large operator carries one more size than a delimiter, so the set the
     // coverage names is the union rather than one glyph's list.
-    let steps = crate::variants::LARGE_SCALES
+    let steps = crate::variants::OPERATOR_SCALES
         .len()
         .max(crate::variants::SCALES.len());
     let bases: Vec<&GlyphData> = glyphs

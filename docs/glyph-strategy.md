@@ -85,32 +85,59 @@ The numeric vocabulary is ported as `lemmata-ptl::util`: `mix`, `barMixL`, `linr
 
 The collection path is ported as `lemmata-ptl::store`: `GlyphStore` and the save sink. A definition saves through the sink, which names the glyph, derives a `uniXXXX` name from a bare code point, refuses a duplicate, takes the advance width and the global transform from the metrics, and files the result. `reference/glyph-oracle/store-oracle.mjs` runs nine saves through upstream's own sink and store and `tests/glyph_store.rs` replays them, including a save the build filter skips, a forced save and a duplicate name. Exact.
 
-## The first definition
+## The first file
 
-`a.doubleStoreySerifless` is ported. It is `DoubleStorey.Serifless`, which RefA-Regular's `a` uses: `union(HookAndBar, Arc)`. The port is `lemmata-ptl::shapes` (the helpers a definition calls) and `lemmata-glyphs::letter::latin::lower_a` (the two bodies and the variant's stroke advice), 791 lines, plus `tests/lower_a.rs`.
+`letter/latin/lower-a.ptl` is ported whole. It builds thirteen `a` variants, a
+half-height `aHalf` for each serifless double-storey one and a cap-height `aCap`
+for each single-storey one, and all sixty are verified. The port is
+`lemmata-ptl::shapes` (the helpers a definition calls) and
+`lemmata-glyphs::letter::latin::lower_a` (the bodies and the variant table's
+stroke advice), 1403 lines, plus `tests/lower_a.rs`.
 
-`shapes.rs` carries `determineMixR`, `HookShape` and the `Arch` namespace from `common/shapes.ptl`, and the clamped arch depths from `meta/aesthetics.ptl`. `lower_a.rs` carries `HookAndBar`, `Arc` and `Sw`.
+`shapes.rs` carries `determineMixR`, `HookShape`, the `Arch` namespace including
+`centerAt`, `flatside` in its four orientations, `HSerif.rt` and `.rb`, `VBar.l`
+and `.r`, `ArcStartSerif`, `InwardSlabArcStart`, `bezControls` and the clamped
+arch depths. `lower_a.rs` carries `DoubleStorey`'s three hook styles and seven
+bodies, `SingleStorey`'s five bodies over five bars, and `CrossingBody`.
 
-`tests/lower_a.rs` compares the bi-knots of both `dispiro` sequences against the ones the build produced: 2 operands, 49 knots, worst deviation 0. Every coordinate, knot type and importance matches, and the proposed normals match in shape. That is the whole shape path, so the solver, the boolean stage and the outline all follow from a match here.
+`tests/lower_a.rs` compares the bi-knots of every `dispiro` sequence against the
+ones the build produced: 60 variants, 2057 knots, worst deviation 0. Every
+coordinate, knot type, importance and normal matches, and so do the expansions
+the solver consumes. That is the whole shape path, so the solver, the boolean
+stage and the outline all follow from a match here. The outline's bounding box
+is checked as well, because `OBarRight.shape` is `OBarLeft.shape` rotated half a
+turn and a missing or wrong flip leaves every knot in the right place.
 
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
-- `FunctionInterpolator`. Upstream's `HookStart` and `Arch.lhs`/`Arch.rhs` are interpolators that read the knots either side of them when the flattener runs. A definition writes those neighbours itself, one line above and one below, so the port passes them in directly and returns the resolved knots. The arc blends the arch emits stay interpolators for the flattener. This avoids teaching the flattener to let an interpolator move its neighbours, which upstream's `HookShape` does: it shifts the terminal knot it attaches to and gives it a heading. The port returns that knot and the caller substitutes it.
+- `FunctionInterpolator`. Upstream's `HookStart` and `Arch.lhs`/`Arch.rhs` are
+  interpolators that read the knots either side of them when the flattener runs.
+  A definition writes those neighbours itself, one line above and one below, so
+  the port passes them in directly and returns the resolved knots. The arc
+  blends the arch emits stay interpolators for the flattener. This avoids
+  teaching the flattener to let an interpolator move its neighbours, which
+  upstream's `HookShape` does: it shifts the terminal knot it attaches to and
+  gives it a heading. The port returns that knot and the caller substitutes it.
 
-The capture is the oracle for this layer. PTL functions cannot be imported into JavaScript the way the geometry and kit modules can, so the only way to run upstream's own code is a full build, and the capture already is one.
+The capture is the oracle for this layer. PTL functions cannot be imported into
+JavaScript the way the geometry and kit modules can, so the only way to run
+upstream's own code is a full build, and the capture already is one.
 
-`a.doubleStoreySerifed` is ported too, which needed only the serif frame's `jut` and `HSerif.rb` rather than the whole serif system. It matches as well, so the test covers 2 variants and 100 knots.
+Getting there turned up four traps worth recording, all in `docs/glyphs.md`:
+the four heading constants in `meta/aesthetics.ptl` point along the stroke, not
+along the axes, so `Upward` is `(-HVContrast, 0)` and `Leftward` is `(0, -1)`;
+`archv` and `arcvh` are blends rather than knots, so writing a bare `g4` where
+one belongs keeps the item count and loses knots; the captured knots for the
+earless corner are the *unflipped* corner inside a `Transformed`; and PTL's
+indented arguments are siblings, so the tailed bar's `Math.max` takes three.
 
-Getting there turned up one trap worth recording: the four heading constants in `meta/aesthetics.ptl` point along the stroke, not along the axes. `Upward` is `(-HVContrast, 0)` and `Leftward` is `(0, -1)`. Reading them as the axis directions produces outlines that are right in position and wrong in every normal, which the bi-knot positions alone do not catch.
-
-`a.singleStoreySerifless` is ported too, which is `FullBarBody` with `SeriflessBar`: `OBarLeft.shape`, the half-turn that makes `OBarRight.shape`, and `VBar.r`. `OBarLeft.shape` is one `dispiro` built from two `flatside` sides and the two `Arch.lhs` calls between them. The test covers 3 variants and 132 knots, all exact.
-
-The test compares three things, because each catches something the others miss. The bi-knots catch the shape logic. The expansion catches anything the solver would see differently. The outline's bounding box catches a transform that lives in the tree rather than in the knots: `OBarRight.shape` is `OBarLeft.shape` rotated half a turn about the ring, so a missing or wrong flip leaves every knot in the right place.
-
-What remains of this file: the other `OBar` variants (`TopCut`, `FlatTop`, `EarlessCorner`, `EarlessRounded`), the other hook styles (`HOOK-SLAB-INWARD`, `HOOK-HALF`) and the arc kinds, the remaining bar shapes (serifed, tailed, double-serifed), `CrossingBody` for `a.crossing`, and the glyphs derived from `a` (turned, script, retroflex, accented).
-
-What remains: the dependency manager's block half and `relation.mjs`, which order glyphs and drive subsetted rebuilds rather than outlines. After that the definitions themselves, which pull from the shared PTL libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382, `letter/shared.ptl` 1,389 and its neighbours), part of the 60,020 and amortized across glyphs.
+What remains of the port surface is the dependency manager's block half and
+`relation.mjs`, which order glyphs and drive subsetted rebuilds rather than
+outlines. After that the definitions themselves, which pull from the shared PTL
+libraries (`common/shapes.ptl` 913, `common/derivatives.ptl` 382,
+`letter/shared.ptl` 1,389 and its neighbours), part of the 60,020 and amortized
+across glyphs.
 
 ## How the measurement was taken
 

@@ -13,27 +13,32 @@ pub const STRETCHY: &[u32] = &[
 ///
 /// A delimiter stretches: a parenthesis is a curve that grows taller while the
 /// stroke keeps its width, so scaling y alone is what a taller one looks like.
-/// A large operator is not stretched but set at a larger size, so its display
-/// form is a scaled drawing, wider as well as taller. Deriving a taller sigma
-/// without widening it is what made it look thin at display size. Iosevka draws
-/// no MATH table, so it ships no display forms either, and these are the three
-/// the capture carries.
-pub const LARGE_OPERATORS: &[u32] = &[0x220F, 0x2211, 0x222B];
+/// The summation and the product are not stretched but set at a larger size, so
+/// their display forms are scaled drawings, wider as well as taller. Deriving a
+/// taller sigma without widening it is what made it look thin at display size.
+///
+/// The integral is not among them. Its limits sit in the gaps of the shape, so a
+/// wider drawing pushes them out and it stops reading as one operator. It is
+/// stretched like a delimiter and takes the larger size the others get.
+pub const SET_BIGGER: &[u32] = &[0x220F, 0x2211];
+
+/// The glyphs that carry a display size, stretched or set bigger.
+pub const OPERATORS: &[u32] = &[0x220F, 0x2211, 0x222B];
 
 /// The scales a delimiter is derived at, beyond its own size.
 pub const SCALES: &[f64] = &[1.5, 2.0];
 
-/// The scales a large operator is derived at.
+/// The scales a large operator is derived at, stretched or set bigger.
 ///
 /// One further than a delimiter gets, because a display operator is set larger
 /// than a stretched delimiter and the renderer can only pick from what it is
 /// given. `displayOperatorMinHeight` decides which of these it picks.
-pub const LARGE_SCALES: &[f64] = &[1.5, 2.0, 2.25];
+pub const OPERATOR_SCALES: &[f64] = &[1.5, 2.0, 2.25];
 
 /// The scales a glyph is derived at.
 #[must_use]
-pub const fn scales(large: bool) -> &'static [f64] {
-    if large { LARGE_SCALES } else { SCALES }
+pub const fn scales(operator: bool) -> &'static [f64] {
+    if operator { OPERATOR_SCALES } else { SCALES }
 }
 
 /// Where the derived variants are encoded.
@@ -65,15 +70,13 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
         if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
             continue;
         }
-        let large = glyph
-            .unicodes
-            .iter()
-            .any(|code| LARGE_OPERATORS.contains(code));
+        let operator = glyph.unicodes.iter().any(|code| OPERATORS.contains(code));
+        let uniform = glyph.unicodes.iter().any(|code| SET_BIGGER.contains(code));
         let centre_x = f64::from(glyph.advance) / 2.0;
         // A grown operator's cell is wider, so the drawing has to move with it:
         // scaled about the old cell's centre alone, its ink would start left of
         // the new origin and the operator would sit off-centre in the line.
-        let scales = scales(large);
+        let scales = scales(operator);
         let (low, high) = glyph
             .contours
             .iter()
@@ -93,7 +96,7 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
                     contour
                         .iter()
                         .map(|point| lemmata_geom::QuadifyPoint {
-                            x: if large {
+                            x: if uniform {
                                 centre_x
                                     + (point.x - centre_x) * scale
                                     + f64::from(glyph.advance) * (scale - 1.0) / 2.0
@@ -110,7 +113,7 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
             derived.push(GlyphData {
                 name: variant_name(&glyph.name, index),
                 unicodes: vec![code],
-                advance: if large {
+                advance: if uniform {
                     let grown = (f64::from(glyph.advance) * scale).round();
                     u16::try_from(grown as i32).unwrap_or(glyph.advance)
                 } else {

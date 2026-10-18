@@ -323,7 +323,7 @@ fn stretchy_glyphs_are_covered() {
         let large = glyph
             .unicodes
             .iter()
-            .any(|code| lemmata_build::variants::LARGE_OPERATORS.contains(code));
+            .any(|code| lemmata_build::variants::OPERATORS.contains(code));
         let scales = lemmata_build::variants::scales(large);
         let records = construction.math_glyph_variant_records();
         assert_eq!(
@@ -342,22 +342,27 @@ fn stretchy_glyphs_are_covered() {
                 "{}'s derived size is {grown} tall against a base of {base}",
                 glyph.name
             );
-            // A large operator is set bigger, so its display form is wider as
-            // well as taller. A delimiter only stretches, and the stroke keeps
-            // the width it was drawn at.
+            // The summation and the product are set bigger, so their display
+            // forms are wider as well as taller. A delimiter stretches, and so
+            // does the integral, whose limits sit in the gaps a wider drawing
+            // would push them out of.
+            let uniform = glyph
+                .unicodes
+                .iter()
+                .any(|code| lemmata_build::variants::SET_BIGGER.contains(code));
             let narrow = width(id);
             let wide = width(GlyphId::new(u32::from(variant)));
-            if large {
+            if uniform {
                 assert!(
                     wide > narrow,
                     "{}'s derived size is {wide} wide against a base of {narrow}, and a \
-                     large operator should grow in both axes",
+                     summation should grow in both axes",
                     glyph.name
                 );
             } else {
                 assert_eq!(
                     wide, narrow,
-                    "{}'s derived size changed width, and a delimiter should stretch only",
+                    "{}'s derived size changed width, and only a set-bigger operator should",
                     glyph.name
                 );
             }
@@ -367,8 +372,7 @@ fn stretchy_glyphs_are_covered() {
     let expected: usize = STRETCHY
         .iter()
         .map(|code| {
-            lemmata_build::variants::scales(lemmata_build::variants::LARGE_OPERATORS.contains(code))
-                .len()
+            lemmata_build::variants::scales(lemmata_build::variants::OPERATORS.contains(code)).len()
         })
         .sum();
     assert_eq!(derived, expected);
@@ -630,8 +634,7 @@ fn stretched_glyphs_are_extended_shapes() {
     let sizes: usize = STRETCHY
         .iter()
         .map(|code| {
-            lemmata_build::variants::scales(lemmata_build::variants::LARGE_OPERATORS.contains(code))
-                .len()
+            lemmata_build::variants::scales(lemmata_build::variants::OPERATORS.contains(code)).len()
         })
         .sum();
     assert_eq!(
