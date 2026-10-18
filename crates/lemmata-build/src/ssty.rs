@@ -95,6 +95,10 @@ fn is_scriptable(glyph: &GlyphData, math_font: bool) -> bool {
 /// encoded from `first_code` upward.
 // The advance is rounded into the 16-bit field the table stores, which cannot
 // overflow a glyph at any scale worth deriving.
+// The arithmetic is kept plain rather than fused: the alternate's proportions
+// are a design choice and a last-bit difference between the native and wasm
+// builds must not be able to move a glyph across a threshold.
+#[allow(clippy::suboptimal_flops)]
 #[must_use]
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {

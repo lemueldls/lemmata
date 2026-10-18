@@ -60,7 +60,8 @@ LEMMATA_GLYPH_CODEPOINTS=$(python3 -c "print(','.join(str(c) for lo, hi in
 npm run build -- ttf-unhinted::RefA
 ```
 
-It lands 1168 glyphs: 904 alphanumerics and 256 operators.
+It lands 1592 glyphs: 904 math alphanumerics, 256 operators, 56 Greek letters,
+58 Latin ones, 10 digits and 308 other symbols.
 
 The alphanumerics are the whole block, and Iosevka draws every style in it except one. `r[math.alphabets]` names eight: bold, italic, bold italic, script, fraktur, double-struck, sans-serif and monospace. The pinned build has seven of them. **Script is absent**, both the plain and the bold pair, 104 codepoints with no glyphs behind them.
 
@@ -126,11 +127,54 @@ The browser shell needed `PLAYWRIGHT_BROWSERS_PATH`. Playwright looks in `~/.cac
 
 ## The layout tags
 
-The specification names three layout tags for math, and one is written. `dtls`, the dotless forms, is a single substitution under the `math` script: `i` and `j` draw their dot as a contour of its own, so the form is the same glyph with that contour removed. `crates/lemmata-layout` builds the GSUB around it, since `write-fonts` has the tables but no builders for the script, feature and lookup lists.
+The specification names three layout tags for math, and two are written.
 
-What separates a tittle from an accent is worth recording, because an accent is also a small mark above the letter. A dot is filled and as tall as it is wide, while a grave is long and thin and a circumflex is hollow against its box. Without that test the derivation produced a dotless `aGrave`, a dotless `aCircumflex` and a dotless `Xi`.
+`dtls`, the dotless forms, is a single substitution under the `math` script: `i`
+and `j` draw their dot as a contour of its own, so the form is the same glyph with
+that contour removed. `crates/lemmata-layout` builds the GSUB around it, since
+`write-fonts` has the tables but no builders for the script, feature and lookup
+lists.
 
-`ssty` and `flac` are not written. `ssty` needs forms that look right when the engine scales them, which is a design rather than a derivation, and `flac` needs flattened accents drawn. Both wait on the same crate, which now exists.
+What separates a tittle from an accent is worth recording, because an accent is
+also a small mark above the letter. A dot is filled and as tall as it is wide,
+while a grave is long and thin and a circumflex is hollow against its box. Without
+that test the derivation produced a dotless `aGrave`, a dotless `aCircumflex` and
+a dotless `Xi`.
+
+`ssty`, the script-size alternates, is the second. It is an alternate
+substitution rather than a single one, and that is the whole of what the feature
+does: it hands the renderer a list of forms per glyph and the renderer picks one
+by index, so the first is the script size and the second the scriptscript size. A
+single substitution would give a renderer one form and no way to ask for the
+other.
+
+Two reference math fonts were read for the shape of that list. Latin Modern Math
+covers 516 glyphs with two alternates each, STIX Two Math 529 with two or four,
+and both cover every letter and digit the font has. Both widen the drawing and
+hold or barely raise the height: Latin Modern's script alternate is 7 to 11
+percent wider with the height unchanged, STIX's 13 percent wider and 8 percent
+taller. Wider rather than taller is the shared intent, since a taller glyph
+collides with the line above, so the derivation holds the height and widens the
+drawing and the cell together, by 10 percent for script and 25 for scriptscript.
+
+What it does not do is thicken the strokes independently of the counters. Latin
+Modern's alternate holds the counters at their size and thickens the stems by
+about 14 percent, which is a redraw rather than a transform of the outline. A
+horizontal scale widens both, which serves the same end by a different route.
+
+Only a math font carries it. The feature is registered under the `math` script,
+which a text run never selects, so deriving alternates for a text font's letters
+puts glyphs in it that nothing can reach: the coverage capture's font went from
+167 glyphs to 243 before that was noticed. The derivation takes the math
+alphanumeric block as the sign that a set is a math font's, and covers the plain
+Latin, Greek and digits only when it holds one.
+
+`flac`, the flattened accents, is not written. It is a single substitution, which
+the crate can already carry: STIX Two Math maps ten combining accents to a
+`mathcap` form, the grave, acute, circumflex, tilde, macron, breve, dot above,
+diaeresis, ring above and caron. What is missing is the accents themselves. The
+math capture holds no combining marks at all, since its ranges are the
+alphanumeric block and the operators, so there is nothing to flatten yet.
 
 ## Texture healing
 
@@ -150,6 +194,6 @@ The derived glyphs have to be encoded, at U+F000 and up. They are not characters
 
 They also have to join the glyph set before anything counts it. Appending them later leaves them past `maxp.num_glyphs`, where they are ignored until something references one and the reference is out of range. That was the bug: `ots-sanitize` said `bad glyph ID: 1593`, one past the count, and a renderer only said `malformed font`. A renderer shrugs where the sanitizer names the number. The writer and the caller that reports the count now read one function, so a derived glyph cannot be written without being counted.
 
-The script style `r[math.alphabets]` names is still a gap in the glyph source, and `r[math.script-style]` needs an `ssty` feature, which is a GSUB table the font does not write yet.
+The script style `r[math.alphabets]` names is still a gap in the glyph source. `r[math.script-style]` is now half closed: `ssty` is written and `flac` waits on the accents.
 
 Math kerning and the horizontal constructions are also unwritten. Neither is needed by a simple equation.
