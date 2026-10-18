@@ -203,7 +203,7 @@ impl Control {
                 dy,
                 af,
             } => {
-                let total = (after.x - before.x).hypot(after.y - before.y);
+                let total = math::hypot(after.x - before.x, after.y - before.y);
                 let r = (distance / total).clamp(0.0, 1.0);
 
                 vec![knot(
@@ -220,7 +220,7 @@ impl Control {
                 dy,
                 af,
             } => {
-                let total = (after.x - before.x).hypot(after.y - before.y);
+                let total = math::hypot(after.x - before.x, after.y - before.y);
                 let r = (1.0 - distance / total).clamp(0.0, 1.0);
 
                 vec![knot(

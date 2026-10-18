@@ -99,7 +99,7 @@ pub const fn boole_pn(b: bool) -> f64 {
 /// `strokeOffset`: offset a point along the normal of a direction.
 #[must_use]
 pub fn stroke_offset(x: f64, y: f64, dx: f64, dy: f64, offset: f64, contrast: f64) -> (f64, f64) {
-    let r = dx.hypot(dy);
+    let r = math::hypot(dx, dy);
     (x + (dy / r) * offset * contrast, y - (dx / r) * offset)
 }
 
@@ -118,7 +118,7 @@ pub const fn sl_x(x0: f64, y0: f64, y1: f64, slope: f64) -> f64 {
 /// `distP`: the parameter step that covers `dist` along a segment.
 #[must_use]
 pub fn dist_p(x0: f64, y0: f64, x1: f64, y1: f64, dist: f64) -> f64 {
-    dist / (x1 - x0).hypot(y1 - y0)
+    dist / math::hypot(x1 - x0, y1 - y0)
 }
 
 /// Which waveform.

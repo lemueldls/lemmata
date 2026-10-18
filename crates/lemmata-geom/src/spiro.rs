@@ -98,11 +98,11 @@ pub struct SpiroArc {
 
 impl SpiroArc {
     fn new(ks: [f64; 4], x0: f64, y0: f64, x1: f64, y1: f64) -> Self {
-        let seg_ch = (x1 - x0).hypot(y1 - y0);
-        let seg_th = (y1 - y0).atan2(x1 - x0);
+        let seg_ch = math::hypot(x1 - x0, y1 - y0);
+        let seg_th = math::atan2(y1 - y0, x1 - x0);
         let xy = integrate_spiro(&ks);
-        let ch = xy[0].hypot(xy[1]);
-        let th = xy[1].atan2(xy[0]);
+        let ch = math::hypot(xy[0], xy[1]);
+        let th = math::atan2(xy[1], xy[0]);
         let arc_length = seg_ch / ch;
         let rot = seg_th - th;
         let theta_left = rot + ks_theta(-0.5, -0.5, &ks);
@@ -353,8 +353,8 @@ fn setup_path(src: &[Knot], n: usize) -> Vec<SpiroSeg> {
     for i in 0..n_seg {
         let dx = r[i + 1].x - r[i].x;
         let dy = r[i + 1].y - r[i].y;
-        r[i].seg_ch = dx.hypot(dy);
-        r[i].seg_th = dy.atan2(dx);
+        r[i].seg_ch = math::hypot(dx, dy);
+        r[i].seg_th = math::atan2(dy, dx);
     }
     let mut i_last = n_seg - 1;
     for i in 0..n_seg {
@@ -374,8 +374,8 @@ fn setup_path(src: &[Knot], n: usize) -> Vec<SpiroSeg> {
 
 fn compute_ends(ks: &[f64; 4], ends: &mut [[f64; 4]; 2], seg_ch: f64) -> f64 {
     let xy = integrate_spiro(ks);
-    let ch = xy[0].hypot(xy[1]);
-    let th = xy[1].atan2(xy[0]);
+    let ch = math::hypot(xy[0], xy[1]);
+    let th = math::atan2(xy[1], xy[0]);
     let l = ch / seg_ch;
     let th_even = 0.5 * ks[0] + (1.0 / 48.0) * ks[2];
     let th_odd = 0.125 * ks[1] + (1.0 / 384.0) * ks[3] - th;

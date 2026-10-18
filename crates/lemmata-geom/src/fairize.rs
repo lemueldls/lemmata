@@ -24,6 +24,7 @@
 use kurbo::{Point, Vec2};
 
 use crate::fit::CurveArc;
+use crate::math;
 use crate::stroke::Bez3;
 
 const EPSILON: f64 = 1e-12;
@@ -655,7 +656,7 @@ fn length_integrand(cubic: &Bez3, t: f64) -> f64 {
     let by = 6.0 * (cubic.a.y + cubic.c.y) - 12.0 * cubic.b.y;
     let cy = 3.0 * (cubic.b.y - cubic.a.y);
 
-    ((ax * t + bx) * t + cx).hypot((ay * t + by) * t + cy)
+    math::hypot((ax * t + bx) * t + cx, (ay * t + by) * t + cy)
 }
 
 /// 16-point Gauss-Legendre on `a..b`. Only the 16-point table is ported, which

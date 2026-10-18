@@ -78,7 +78,7 @@ pub const fn leftward() -> Vec2 {
 /// `archv.yFromX`.
 #[must_use]
 pub fn archv_y_from_x(px: f64, superness: f64) -> f64 {
-    1.0 - (1.0 - px.powf(superness)).powf(1.0 / superness)
+    1.0 - math::pow(1.0 - math::pow(px, superness), 1.0 / superness)
 }
 
 /// `determineMixR`: where along the chord the key knot sits.
@@ -90,7 +90,7 @@ pub fn determine_mix_r(w: f64, v: f64, u: f64, sw: f64, swash: bool, superness: 
     let mut r = if w <= v {
         0.5
     } else {
-        1.0 / ((1.0 - (1.0 - v / w).powf(superness)).powf(1.0 / superness) + 1.0)
+        1.0 / (math::pow(1.0 - math::pow(1.0 - v / w, superness), 1.0 / superness) + 1.0)
     };
     if swash {
         let idepth = w - sw;
@@ -117,7 +117,7 @@ fn super_sin(angle: f64, superness: f64) -> f64 {
     }
     let s = math::sin(angle * std::f64::consts::PI / 180.0);
 
-    crate::util::js_sign(s) * s.abs().powf(2.0 / superness)
+    crate::util::js_sign(s) * math::pow(s.abs(), 2.0 / superness)
 }
 
 /// `superCos`.
@@ -127,7 +127,7 @@ fn super_cos(angle: f64, superness: f64) -> f64 {
     }
     let c = math::cos(angle * std::f64::consts::PI / 180.0);
 
-    crate::util::js_sign(c) * c.abs().powf(2.0 / superness)
+    crate::util::js_sign(c) * math::pow(c.abs(), 2.0 / superness)
 }
 
 /// `mixR`: the ratio where the arch's key knot sits.
@@ -142,7 +142,7 @@ fn mix_r(w: f64, ang_w: Option<f64>, v: f64, ang_v: Option<f64>, u: f64, superne
         let chr_w = rad_w * super_cos(aw, superness);
         return chr_w / (chr_v + chr_w);
     }
-    let r = 1.0 / ((1.0 - (1.0 - v / w).powf(superness)).powf(1.0 / superness) + 1.0);
+    let r = 1.0 / (math::pow(1.0 - math::pow(1.0 - v / w, superness), 1.0 / superness) + 1.0);
 
     0.5 + (r - 0.5) * (v + w) / (u * 2.0)
 }

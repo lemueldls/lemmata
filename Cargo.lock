@@ -191,7 +191,6 @@ version = "0.1.0"
 dependencies = [
  "lemmata-build",
  "lemmata-capture",
- "lemmata-geom",
  "read-fonts",
  "wasm-bindgen",
 ]

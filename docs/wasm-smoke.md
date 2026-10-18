@@ -80,7 +80,7 @@ It did not close the gap. The deviation is **10.5745 font units**, on `g`, exact
 | kurbo on `libm` | 10.5745 |
 | native built in release rather than debug | 10.5745 |
 
-Identical to four decimals across all of them. Float math is therefore ruled out: noise from it would move, and this does not move. It is deterministic on each side and different between them, which is the signature of a discrete decision, not an accumulating error.
+Identical to four decimals across all of them. This was read at the time as ruling float math out, on the reasoning that noise would move the number. That reading was wrong, and the resolution at the end of this document says why: the number did not move because the un-routed calls were never on the path of the worst glyph, not because float math was absent.
 
 ### Pointer width is not it either
 
@@ -108,6 +108,32 @@ Ten of the seventy-one glyphs differ at the expansion, the first stage after the
 
 That is a large narrowing. The divergence is not in the quadifier, not in the font writer, not in overlap resolution, and not in the boolean engine: all of those run after the expansion and cannot introduce it. What remains is `lemmata_geom`'s expansion path, which is our own code, where every transcendental already goes through `lemmata_geom::math` and the remaining float operations are exact.
 
-So it is not float math, which the earlier experiments had already suggested three times, and it is not the pointer width, which the i686 comparison ruled out for the arcs. It is something structural in the expansion, and it affects ten glyphs out of seventy-one rather than all of them, which is what a tie or a threshold being crossed looks like rather than an arithmetic difference.
+Ten of seventy-one rather than all of them was read as a tie or a threshold being crossed. It was not: it was which glyphs happened to round differently.
 
 The next step is to print the knot values of one of those ten on both targets rather than hashing them. A hash says they differ; the values say by how much and where, and that is what names the line.
+
+## Resolution: it was un-routed float math
+
+The knot values of `k` on the two targets differ in the last place:
+
+```
+native 94.87126081485027  186.65832099282113  -38.112824113375154   91.50409850541625
+wasm   94.87126081485027  186.65832099282116  -38.11282411337513    91.50409850541624
+```
+
+One to two units in the last place, in the expansion's coordinates. So it was float math after all, and the earlier conclusion that it was not came from an audit whose output was cut off at five lines. On running it in full, `lemmata-geom` and `lemmata-ptl` still had these un-routed:
+
+| file | call | where it matters |
+| --- | --- | --- |
+| `lemmata-ptl/src/shapes.rs` | five `f64::powf` | the arch blender's superellipse |
+| `lemmata-ptl/src/control.rs` | two `f64::hypot` | the distance interpolators |
+| `lemmata-ptl/src/util.rs` | two `f64::hypot` | `strokeOffset`, `distP` |
+| `lemmata-geom/src/spiro.rs` | three `atan2`, three `hypot` | the spiro solve |
+| `lemmata-geom/src/stroke.rs` | two `atan2`, two `hypot` | stroking |
+| `lemmata-geom/src/fairize.rs` | one `hypot` | fairization |
+
+The earlier passes had patched the specific literal strings I happened to read, `theta.cos()` and friends, and missed every `powf`, `atan2` and two-argument `hypot` in the same files. Routing them through `lemmata_geom::math` closes it.
+
+Verified: the expansion of `k` is identical, all seventy-two glyphs' expansion hashes are identical, and the two builds are **byte-identical** with a worst deviation of **0.000000** font units. `r[wasm.parity]` and `r[wasm.parity-bytes]` both hold.
+
+The lesson is the audit, not the arithmetic: grepping for the calls I remembered instead of the set that exists, and reading a truncated list as a complete one, cost more than every wrong hypothesis in this document put together.

@@ -126,8 +126,8 @@ impl RoundCapCurve {
         center1: Point,
         point1: Point,
     ) -> Self {
-        let theta0 = (point0.y - center0.y).atan2((point0.x - center0.x) / contrast);
-        let mut theta1 = (point1.y - center1.y).atan2((point1.x - center1.x) / contrast);
+        let theta0 = math::atan2(point0.y - center0.y, (point0.x - center0.x) / contrast);
+        let mut theta1 = math::atan2(point1.y - center1.y, (point1.x - center1.x) / contrast);
         if side {
             while theta1 < theta0 {
                 theta1 += 2.0 * std::f64::consts::PI;
@@ -137,8 +137,8 @@ impl RoundCapCurve {
                 theta1 -= 2.0 * std::f64::consts::PI;
             }
         }
-        let r0 = (center0.y - point0.y).hypot((center0.x - point0.x) / contrast);
-        let r1 = (center1.y - point1.y).hypot((center1.x - point1.x) / contrast);
+        let r0 = math::hypot(center0.y - point0.y, (center0.x - point0.x) / contrast);
+        let r1 = math::hypot(center1.y - point1.y, (center1.x - point1.x) / contrast);
 
         Self {
             contrast,
