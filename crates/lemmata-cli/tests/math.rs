@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
 use read_fonts::tables::glyf::Glyph as ReadGlyph;
+use read_fonts::tables::gsub::SubstitutionSubtables;
 use read_fonts::tables::math::{PartFlags, StretchAxis};
 use read_fonts::types::{GlyphId, Tag};
 use read_fonts::{FontRef, TableProvider};
@@ -647,6 +648,225 @@ fn stretched_glyphs_are_extended_shapes() {
     // have no reason to move.
     assert_eq!(coverage.iter().count(), covered);
     eprintln!("extended shapes: {covered} glyphs");
+}
+
+/// `r[math.script-style]`: the script-size alternates, and the `ssty` feature
+/// that offers them to a renderer.
+#[test]
+fn script_style_alternates_are_carried_by_ssty() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let gsub = font.gsub().expect("the font carries a GSUB");
+
+    let feature_list = gsub.feature_list().expect("a feature list");
+    let record = feature_list
+        .feature_records()
+        .iter()
+        .find(|record| record.feature_tag() == Tag::new(b"ssty"))
+        .expect("the font carries ssty");
+    let index = usize::from(
+        record
+            .feature(feature_list.offset_data())
+            .expect("the feature reads")
+            .lookup_list_indices()
+            .first()
+            .expect("the feature names a lookup")
+            .get(),
+    );
+    let lookup = gsub
+        .lookup_list()
+        .expect("a lookup list")
+        .lookups()
+        .get(index)
+        .expect("the lookup is in the list");
+
+    // An alternate substitution, not a single one. The difference is the whole
+    // point: the feature hands the renderer a list and the renderer picks a form
+    // by index, which is how two optical sizes are offered without the feature
+    // choosing between them. A single substitution here would give a renderer
+    // one form and no way to ask for the other.
+    let SubstitutionSubtables::Alternate(subtables) = lookup.subtables().expect("subtables") else {
+        panic!("ssty is not an alternate substitution");
+    };
+    let table = subtables
+        .iter()
+        .next()
+        .expect("a subtable")
+        .expect("the subtable reads");
+    let sets = table.alternate_sets();
+    assert!(!sets.is_empty(), "ssty names no glyphs");
+
+    let scales = lemmata_build::ssty::SCALES.len();
+    for set in sets.iter() {
+        let forms = set.expect("the alternate set reads").alternate_glyph_ids();
+        assert_eq!(
+            forms.len(),
+            scales,
+            "an alternate set should offer one form per scale"
+        );
+    }
+
+    // The derivation holds the height and widens. Both reference fonts widen,
+    // and they disagree about the height, so the height is the one thing a
+    // transform should not move: a script-size glyph that grows taller collides
+    // with the line above it.
+    let glyphs: Vec<GlyphData> = captured
+        .iter()
+        .map(|glyph| GlyphData {
+            name: glyph.name.clone(),
+            unicodes: glyph.unicodes.clone(),
+            advance: advance_to_u16(glyph.advance),
+            contours: lemmata_capture::contours(glyph),
+        })
+        .collect();
+    let alternates = lemmata_build::ssty::derive(&glyphs, 0);
+    assert!(
+        !alternates.is_empty(),
+        "the capture has glyphs a renderer sets at script size"
+    );
+    assert_eq!(
+        alternates.len(),
+        sets.len() * scales,
+        "the derivation and the feature should cover the same glyphs"
+    );
+    for (index, alternate) in alternates.iter().enumerate() {
+        let base_name = alternate
+            .name
+            .strip_suffix(".sts")
+            .or_else(|| alternate.name.strip_suffix(".st"))
+            .expect("an alternate is named for its base");
+        let base = glyphs
+            .iter()
+            .find(|glyph| glyph.name == base_name)
+            .unwrap_or_else(|| panic!("{} has no base", alternate.name));
+        let (_, low, _, high) = alternate.bounding_box().expect("the alternate has ink");
+        let (_, base_low, _, base_high) = base.bounding_box().expect("the base has ink");
+        assert_eq!(
+            (high - low, low),
+            (base_high - base_low, base_low),
+            "{} should keep its base's height and baseline",
+            alternate.name
+        );
+        assert!(
+            alternate.advance > base.advance,
+            "{} should take more room than its base",
+            alternate.name
+        );
+        let (x0, _, x1, _) = alternate.bounding_box().expect("the alternate has ink");
+        let (base_x0, _, base_x1, _) = base.bounding_box().expect("the base has ink");
+        assert!(
+            x1 - x0 > base_x1 - base_x0,
+            "{} should be wider than its base",
+            alternate.name
+        );
+        // The second scale is the wider of the two, which is what makes the
+        // list an order rather than a set.
+        if index % scales == 1 {
+            let narrower = &alternates[index - 1];
+            assert!(
+                alternate.advance > narrower.advance,
+                "{} should be the wider of the pair",
+                alternate.name
+            );
+        }
+    }
+    eprintln!(
+        "ssty: {} glyphs, {} alternates",
+        sets.len(),
+        alternates.len()
+    );
+}
+
+/// `r[math.script-style]`: the alternate reaches a shaper, and the form it picks
+/// is the one the value asks for.
+#[test]
+fn ssty_reaches_a_shaper() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let glyphs: Vec<GlyphData> = captured
+        .iter()
+        .map(|glyph| GlyphData {
+            name: glyph.name.clone(),
+            unicodes: glyph.unicodes.clone(),
+            advance: advance_to_u16(glyph.advance),
+            contours: lemmata_capture::contours(glyph),
+        })
+        .collect();
+
+    // The math italic `x`, which is the glyph an equation sets a variable in.
+    let code = 0x1D465;
+    let base = captured
+        .iter()
+        .find(|glyph| glyph.unicodes.contains(&code))
+        .unwrap_or_else(|| panic!("the capture has no U+{code:04X}"));
+    let text = char::from_u32(code).expect("a scalar value").to_string();
+
+    let blob: harfrust::font::Blob = bytes.into();
+    let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
+    let shaper = harfrust::ShaperFont::new(&font);
+    // A renderer sets the run's script to math when it sets an equation, and
+    // that is what selects the feature: it is registered under `math`, so a text
+    // run never reaches it. `guess_segment_properties` reads the script off the
+    // text and the math alphanumerics are Common, so the script is set after it.
+    let run = |value: u32| -> Vec<GlyphId> {
+        let mut buffer = harfrust::Buffer::new();
+        buffer.push_str(&text);
+        buffer.guess_segment_properties();
+        buffer.set_script(Some(harfrust::Script::MATH));
+        let features = [harfrust::Feature::new(Tag::new(b"ssty"), value, ..)];
+        harfrust::shape(
+            &shaper,
+            &mut buffer,
+            harfrust::ShapeOptions::default().features(&features),
+        )
+        .expect("shape the run");
+
+        buffer
+            .glyph_infos()
+            .iter()
+            .map(|info| GlyphId::new(info.glyph_id))
+            .collect()
+    };
+    // The glyph ids are the input's, then the derived ones in order, so a shaped
+    // id names a glyph the way the derivation does.
+    let mut all = glyphs.clone();
+    all.extend(lemmata_build::font::derived(&glyphs, &Metrics::default()));
+    let name_of = |id: GlyphId| -> String {
+        let index = usize::try_from(id.to_u32()).expect("an id");
+        if index == 0 {
+            return ".notdef".to_string();
+        }
+
+        all.get(index - 1)
+            .unwrap_or_else(|| panic!("glyph {index} is not in the font"))
+            .name
+            .clone()
+    };
+
+    // Zero disables the feature, which is the base glyph. One and two select the
+    // two forms, in the order the table lists them.
+    let plain = run(0);
+    assert_eq!(
+        name_of(plain[0]),
+        base.name,
+        "a disabled ssty changes nothing"
+    );
+    assert_eq!(
+        name_of(run(1)[0]),
+        lemmata_build::ssty::alternate_name(&base.name, 0),
+        "the first alternate should be the script size"
+    );
+    assert_eq!(
+        name_of(run(2)[0]),
+        lemmata_build::ssty::alternate_name(&base.name, 1),
+        "the second alternate should be the scriptscript size"
+    );
+    eprintln!("ssty: a shaper picks {} for {}", base.name, text);
 }
 
 /// `r[math.script-style]`'s inventory: the dotless forms the specification asks

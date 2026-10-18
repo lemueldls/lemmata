@@ -156,6 +156,8 @@ pub fn derived(glyphs: &[GlyphData], metrics: &Metrics) -> Vec<GlyphData> {
     derived.extend(pieces);
     let dotless = crate::dotless::derive(glyphs, f64::from(metrics.x_height), next_code(&derived));
     derived.extend(dotless);
+    let script = crate::ssty::derive(glyphs, next_code(&derived));
+    derived.extend(script);
     let healed = crate::texture::derive(glyphs, next_code(&derived));
     derived.extend(healed);
 
@@ -287,30 +289,53 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
 
 /// The substitutions the font carries.
 ///
-/// One feature so far: `dtls`, the dotless forms, which the specification asks
-/// for and which the derivation can produce from the dot's own contour. A pair
-/// is found by name, the way the MATH table finds its derived glyphs, so the
-/// derivation and the substitution cannot come to name different glyphs.
+/// Two features: `dtls`, the dotless forms, and `ssty`, the script-size
+/// alternates. A pair is found by name, the way the MATH table finds its derived
+/// glyphs, so the derivation and the substitution cannot come to name different
+/// glyphs.
 fn substitutions(glyphs: &[GlyphData]) -> Gsub {
+    let id = |name: &str| -> Option<GlyphId16> {
+        let index = glyphs.iter().position(|glyph| glyph.name == name)?;
+        u16::try_from(index + 1).ok().map(GlyphId16::new)
+    };
+
     let mut pairs = Vec::new();
-    for (index, glyph) in glyphs.iter().enumerate() {
+    for glyph in glyphs {
         let Some(base) = glyph.name.strip_suffix(".dotless") else {
             continue;
         };
-        let Some(base_index) = glyphs.iter().position(|other| other.name == base) else {
-            continue;
-        };
-        let (Ok(from), Ok(to)) = (u16::try_from(base_index + 1), u16::try_from(index + 1)) else {
-            continue;
-        };
-        pairs.push((GlyphId16::new(from), GlyphId16::new(to)));
+        if let (Some(from), Some(to)) = (id(base), id(&glyph.name)) {
+            pairs.push((from, to));
+        }
     }
 
-    let mut features = vec![lemmata_layout::Feature {
-        tag: Tag::new(b"dtls"),
-        scripts: vec![Tag::new(b"math")],
-        effect: lemmata_layout::Effect::Single(pairs),
-    }];
+    // Each base names its alternates in the order the renderer picks them, so
+    // the first is the script size and the second the scriptscript size.
+    let mut alternates = Vec::new();
+    for glyph in glyphs {
+        let forms: Vec<GlyphId16> = (0..crate::ssty::SCALES.len())
+            .filter_map(|index| id(&crate::ssty::alternate_name(&glyph.name, index)))
+            .collect();
+        if forms.is_empty() {
+            continue;
+        }
+        if let Some(base) = id(&glyph.name) {
+            alternates.push((base, forms));
+        }
+    }
+
+    let mut features = vec![
+        lemmata_layout::Feature {
+            tag: Tag::new(b"dtls"),
+            scripts: vec![Tag::new(b"math")],
+            effect: lemmata_layout::Effect::Single(pairs),
+        },
+        lemmata_layout::Feature {
+            tag: Tag::new(b"ssty"),
+            scripts: vec![Tag::new(b"math")],
+            effect: lemmata_layout::Effect::Alternate(alternates),
+        },
+    ];
     if let Some(healing) = texture(glyphs) {
         features.push(healing);
     }

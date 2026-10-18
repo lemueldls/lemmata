@@ -10,7 +10,10 @@
 //! per glyph needs. A contextual one fires only where the neighbours allow,
 //! which is what a form that borrows space from the glyph beside it needs.
 
-use write_fonts::tables::gsub::{Gsub, SingleSubst, SubstitutionChainContext, SubstitutionLookup};
+use write_fonts::tables::gsub::{
+    AlternateSet, AlternateSubstFormat1, Gsub, SingleSubst, SubstitutionChainContext,
+    SubstitutionLookup,
+};
 use write_fonts::tables::layout::{
     ChainedSequenceContext, ChainedSequenceContextFormat3, CoverageTable, Feature as FeatureTable,
     FeatureList, FeatureRecord, LangSys, Lookup, LookupFlag, LookupList, Script, ScriptList,
@@ -40,6 +43,14 @@ pub struct Rule {
 pub enum Effect {
     /// One lookup substituting each of these glyphs for its partner.
     Single(Vec<(GlyphId16, GlyphId16)>),
+    /// One lookup offering each of these glyphs a list of forms to choose from.
+    ///
+    /// This is a different lookup type from [`Effect::Single`], and the
+    /// difference matters: the feature does not say which form is used, the
+    /// renderer picks one by index. `ssty` is written this way, so the two
+    /// optical sizes of a script glyph are alternatives rather than one
+    /// substitution.
+    Alternate(Vec<(GlyphId16, Vec<GlyphId16>)>),
     /// A sequence of rules, applied in order, so a later rule sees what an
     /// earlier one left behind.
     Contextual(Vec<Rule>),
@@ -83,6 +94,26 @@ fn substitution(pairs: &[(GlyphId16, GlyphId16)]) -> SubstitutionLookup {
     ))
 }
 
+/// An alternate-substitution lookup.
+fn alternates(entries: &[(GlyphId16, Vec<GlyphId16>)]) -> SubstitutionLookup {
+    // Format 1 orders the alternate sets by coverage index, so the entries are
+    // sorted together. A glyph named twice would give the coverage a duplicate
+    // that its own sort removes, and the sets would then be off by one from the
+    // glyphs they belong to, so the first entry for a glyph wins.
+    let mut entries = entries.to_vec();
+    entries.sort_unstable_by_key(|(glyph, _)| *glyph);
+    entries.dedup_by_key(|(glyph, _)| *glyph);
+    let (covered, sets): (Vec<GlyphId16>, Vec<Vec<GlyphId16>>) = entries.into_iter().unzip();
+
+    SubstitutionLookup::Alternate(Lookup::new(
+        LookupFlag::empty(),
+        vec![AlternateSubstFormat1::new(
+            coverage(covered),
+            sets.into_iter().map(AlternateSet::new).collect(),
+        )],
+    ))
+}
+
 /// Builds a GSUB carrying `features`.
 ///
 /// A feature with nothing to do is skipped: a lookup with an empty coverage is
@@ -100,6 +131,12 @@ pub fn gsub(features: &[Feature]) -> Gsub {
                     continue;
                 }
                 indices.push(push(&mut lookups, substitution(pairs)));
+            }
+            Effect::Alternate(entries) => {
+                if entries.is_empty() {
+                    continue;
+                }
+                indices.push(push(&mut lookups, alternates(entries)));
             }
             Effect::Contextual(rules) => {
                 for rule in rules {

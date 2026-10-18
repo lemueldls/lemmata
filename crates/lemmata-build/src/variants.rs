@@ -25,6 +25,14 @@ pub const SET_BIGGER: &[u32] = &[0x220F, 0x2211];
 /// The glyphs that carry a display size, stretched or set bigger.
 pub const OPERATORS: &[u32] = &[0x220F, 0x2211, 0x222B];
 
+/// How much wider a set-bigger operator grows, against how much taller.
+///
+/// A scale multiplies the stroke, and the weight of a vertical stroke is its
+/// width. Growing width by the height's factor is what made the summation's ink
+/// as heavy as the text was tall. A modest widening keeps the operator legible
+/// as one shape without thickening its strokes by the height's factor.
+pub const WIDEN: f64 = 1.25;
+
 /// The scales a delimiter is derived at, beyond its own size.
 pub const SCALES: &[f64] = &[1.5, 2.0];
 
@@ -61,8 +69,15 @@ pub fn variant_name(base: &str, index: usize) -> String {
 /// A large operator is scaled in both axes and its advance grows with it, since
 /// a wider drawing in a cell that did not grow would run into its neighbour.
 // The advance of a grown operator is rounded into the 16-bit field the table
-// stores, which cannot overflow a glyph at any scale worth deriving.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// stores, which cannot overflow a glyph at any scale worth deriving. The
+// arithmetic is kept plain rather than fused, because these transforms decide
+// the bytes and a last-bit difference between the native and wasm builds would
+// move them.
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::suboptimal_flops
+)]
 #[must_use]
 pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
     let mut derived = Vec::new();
@@ -72,6 +87,9 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
         }
         let operator = glyph.unicodes.iter().any(|code| OPERATORS.contains(code));
         let uniform = glyph.unicodes.iter().any(|code| SET_BIGGER.contains(code));
+        // Width and height grow by different factors: height by the scale, width
+        // by `WIDEN` at most, so the stroke weight stays near the drawn one.
+        let widen = if uniform { WIDEN } else { 1.0 };
         let centre_x = f64::from(glyph.advance) / 2.0;
         // A grown operator's cell is wider, so the drawing has to move with it:
         // scaled about the old cell's centre alone, its ink would start left of
@@ -96,13 +114,9 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
                     contour
                         .iter()
                         .map(|point| lemmata_geom::QuadifyPoint {
-                            x: if uniform {
-                                centre_x
-                                    + (point.x - centre_x) * scale
-                                    + f64::from(glyph.advance) * (scale - 1.0) / 2.0
-                            } else {
-                                point.x
-                            },
+                            x: centre_x
+                                + (point.x - centre_x) * widen
+                                + f64::from(glyph.advance) * (widen - 1.0) / 2.0,
                             y: centre + (point.y - centre) * scale,
                             ..*point
                         })
@@ -113,11 +127,9 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
             derived.push(GlyphData {
                 name: variant_name(&glyph.name, index),
                 unicodes: vec![code],
-                advance: if uniform {
-                    let grown = (f64::from(glyph.advance) * scale).round();
+                advance: {
+                    let grown = (f64::from(glyph.advance) * widen).round();
                     u16::try_from(grown as i32).unwrap_or(glyph.advance)
-                } else {
-                    glyph.advance
                 },
                 contours,
             });
