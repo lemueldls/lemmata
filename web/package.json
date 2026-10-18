@@ -6,12 +6,24 @@
   "scripts": {
     "font": "node scripts/font.mjs",
     "font:write": "node scripts/font.mjs --write",
-    "build": "pnpm font && astro build",
-    "dev": "pnpm font && astro dev",
-    "preview": "astro preview"
+    "build": "pnpm font && nuxt generate",
+    "dev": "pnpm font && nuxt dev",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck",
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "astro": "^7.4.0",
-    "lemmata-web": "workspace:*"
+    "@nuxt/fonts": "^1.0.1",
+    "lemmata-web": "workspace:*",
+    "nuxt": "^4.6.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.13"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

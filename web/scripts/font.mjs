@@ -34,7 +34,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const web = join(here, "..");
 const root = join(web, "..");
 
-const fonts = join(web, "fonts");
+const fonts = join(web, "public/fonts");
 const reference = join(fonts, "lemmata.ttf");
 const math = join(fonts, "lemmata-math.woff2");
 const golden = JSON.parse(

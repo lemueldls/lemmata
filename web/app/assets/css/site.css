@@ -36,11 +36,9 @@ math {
   /* The interface is the system monospace, and `--built` is the face the site
      ships. They are separate because a capture carries a subset of the glyphs
      the interface needs, so the page is set in the build where the build
-     reaches and says so where it does not. The fallback inside the variable is
-     for the font arriving: an undefined variable would invalidate the whole
-     declaration rather than fall back. */
+     reaches and says so where it does not. */
   --face: var(--mono);
-  --built: var(--font-lemmata, Lemmata), var(--mono);
+  --built: Lemmata, var(--mono);
 
   --step--2: 12px;
   --step--1: 14px;
@@ -452,6 +450,13 @@ kbd {
 
 .ledger__name {
   font-size: var(--step--1);
+}
+
+/* The number is the order of the argument, not a label, so it is quiet. */
+.ledger__name b {
+  margin-right: 4px;
+  color: var(--faint);
+  font-weight: 400;
 }
 
 .ledger__note {
@@ -966,6 +971,90 @@ a:focus-visible {
 
 .heal-text--healed {
   font-feature-settings: "calt" 1;
+}
+
+/* The specimen plate -------------------------------------------------- */
+
+/* A sample, the width of the panel, over the grid of the font's own cells, with
+   the face and the size named under it. It is the one thing every font site has
+   and every one of them does the same way: show the font, big, and say what it
+   is. The grid is ours. */
+.plate {
+  display: grid;
+  gap: 10px;
+  padding: 18px 16px 12px;
+}
+
+.plate__sample {
+  margin: 0;
+  font-family: var(--built);
+  font-size: var(--plate, 48px);
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--rule) 0 1px,
+    transparent 1px var(--cell, 12px)
+  );
+}
+
+.plate__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--faint);
+  font-size: var(--step--2);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* A control that is an icon, so a bordered chip means "this does something"
+   and a bare tag means "this is a fact". */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--rule-2);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* A row of choices that are one choice, the way a segmented control is. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--rule-2);
+}
+
+.segmented button {
+  padding: 5px 10px;
+  border: 0;
+  border-left: 1px solid var(--rule-2);
+  background: none;
+  color: var(--dim);
+  font-family: inherit;
+  font-size: var(--step--1);
+  cursor: pointer;
+}
+
+.segmented button:first-child {
+  border-left: 0;
+}
+
+.segmented button[aria-pressed="true"],
+.segmented button[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--bg);
 }
 
 /* The proof closes the way a proof closes. */

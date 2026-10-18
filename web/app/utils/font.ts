@@ -1,23 +1,43 @@
-// Reads the font a page has just built.
+// Reads the font the site ships.
 //
 // Nothing here measures with a canvas. A character the font lacks is measured
 // through a fallback, and the fallback reports its own number, which is how a
-// page ends up printing Arial's cap height for a font it built. So every value
+// page ends up printing Arial's cap height for a font it has. So every value
 // comes from the font's own tables: `maxp` for the glyph count, `head` for the
 // units per em, `cmap` for the characters, `glyf` for the ink, `hmtx` for the
 // advance.
 
-const viewOf = (bytes) =>
+/// The ink box of one glyph, as `glyf` stores it in the glyph's header.
+export interface Ink {
+  xMin: number;
+  yMin: number;
+  xMax: number;
+  yMax: number;
+}
+
+/// What the font's tables answer. `null` is a question the font does not
+/// answer, which is different from a zero.
+export interface Reading {
+  upem: number | null;
+  drawn: number;
+  mapped: number;
+  xHeight: number | null;
+  ascender: number | null;
+  descender: number | null;
+  advance: number | null;
+}
+
+const viewOf = (bytes: Uint8Array): DataView =>
   new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
-const tag = (name) =>
+const tag = (name: string): number =>
   name
     .split("")
     .reduce((value, character) => (value << 8) | character.charCodeAt(0), 0) >>>
   0;
 
 /// The offset of a table, from the directory at the front of the font.
-function table(view, name) {
+function table(view: DataView, name: string): number | null {
   const count = view.getUint16(4);
 
   for (let index = 0; index < count; index += 1) {
@@ -30,7 +50,7 @@ function table(view, name) {
 
 /// The number of glyphs the font carries, which is the count after every
 /// derived glyph has been added.
-export function glyphCount(bytes) {
+export function glyphCount(bytes: Uint8Array): number | null {
   const view = viewOf(bytes);
   const offset = table(view, "maxp");
 
@@ -38,25 +58,25 @@ export function glyphCount(bytes) {
 }
 
 /// The em the font is drawn at.
-export function unitsPerEm(bytes) {
+export function unitsPerEm(bytes: Uint8Array): number | null {
   const view = viewOf(bytes);
   const offset = table(view, "head");
 
   return offset === null ? null : view.getUint16(offset + 18);
 }
 
-/// Which character maps to which glyph, out of the format 4 subtable. Every
-/// font this project writes carries one, and it is the only place that says
-/// what the font can set, as opposed to what a browser will substitute.
-export function cmap(bytes) {
+/// Which character maps to which glyph, out of the format 4 subtable. Every font
+/// this project writes carries one, and it is the only place that says what the
+/// font can set, as opposed to what a browser will substitute.
+export function cmap(bytes: Uint8Array): Map<number, number> {
   const view = viewOf(bytes);
-  const map = new Map();
+  const map = new Map<number, number>();
   const directory = table(view, "cmap");
 
   if (directory === null) return map;
 
   const records = view.getUint16(directory + 2);
-  let subtable = null;
+  let subtable: number | null = null;
 
   for (let index = 0; index < records; index += 1) {
     const record = directory + 4 + index * 8;
@@ -68,7 +88,7 @@ export function cmap(bytes) {
       subtable = at;
       break;
     }
-    if (platform === 3 || platform === 0) subtable = subtable ?? at;
+    if (platform === 3 || platform === 0) subtable ??= at;
   }
 
   if (subtable === null) return map;
@@ -85,7 +105,7 @@ export function cmap(bytes) {
     const delta = view.getInt16(deltas + segment * 2);
     const range = view.getUint16(ranges + segment * 2);
     for (let code = start; code <= end && code !== 0xffff; code += 1) {
-      let glyph;
+      let glyph: number;
       if (range === 0) {
         glyph = (code + delta) & 0xffff;
       } else {
@@ -100,8 +120,8 @@ export function cmap(bytes) {
   return map;
 }
 
-/// The byte range of one glyph in `glyf`, out of `loca`.
-function outline(view, id) {
+/// The offset of one glyph's outline in `glyf`, out of `loca`.
+function outline(view: DataView, id: number): number | null {
   const loca = table(view, "loca");
   const glyf = table(view, "glyf");
   const head = table(view, "head");
@@ -116,12 +136,17 @@ function outline(view, id) {
   return start === end ? null : glyf + start;
 }
 
-/// The ink extents of one character, from the bounding box `glyf` stores in
-/// the glyph's header. A glyph with no outline, like the space, has none.
-export function ink(map, bytes, character) {
-  const view = viewOf(bytes);
-  const id = map.get(character.codePointAt(0));
+/// The ink extents of one character. A glyph with no outline, like the space,
+/// has none.
+export function ink(
+  map: Map<number, number>,
+  bytes: Uint8Array,
+  character: string,
+): Ink | null {
+  const code = character.codePointAt(0);
+  const id = code === undefined ? undefined : map.get(code);
   if (id === undefined) return null;
+  const view = viewOf(bytes);
   const at = outline(view, id);
 
   return at === null
@@ -135,9 +160,14 @@ export function ink(map, bytes, character) {
 }
 
 /// The advance of one character, from `hmtx`.
-export function advance(map, bytes, character) {
+export function advance(
+  map: Map<number, number>,
+  bytes: Uint8Array,
+  character: string,
+): number | null {
+  const code = character.codePointAt(0);
+  const id = code === undefined ? undefined : map.get(code);
   const view = viewOf(bytes);
-  const id = map.get(character.codePointAt(0));
   const hmtx = table(view, "hmtx");
   const hhea = table(view, "hhea");
   if (id === undefined || hmtx === null || hhea === null) return null;
@@ -148,33 +178,29 @@ export function advance(map, bytes, character) {
 
 /// Which characters of a string the font does not carry. The count is of the
 /// distinct characters, since a font either has a character or does not.
-export function coverage(map, text) {
+export function coverage(
+  map: Map<number, number>,
+  text: string,
+): { total: number; missing: string[] } {
   const unique = [...new Set([...text])].filter(
     (character) => !/\s/.test(character),
   );
-  const missing = unique.filter(
-    (character) => !map.has(character.codePointAt(0)),
-  );
+  const missing = unique.filter((character) => {
+    const code = character.codePointAt(0);
+
+    return code === undefined || !map.has(code);
+  });
 
   return { total: unique.length, missing };
 }
 
-export async function sha256Hex(bytes) {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+export async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", bytes as BufferSource);
 
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
 
-export const short = (hash, length = 16) => `${hash.slice(0, length)}…`;
-
-/// Registers a built font under a family name and hands the face back.
-export async function registerFace(bytes, family) {
-  const face = new FontFace(family, bytes.buffer);
-
-  await face.load();
-  document.fonts.add(face);
-
-  return face;
-}
+export const short = (hash: string, length = 16): string =>
+  `${hash.slice(0, length)}…`;

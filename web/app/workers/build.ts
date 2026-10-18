@@ -1,3 +1,5 @@
+// The worker's side of the generator.
+//
 // The page and this worker exchange messages rather than calls:
 //
 //   page -> worker  { capture, plan }        build
@@ -18,6 +20,21 @@
 
 import init, { build_font, default_plan } from "lemmata-web";
 
+interface Request {
+  capture?: Uint8Array | ArrayBuffer;
+  plan?: string | boolean;
+  ask?: string;
+  cancel?: boolean;
+}
+
+/// `self` in a worker is a different scope from the one the DOM library
+/// declares, and the whole of what this file uses of it is these two.
+interface WorkerScope {
+  postMessage(message: unknown): void;
+}
+
+const scope = self as unknown as WorkerScope;
+
 // The worker has its own wasm instance, so it initialises its own glue.
 // Importing `build_font` without awaiting this is how the first browser run
 // failed: `__wbindgen_malloc` is not there until the module is instantiated.
@@ -25,29 +42,29 @@ const ready = init();
 
 let cancelled = false;
 
-self.onmessage = async (event) => {
+self.onmessage = async (event: MessageEvent<Request>): Promise<void> => {
   const message = event.data;
 
   if (message.cancel) {
     cancelled = true;
-    self.postMessage({ phase: "cancelled" });
+    scope.postMessage({ phase: "cancelled" });
     return;
   }
 
   if (cancelled) {
-    self.postMessage({ error: "cancelled" });
+    scope.postMessage({ error: "cancelled" });
     return;
   }
 
   if (message.ask === "plan") {
     await ready;
-    self.postMessage({ plan: default_plan() });
+    scope.postMessage({ plan: default_plan() });
     return;
   }
 
   try {
     await ready;
-    self.postMessage({ phase: "building", done: 0, total: 1 });
+    scope.postMessage({ phase: "building", done: 0, total: 1 });
     const started = performance.now();
     // A `Uint8Array`, not an `ArrayBuffer`: wasm-bindgen's `&[u8]` reads
     // `length`, and an `ArrayBuffer` only has `byteLength`, which is how this
@@ -55,9 +72,9 @@ self.onmessage = async (event) => {
     const capture =
       message.capture instanceof Uint8Array
         ? message.capture
-        : new Uint8Array(message.capture);
-    const bytes = build_font(capture, message.plan);
-    self.postMessage({
+        : new Uint8Array(message.capture ?? new ArrayBuffer(0));
+    const bytes = build_font(capture, String(message.plan ?? ""));
+    scope.postMessage({
       bytes,
       elapsed: performance.now() - started,
       phase: "done",
@@ -65,7 +82,9 @@ self.onmessage = async (event) => {
       total: 1,
     });
   } catch (error) {
-    self.postMessage({ error: String(error) });
+    scope.postMessage({
+      error: error instanceof Error ? error.message : String(error),
+    });
   } finally {
     cancelled = false;
   }

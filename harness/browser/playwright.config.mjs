@@ -1,6 +1,7 @@
 // The browser suite's configuration.
 //
-// The page is served from the built site, so the server's root is `web/dist`.
+// The page is served from the built site, so the server's root is the directory
+// `nuxt generate` writes: `web/.output/public`.
 
 import { defineConfig } from "@playwright/test";
 
@@ -22,7 +23,7 @@ export default defineConfig({
   // does and what its root-absolute asset URLs assume.
   webServer: {
     command: `python3 -m http.server ${sitePort} --bind 127.0.0.1`,
-    cwd: "../../web/dist",
+    cwd: "../../web/.output/public",
     url: `http://127.0.0.1:${sitePort}/index.html`,
     reuseExistingServer: true,
   },
