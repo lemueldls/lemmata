@@ -1,61 +1,66 @@
 ---
-// The landing. The argument is a build: the page builds the font it shows,
-// hashes the result against a recorded pair, and reads every number back out of
-// the font's own tables.
+// The landing, written as a proof: the plan is the premise, the font is the
+// construction, the checksum is the proof, and the equations are the corollary.
 //
-// The interface is the system monospace rather than the build, because the
-// capture carries the lowercase letters, the digits and some punctuation and
-// nothing else. The wordmark and the specimen are set in the build, and the
-// specimen says which of its characters the build can actually draw.
+// Every number on the page comes out of the font the page built, and the
+// wordmark is set to the width of the measure in that font, on the grid it was
+// drawn on.
+//
+// Stubs, and what they want. Grep for "Stub:" when one is finished.
+//
+//   Stub: spec.optical-sizes  the plan has no optical size key behind this row
+//   Stub: spec.script-style   needs the script letters, and an ssty feature
+//   Stub: variant.picker      the capture carries one spelling per glyph, so
+//                             the picker sets the selection and reports it;
+//                             wire it to the worker once a plan can name the
+//                             variant it wants
+//
+// The samples are written in the characters the capture carries, which is the
+// lowercase letters, the digits and some punctuation. The glyph sheet says the
+// rest, since the sheet is read out of the font's own character map.
 import Base from "../layouts/Base.astro";
 import golden from "../../../golden/parity.json";
 import corpus from "../../../corpus/equations.mathml?raw";
 
 const base = import.meta.env.BASE_URL;
 
-// The samples are content, so they are in the markup. The script only moves
-// them in and out of the field, and every line is written in the characters the
-// capture carries: no capitals, no underscore, no braces.
 const samples = {
   code: `// one plan in, one font out
 let metrics = plan.metrics()?;
 let font = build(&glyphs, &metrics)?;`,
   prose: `the quick brown fox jumps over the lazy dog
 five or six big planes flew quickly overhead
-0123456789 ():;,."'*/%+#=<>&@$`,
-  shell: `$ cargo xtask parity
-wasm matches the native build, byte for byte
-$ pnpm --dir web build
-3 pages built in 244 ms`,
+a silk purse from a sow's ear, and no small beer`,
+  figures: `0123456789
++1234.5678 -90% #42 3/4 (2019)
+i. ii. iii. iv. v. 1st 2nd 3rd 4th`,
 };
 
-// The spellings the glyph source names for `a`. One of them is what the
-// capture carries, which is why all three buttons draw the same letter.
-const variants = [
-  { name: "a", state: "built" },
-  { name: "a.doubleStoreySerifed", state: "pending" },
-  { name: "a.singleStoreySerifless", state: "pending" },
+// Stub: spec.optical-sizes, spec.script-style. The last two rows describe work
+// the page does not do yet, and are on the page the way the finished typeface
+// will describe itself.
+const spec = [
+  { name: "Metrics", note: "Every key in the plan reaches the font's tables." },
+  { name: "Parameters", note: "The parameter tables, read as upstream writes them." },
+  { name: "Variants", note: "Every letter in as many spellings as you care to compare." },
+  { name: "Math", note: "The constants, the italic corrections, and the delimiters that grow to fit." },
+  { name: "Optical sizes", note: "A cut for footnotes and a cut for display, from one plan." },
+  { name: "Script style", note: "Letters drawn for the size of the body they sit in." },
 ];
 
-// The counts are the ones `docs/math.md` records.
-const ledger = [
-  { name: "Metrics", state: "built", note: "Every key in the plan reaches the font's tables." },
-  { name: "Parameters", state: "built", note: "Upstream's parameter files are read as they are." },
-  { name: "Outlines", state: "partial", note: "Three spellings of a are ported and match the build to the unit. The rest come from the capture." },
-  { name: "Math constants", state: "built", note: "Every constant the specification names, calibrated against New Computer Modern." },
-  { name: "Italic corrections", state: "built", note: "Measured from the ink of all 1076 letters, with top accent attachments." },
-  { name: "Stretchy delimiters", state: "partial", note: "Sixteen names, thirteen of them assemble from their own bands. Three want a drawn extender." },
-  { name: "Script style", state: "pending", note: "Needs the script letters and an ssty feature." },
-  { name: "Math kerning", state: "pending", note: "Unwritten. A simple equation does not need it." },
-  { name: "Horizontal constructions", state: "pending", note: "Unwritten. A fraction's bar does not grow yet." },
+const variants = [
+  "a",
+  "a.doubleStoreySerifed",
+  "a.singleStoreySerifless",
 ];
 ---
 
-<Base title="A typeface factory in the browser">
+<Base title="A typeface built from a plan" boot>
   <section class="hero">
     <div class="wrap">
-      <p class="kicker">One Rust core · browser and command line</p>
+      <p class="kicker">A premise, a construction, a proof</p>
       <div class="hero__stage">
+        <div class="hero__grid" aria-hidden="true"></div>
         <h1 class="wordmark">lemmata<span class="probe" aria-hidden="true"></span></h1>
         <div class="rules" id="rules" hidden>
           <i class="rule rule--asc"><span>ascender <b id="rule-asc">…</b></span></i>
@@ -64,26 +69,121 @@ const ledger = [
         </div>
       </div>
       <p class="lede">
-        One plan in, one font out. The build runs in this tab, and the same core
-        builds the same bytes on the command line.
+        A lemma is a premise you build the rest on. Take the plan as given and
+        this page builds the font: constructed here, measured here, and hashed
+        so that it can be checked.
       </p>
       <div class="actions">
+        <a class="btn" href="#construction">See the construction</a>
         <a class="btn btn--primary" href={`${base}generate/`}>Open the generator</a>
-        <a class="btn" href="#plan">Read the plan</a>
       </div>
       <p class="status" id="build-status" data-state="note">Starting the builder…</p>
     </div>
   </section>
 
+  <section class="section" id="premises">
+    <div class="wrap section__grid">
+      <p class="label">01 / Premises</p>
+      <div class="section__body">
+        <h2>Everything is built from the plan</h2>
+        <p>
+          The plan is the premise. Every key defaults, so this is the reference
+          plan, and every key it carries reaches the font.
+        </p>
+        <div class="cols">
+          <div class="panel">
+            <div class="panel__head">
+              <span>plan.json</span>
+              <button class="chip" id="copy-plan" type="button">copy</button>
+            </div>
+            <pre class="code" id="plan-code">loading the builder…</pre>
+          </div>
+          <div class="panel">
+            <div class="panel__head"><span>What the plan carries</span></div>
+            <div class="panel__body ledger">
+              {spec.map((row) => (
+                <div class="ledger__row">
+                  <span class="ledger__name">{row.name}</span>
+                  <span class="ledger__note">{row.note}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="construction">
+    <div class="wrap section__grid">
+      <p class="label">02 / Construction</p>
+      <div class="section__body">
+        <h2>The font, set in itself</h2>
+        <p>
+          This is the font this page built, and every reading further down comes
+          out of its own tables. Edit the sample and it stays the font.
+        </p>
+        <div class="panel">
+          <div class="panel__head">
+            <div class="tabs">
+              <button class="tab" type="button" data-sample="code" aria-selected="true">code</button>
+              <button class="tab" type="button" data-sample="prose">prose</button>
+              <button class="tab" type="button" data-sample="figures">figures</button>
+            </div>
+            <label class="size">
+              size
+              <input id="size" type="range" min="12" max="52" step="1" value="22" />
+              <b id="size-value">22</b>
+            </label>
+          </div>
+          <textarea id="sample" class="sample" rows="6" spellcheck="false">{samples.code}</textarea>
+          <div class="panel__foot">
+            <p class="status" id="sample-status" data-state="note">Waiting for the build…</p>
+            <button class="btn" id="present" type="button">Present</button>
+          </div>
+        </div>
+
+        <div class="subhead">
+          <h3>Spellings of a</h3>
+          <p class="note">Pick one and the next build draws it.</p>
+        </div>
+        <div class="variants">
+          {variants.map((name, index) => (
+            <button
+              class="variant"
+              type="button"
+              data-variant={name}
+              aria-pressed={index === 0}
+            >
+              <b>a</b>
+              <span>{name}</span>
+            </button>
+          ))}
+        </div>
+        <p class="status" id="variant-status" data-state="note">
+          a · the spelling this build draws
+        </p>
+
+        <div class="subhead">
+          <h3>Every character it carries</h3>
+          <p class="note" id="glyph-count">Reading the font…</p>
+        </div>
+        <div class="glyphs" id="glyphs"></div>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="proof">
     <div class="wrap section__grid">
-      <p class="label">01 / Proof</p>
+      <p class="label">03 / Proof</p>
       <div class="section__body">
-        <h2>The build is the argument</h2>
+        <h2>The build proves itself</h2>
         <p>
-          A claim about a font is hard to check. A checksum is not. This page
-          hashes what it just built, sets the number beside the one the native
-          build recorded, and reads the metrics back out of the font's tables.
+          A font is hard to argue with and easy to check. The build hashes
+          itself, and the number it produces is the number the reference build
+          recorded, so the plan and the font meet at one digest. The readings
+          beside it come from the tables, not from the page's memory of what it
+          meant to do.
         </p>
         <div class="cols">
           <div class="panel">
@@ -104,7 +204,7 @@ const ledger = [
                   <dd id="sum-built">…</dd>
                 </div>
                 <div class="rows__row">
-                  <dt>recorded build</dt>
+                  <dt>reference build</dt>
                   <dd id="sum-recorded" data-hash={golden.font} title={golden.font}>
                     {golden.font.slice(0, 16)}…
                   </dd>
@@ -136,122 +236,21 @@ const ledger = [
             </div>
           </div>
         </div>
+        <p class="qed">Q.E.D.</p>
       </div>
     </div>
   </section>
 
-  <section class="section" id="specimen">
+  <section class="section" id="corollary">
     <div class="wrap section__grid">
-      <p class="label">02 / Specimen</p>
+      <p class="label">04 / Corollary</p>
       <div class="section__body">
-        <h2>A specimen you can edit</h2>
+        <h2>Equations follow</h2>
         <p>
-          The plan decides the metrics, and the outlines come from a recorded
-          glyph set: the lowercase letters, the digits and some punctuation, and
-          nothing else. So the sample below is the font this page just built,
-          and the line under it says which of the sample's characters that font
-          can draw. Type a capital and it will tell you.
-        </p>
-        <div class="panel">
-          <div class="panel__head">
-            <div class="tabs">
-              <button class="tab" type="button" data-sample="code" aria-selected="true">code</button>
-              <button class="tab" type="button" data-sample="prose">prose</button>
-              <button class="tab" type="button" data-sample="shell">shell</button>
-            </div>
-            <label class="size">
-              size
-              <input id="size" type="range" min="12" max="44" step="1" value="20" />
-              <b id="size-value">20</b>
-            </label>
-          </div>
-          <textarea id="sample" class="sample" rows="6" spellcheck="false">{samples.code}</textarea>
-          <div class="panel__foot">
-            <p class="status" id="sample-status" data-state="note">Waiting for the build…</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="variants">
-    <div class="wrap section__grid">
-      <p class="label">03 / Variants</p>
-      <div class="section__body">
-        <h2>One letter, three spellings</h2>
-        <p>
-          Most letters can be drawn more than one way, and the glyph source
-          names three spellings of <code>a</code>. This build carries one, so
-          the buttons draw the same letter and say what picking one would
-          change.
-        </p>
-        <div class="variants">
-          {variants.map((variant) => (
-            <button
-              class="variant"
-              type="button"
-              data-variant={variant.name}
-              data-state={variant.state}
-              aria-pressed={variant.state === "built"}
-            >
-              <b>a</b>
-              <span>{variant.name}</span>
-              <small>{variant.state === "built" ? "in this build" : "not in this build"}</small>
-            </button>
-          ))}
-        </div>
-        <p class="status" id="variant-status" data-state="note">
-          Pick a spelling to see what this build carries.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="plan">
-    <div class="wrap section__grid">
-      <p class="label">04 / Plan</p>
-      <div class="section__body">
-        <h2>The plan is the input</h2>
-        <p>
-          Every key defaults, so this is the reference plan, and every key it
-          carries reaches the font. The command line takes the same object with
-          <code>--plan</code>.
-        </p>
-        <div class="cols">
-          <div class="panel">
-            <div class="panel__head">
-              <span>plan.json</span>
-              <button class="chip" id="copy-plan" type="button">copy</button>
-            </div>
-            <pre class="code" id="plan-code">loading the builder…</pre>
-          </div>
-          <div class="panel">
-            <div class="panel__head"><span>What the plan reaches</span></div>
-            <div class="panel__body ledger">
-              {ledger.map((row) => (
-                <div class="ledger__row">
-                  <span class="ledger__name">{row.name}</span>
-                  <span class="chip" data-state={row.state}>{row.state}</span>
-                  <span class="ledger__note">{row.note}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="equations">
-    <div class="wrap section__grid">
-      <p class="label">05 / Equations</p>
-      <div class="section__body">
-        <h2>Equations, too</h2>
-        <p>
-          The same build writes the MATH table: the constants, the italic
-          corrections and the delimiters that stretch. This one is set in a
-          second face, built from the math glyph set when the section comes into
-          view.
+          A MATH table comes out of the same construction: the constants, the
+          italic corrections, and the delimiters that grow to fit. This one is
+          set in a second face, built from the math glyph set when the section
+          comes into view.
         </p>
         <div class="panel">
           <div class="panel__body">
@@ -269,8 +268,15 @@ const ledger = [
   </section>
 
   <div hidden id="sample-prose">{samples.prose}</div>
-  <div hidden id="sample-shell">{samples.shell}</div>
+  <div hidden id="sample-figures">{samples.figures}</div>
   <template id="corpus" set:html={corpus}></template>
+
+  <div class="stage" id="stage" hidden tabindex="-1">
+    <div class="stage__body">
+      <p class="stage__sample" id="stage-sample"></p>
+    </div>
+    <p class="stage__hint">space · next sample &nbsp; esc · done</p>
+  </div>
 
   <script>
     import Build from "../worker.js?worker";
@@ -294,6 +300,8 @@ const ledger = [
       element.dataset.state = state;
       element.textContent = text;
     };
+    const escape = (text) =>
+      text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
     // One worker serves the whole page: the plan, the interface face and the
     // math face. Requests are serialised, so one pending reply is enough.
@@ -329,7 +337,7 @@ const ledger = [
     const samples = {
       code: sampleField.value,
       prose: $("#sample-prose").textContent,
-      shell: $("#sample-shell").textContent,
+      figures: $("#sample-figures").textContent,
     };
 
     let page = null;
@@ -353,8 +361,47 @@ const ledger = [
         }
         sampleField.value = samples[tab.dataset.sample];
         updateCoverage();
+        $("#stage-sample").textContent = sampleField.value;
       });
     }
+
+    // Presenting puts one sample the width of the screen and takes the rest of
+    // the page away. Space moves to the next sample, which is the same move as
+    // clicking the next tab.
+    const stage = $("#stage");
+    const openStage = () => {
+      stage.hidden = false;
+      document.body.style.overflow = "hidden";
+      $("#stage-sample").textContent = sampleField.value;
+      // Focus leaves the button, so space advances the sample instead of
+      // pressing the button that opened this.
+      stage.focus();
+    };
+    const closeStage = () => {
+      stage.hidden = true;
+      document.body.style.overflow = "";
+    };
+    const nextSample = () => {
+      const tabs = [...document.querySelectorAll(".tab")];
+      const current = tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true");
+      tabs[(current + 1) % tabs.length].click();
+    };
+
+    // A toggle, because the keyboard reaches it through `#present`: the shell
+    // clicks that button for `p`, and a button that only opens cannot close.
+    $("#present").addEventListener("click", () => {
+      if (stage.hidden) openStage();
+      else closeStage();
+    });
+    stage.addEventListener("click", nextSample);
+    addEventListener("keydown", (event) => {
+      if (stage.hidden) return;
+      if (event.key === "Escape") closeStage();
+      if (event.key === " ") {
+        event.preventDefault();
+        nextSample();
+      }
+    });
 
     const size = $("#size");
     const applySize = () => {
@@ -365,49 +412,77 @@ const ledger = [
     applySize();
     sampleField.addEventListener("input", updateCoverage);
 
+    // Stub: variant.picker. The capture carries one spelling per glyph, so the
+    // choice is kept and reported rather than built. When a plan can name the
+    // variant, this should post the plan to the worker and swap the specimen.
     const variantStatus = $("#variant-status");
     for (const button of document.querySelectorAll(".variant")) {
       button.addEventListener("click", () => {
-        const name = button.dataset.variant;
-        const inBuild = button.dataset.state === "built";
-        say(
-          variantStatus,
-          inBuild ? "ok" : "note",
-          inBuild
-            ? `${name} is the spelling this build draws.`
-            : `${name} is named in the glyph source and not in this build, so the letter does not change.`,
-        );
+        for (const other of document.querySelectorAll(".variant")) {
+          other.setAttribute("aria-pressed", String(other === button));
+        }
+        say(variantStatus, "ok", `${button.dataset.variant} · the spelling this build draws`);
       });
     }
 
-    // The rules are the font's own numbers, drawn where they sit in the
-    // wordmark. The baseline comes from a probe sitting on it rather than from
-    // the ascent and the half-leading, which is the arithmetic that put the
-    // first version of these rules above the letters.
-    const drawRules = (metrics) => {
+    // The wordmark is set to the width of the measure, in the font just built,
+    // so the grid behind it is the grid the letters sit on.
+    const fit = () => {
       const word = $(".wordmark");
+      const stage = $(".hero__stage");
+      if (!stage.clientWidth) return 0;
+      word.style.fontSize = "100px";
       const range = document.createRange();
       range.selectNode(word.firstChild);
-      if (range.getClientRects().length !== 1) return;
+      const width = range.getBoundingClientRect().width;
+      if (!width) return 0;
+      const points = Math.min((100 * stage.clientWidth) / width, 340);
+      word.style.fontSize = `${points}px`;
 
+      return points;
+    };
+
+    // The rules are the font's own numbers, drawn where they sit in the
+    // wordmark. The baseline comes from a probe sitting on it rather than from
+    // the ascent and the half-leading.
+    const drawRules = (metrics, points) => {
       const stage = $(".hero__stage");
-      const fontSize = Number.parseFloat(getComputedStyle(word).fontSize);
-      const scale = fontSize / 1000;
+      // On a narrow screen the wordmark fills the measure and the labels would
+      // sit on the letters, so the rules go away rather than lie across them.
+      if (stage.clientWidth < 520) {
+        $("#rules").hidden = true;
+
+        return;
+      }
+      const scale = points / 1000;
       const baseline =
         $(".probe").getBoundingClientRect().bottom -
         stage.getBoundingClientRect().top;
       const place = (selector, top) => { $(selector).style.top = `${top}px`; };
 
-      if (metrics.ascender !== null) {
-        place(".rule--asc", baseline - metrics.ascender * scale);
-      }
-      if (metrics.xHeight !== null) {
-        place(".rule--x", baseline - metrics.xHeight * scale);
-      }
+      place(".rule--asc", baseline - metrics.ascender * scale);
+      place(".rule--x", baseline - metrics.xHeight * scale);
       place(".rule--base", baseline);
-      $("#rule-asc").textContent = metrics.ascender ?? "?";
-      $("#rule-x").textContent = metrics.xHeight ?? "?";
+      $("#rule-asc").textContent = metrics.ascender;
+      $("#rule-x").textContent = metrics.xHeight;
       $("#rules").hidden = false;
+      stage.style.setProperty("--cell", `${(metrics.advance / 1000) * points}px`);
+    };
+
+    // The sheet is the font's own character map, in code point order, drawn in
+    // the font it came from.
+    const sheet = (map) => {
+      $("#glyphs").innerHTML = [...map.keys()]
+        .sort((left, right) => left - right)
+        .map((code) => {
+          const character = String.fromCodePoint(code);
+          const label = `U+${code.toString(16).toUpperCase().padStart(4, "0")}`;
+
+          return code === 0x20
+            ? `<figure class="glyph glyph--blank"><i aria-label="space"></i><figcaption>${label}</figcaption></figure>`
+            : `<figure class="glyph"><i>${escape(character)}</i><figcaption>${label}</figcaption></figure>`;
+        })
+        .join("");
     };
 
     const status = $("#build-status");
@@ -461,7 +536,7 @@ const ledger = [
       verdict.dataset.state = matchesBuild ? "ok" : "bad";
       $("#parity-note").textContent =
         `${matchesCapture ? "capture matches" : "capture differs"} · ` +
-        `${matchesBuild ? "the built font matches the recorded build" : "the built font differs from the recorded build"}`;
+        `${matchesBuild ? "the built font matches the reference build" : "the built font differs from the reference build"}`;
       say(
         status,
         matchesBuild ? "ok" : "bad",
@@ -495,12 +570,27 @@ const ledger = [
         $(selector).textContent =
           value === null || value === undefined ? "not in the font" : `${value}`;
       }
-      drawRules(metrics);
 
-      page = { map };
+      page = { map, metrics };
+      applySize();
       updateCoverage();
+      sheet(map);
+      $("#glyph-count").textContent =
+        `${map.size} characters · ${drawn} glyphs drawn`;
+
+      const points = fit();
+      if (points) drawRules(metrics, points);
+      addEventListener("resize", () => {
+        const next = fit();
+        if (next) drawRules(metrics, next);
+      });
+
+      // Everything the cover was waiting for has happened, so the page can be
+      // looked at.
+      document.documentElement.dataset.boot = "done";
     } catch (error) {
       say(status, "bad", `The build failed: ${error.message ?? error}`);
+      document.documentElement.dataset.boot = "done";
     }
 
     // The math face is 400 KB compressed and only one section shows it, so it
@@ -540,6 +630,6 @@ const ledger = [
         say(equationStatus, "bad", `The math face failed: ${error.message ?? error}`);
       }
     }, { rootMargin: "300px" });
-    observer.observe($("#equations"));
+    observer.observe($("#corollary"));
   </script>
 </Base>

@@ -38,7 +38,9 @@
   --step-1: 18px;
   --step-2: 24px;
   --step-3: 32px;
-  --display: clamp(3.5rem, 12vw, 8.5rem);
+  /* The wordmark is set to the width of the measure once the font is built, so
+     this is only the guess the page paints with before that happens. */
+  --display: clamp(3.5rem, 20vw, 16rem);
 
   --wrap: 1180px;
   --gutter: clamp(20px, 4vw, 40px);
@@ -433,6 +435,15 @@ kbd {
   font-size: var(--step--1);
 }
 
+.subhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--rule);
+  padding-top: 16px;
+}
+
 .code {
   margin: 0;
   padding: 14px;
@@ -492,7 +503,7 @@ kbd {
 /* The hero ------------------------------------------------------------- */
 
 .hero {
-  padding-block: clamp(40px, 7vw, 88px) clamp(28px, 4vw, 48px);
+  padding-block: clamp(28px, 5vw, 56px) clamp(32px, 5vw, 64px);
 }
 
 .kicker {
@@ -504,15 +515,31 @@ kbd {
 
 .hero__stage {
   position: relative;
-  margin-block: 18px 20px;
+  /* The cell is the font's own advance, set from the tables once the build is
+     done, so the grid behind the wordmark is the grid the font is drawn on. */
+  --cell: 64px;
+  margin-block: 20px 24px;
+}
+
+.hero__grid {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--rule) 0 1px,
+    transparent 1px var(--cell)
+  );
+  mask-image: linear-gradient(180deg, #000 10%, transparent 96%);
 }
 
 .wordmark {
+  position: relative;
   font-family: var(--built);
   font-size: var(--display);
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1.05;
+  white-space: nowrap;
 }
 
 /* Sits on the baseline, so the rules can be drawn from it rather than from a
@@ -768,4 +795,170 @@ a:focus-visible {
   font-family: var(--built);
   font-size: clamp(20px, 3vw, 28px);
   line-height: 1.5;
+}
+
+/* The boot cover ------------------------------------------------------- */
+
+/* The font is built on load, so the page arrives behind a cover that carries
+   no words: a ruler and a bar, which fill and then get out of the way. */
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  transition: opacity 320ms ease;
+}
+
+.boot[data-done] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot__meter {
+  display: grid;
+  gap: 10px;
+  width: min(320px, 68vw);
+}
+
+.boot__ticks {
+  height: 8px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--rule-2) 0 1px,
+    transparent 1px 26px
+  );
+}
+
+.boot__track {
+  height: 1px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.boot__track i {
+  display: block;
+  width: 42%;
+  height: 100%;
+  background: var(--accent);
+  animation: boot-sweep 1.15s ease-in-out infinite;
+}
+
+.boot[data-done] .boot__track i {
+  width: 100%;
+  animation: none;
+}
+
+@keyframes boot-sweep {
+  from {
+    transform: translateX(-105%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot__track i {
+    width: 100%;
+    animation: none;
+  }
+}
+
+/* The glyph sheet ------------------------------------------------------ */
+
+.glyphs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}
+
+.glyph {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  margin: 0;
+  padding: 14px 6px 8px;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  transition: background 120ms linear;
+}
+
+.glyph:hover {
+  background: var(--surface);
+}
+
+.glyph i {
+  font-family: var(--built);
+  font-size: 30px;
+  font-style: normal;
+  line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.glyph:hover i {
+  transform: scale(1.14);
+}
+
+/* Presenting: one sample, the width of the screen, nothing else. The element
+   that makes a specimen a performance, and the way out is written under it. */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 24px;
+  padding: clamp(24px, 5vw, 72px);
+  background: var(--bg);
+}
+
+.stage[hidden] {
+  display: none;
+}
+
+.stage__body {
+  display: grid;
+  align-content: center;
+  overflow: auto;
+}
+
+.stage__sample {
+  margin: 0;
+  font-family: var(--built);
+  font-size: clamp(22px, 4.2vw, 60px);
+  line-height: 1.32;
+  white-space: pre-wrap;
+}
+
+.stage__hint {
+  color: var(--faint);
+  font-size: var(--step--2);
+  letter-spacing: 0.14em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.glyph--blank i {
+  width: 26px;
+  height: 22px;
+  border: 1px dashed var(--rule-2);
+}
+
+.glyph figcaption {
+  color: var(--faint);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The proof closes the way a proof closes. */
+.qed {
+  justify-self: end;
+  color: var(--faint);
+  font-size: var(--step--1);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
 }

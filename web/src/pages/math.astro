@@ -16,7 +16,7 @@ import corpus from "../../../corpus/equations.mathml?raw";
 import Base from "../layouts/Base.astro";
 ---
 
-<Base title="Equations">
+<Base title="Equations" boot>
   <div class="wrap page">
     <h1>Equations</h1>
     <p>
@@ -120,6 +120,7 @@ import Base from "../layouts/Base.astro";
 
       render();
       source.addEventListener("input", render);
+      document.documentElement.dataset.boot = "done";
     };
 
     run().catch((error) => {

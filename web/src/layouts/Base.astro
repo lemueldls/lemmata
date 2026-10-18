@@ -1,6 +1,6 @@
 ---
-// One shell for the site: the head, the masthead, the footer, the theme and the
-// keyboard shortcuts.
+// One shell for the site: the head, the masthead, the footer, the theme, the
+// keyboard and the cover a page puts up while it builds its font.
 //
 // The theme is decided by an inline script before the stylesheet applies. A
 // swap after paint shows the other theme for a frame, which is the one thing a
@@ -10,11 +10,15 @@ import "../styles/site.css";
 interface Props {
   title: string;
   description?: string;
+  /// Cover the page until it has a font to show. For the pages that build one
+  /// on load.
+  boot?: boolean;
 }
 
 const {
   title,
-  description = "A typeface factory that builds fonts in the browser from one Rust core.",
+  description = "A typeface built from a plan, and proved in the page that shows it.",
+  boot = false,
 } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const on = (route: string) =>
@@ -62,15 +66,12 @@ const on = (route: string) =>
       <div class="wrap footer__grid">
         <div>
           <h3>Lemmata</h3>
-          <p>
-            One Rust core, a command line and this tab. The site is static
-            files, and the font is built in the browser.
-          </p>
+          <p>A typeface built from a plan, and proved in the page that shows it.</p>
         </div>
         <div>
           <h3>Routes</h3>
           <ul>
-            <li><a href={base}>Landing</a></li>
+            <li><a href={base}>Premises</a></li>
             <li><a href={`${base}generate/`}>Generator</a></li>
             <li><a href={`${base}math/`}>Equations</a></li>
           </ul>
@@ -80,6 +81,7 @@ const on = (route: string) =>
           <ul>
             <li><kbd>g</kbd> generator</li>
             <li><kbd>e</kbd> equations</li>
+            <li><kbd>p</kbd> present</li>
             <li><kbd>t</kbd> theme</li>
           </ul>
         </div>
@@ -93,6 +95,18 @@ const on = (route: string) =>
         </div>
       </div>
     </footer>
+    {
+      boot && (
+        <div class="boot" id="boot" aria-hidden="true">
+          <div class="boot__meter">
+            <span class="boot__ticks" />
+            <span class="boot__track">
+              <i />
+            </span>
+          </div>
+        </div>
+      )
+    }
     <script>
       const root = document.documentElement;
       const toggle = document.querySelector("#theme");
@@ -110,8 +124,30 @@ const on = (route: string) =>
       paint();
       toggle.addEventListener("click", flip);
 
+      // The cover comes down when the page says it is ready to be looked at,
+      // and it comes down anyway after a while: a build that never finishes
+      // must not leave the page behind a curtain.
+      const boot = document.querySelector("#boot");
+      if (boot) {
+        const done = () => {
+          boot.dataset.done = "";
+          setTimeout(() => boot.remove(), 400);
+        };
+        if (root.dataset.boot === "done") {
+          done();
+        } else {
+          const watch = new MutationObserver(() => {
+            if (root.dataset.boot !== "done") return;
+            watch.disconnect();
+            done();
+          });
+          watch.observe(root, { attributes: true, attributeFilter: ["data-boot"] });
+          setTimeout(done, 20000);
+        }
+      }
+
       // A key press anywhere outside a field is a shortcut. The footer lists
-      // them, which is the only place they are documented.
+      // them, which is the only place they are written down.
       addEventListener("keydown", (event) => {
         if (event.metaKey || event.ctrlKey || event.altKey) return;
         const target = event.target;
@@ -124,6 +160,10 @@ const on = (route: string) =>
         }
         if (event.key === "t") {
           flip();
+          return;
+        }
+        if (event.key === "p") {
+          document.querySelector("#present")?.click();
           return;
         }
         const routes = { g: "generate/", e: "math/" };
