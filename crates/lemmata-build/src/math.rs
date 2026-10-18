@@ -92,20 +92,6 @@ pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
     }
 }
 
-/// The glyphs a renderer stretches vertically: delimiters, the radical, the
-/// large operators and the corners that bracket a matrix.
-const STRETCHY: &[u32] = &[
-    0x0028, 0x0029, // parentheses
-    0x005B, 0x005D, // brackets
-    0x007B, 0x007D, // braces
-    0x221A, // radical
-    0x222B, // integral
-    0x2211, // summation
-    0x220F, // product
-    0x2308, 0x2309, 0x230A, 0x230B, // ceiling and floor
-    0x27E8, 0x27E9, // angle brackets
-];
-
 /// The stretchy constructions, one per glyph.
 ///
 /// Every one is empty for now: no size variants, and no assembly. The coverage
@@ -115,7 +101,11 @@ const STRETCHY: &[u32] = &[
 pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
     let mut ids = Vec::new();
     for (index, glyph) in glyphs.iter().enumerate() {
-        if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
+        if !glyph
+            .unicodes
+            .iter()
+            .any(|code| crate::variants::STRETCHY.contains(code))
+        {
             continue;
         }
         let Ok(id) = u16::try_from(index + 1) else {
