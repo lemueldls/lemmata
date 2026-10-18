@@ -15,7 +15,7 @@ use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
 use read_fonts::tables::glyf::Glyph as ReadGlyph;
 use read_fonts::tables::head::MacStyle;
-use read_fonts::tables::math::MathConstant;
+use read_fonts::tables::math::{MathConstant, StretchAxis};
 use read_fonts::tables::os2::SelectionFlags;
 use read_fonts::types::NameId;
 use read_fonts::{FontRef, TableProvider};
@@ -393,6 +393,48 @@ fn math_table_round_trips() {
         expected.script_percent_scale_down,
         profile.script_percent_scale_down
     );
+}
+
+/// `r[build.subset]`: export can restrict output to chosen Unicode ranges, and
+/// the restriction runs on the input so the MATH table's ids stay true.
+#[test]
+fn subsetting_restricts_the_export() {
+    let Some((_, captured)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let mut glyphs = glyph_data(&captured);
+    let before = glyphs.len();
+    // The parentheses and the digits, which leaves the letters out and keeps a
+    // glyph the MATH table names.
+    lemmata_build::font::retain_ranges(&mut glyphs, &[(0x0028, 0x0039)]);
+    assert!(glyphs.len() < before, "the range has to drop something");
+
+    let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default())
+        .expect("build the subset");
+    let font = FontRef::new(&bytes).expect("reopen the subset");
+    let cmap = font.cmap().expect("cmap");
+    assert!(
+        cmap.map_codepoint(u32::from(b'(')).is_some(),
+        "the range is kept"
+    );
+    assert!(
+        cmap.map_codepoint(u32::from(b'A')).is_none(),
+        "and nothing outside it"
+    );
+
+    // The MATH table survives because it was assembled over the subset, which is
+    // the reason the restriction runs here rather than on the built font.
+    let math = font.math().expect("the subset still has a MATH table");
+    let variants = math.math_variants().expect("MathVariants");
+    let paren = cmap.map_codepoint(u32::from(b'(')).expect("the paren");
+    assert!(
+        variants
+            .glyph_construction(paren, StretchAxis::Vertical)
+            .is_some(),
+        "the paren is still named by the table"
+    );
+    eprintln!("subset: {} glyphs from {}", glyphs.len(), before);
 }
 
 /// `r[build.formats]`: a native build emits WOFF2, and the container is one a

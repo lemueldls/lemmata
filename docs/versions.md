@@ -24,7 +24,6 @@ Pinned 17 October 2026. Update only together with a drift report.
 | libm | 0.2.16 |
 | linesweeper | 0.5.0 |
 | harfrust | 0.14.0 |
-| skera | 0.8.0 |
 | ttf2woff2 | 0.14.0 |
 | wasm-bindgen | 0.2.129 |
 

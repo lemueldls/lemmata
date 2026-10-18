@@ -36,6 +36,7 @@ wasm-bindgen = "=0.2.129"
 # targets, which is the same trap the font bytes were caught by.
 ttf2woff2 = { version = "0.14.0", default-features = false, features = ["portable-float"] }
 
+
 [patch.crates-io]
 kurbo = { path = "vendor/kurbo" }
 

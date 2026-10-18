@@ -42,14 +42,40 @@ Usage: lemmata build [--glyphs <capture>] [--out <font.ttf>] [--family <name>]
   --glyphs  glyph capture to read (default target/glyphs.bin)
   --out     font to write; a .woff2 extension compresses it (default
             target/Lemmata-Regular.ttf)
+  --subset  Unicode ranges to keep, as U+XXXX or U+XXXX-U+YYYY, comma
+            separated (default: everything the capture holds)
   --family  family name for the output font (default Lemmata)
   --plan    JSON plan for the font's metrics (default: the reference plan)";
+
+/// The Unicode ranges a `--subset` argument names.
+fn parse_ranges(text: &str) -> Result<Vec<(u32, u32)>, String> {
+    let code_point = |text: &str| -> Result<u32, String> {
+        let text = text.trim();
+        let digits = text
+            .strip_prefix("U+")
+            .or_else(|| text.strip_prefix("u+"))
+            .unwrap_or(text);
+        u32::from_str_radix(digits, 16).map_err(|_| format!("{text} is not a code point"))
+    };
+
+    text.split(',')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            part.split_once('-').map_or_else(
+                || code_point(part).map(|code| (code, code)),
+                |(low, high)| Ok((code_point(low)?, code_point(high)?)),
+            )
+        })
+        .collect()
+}
 
 fn build(args: &[String]) -> Result<(), String> {
     let mut glyphs_path = PathBuf::from("target/glyphs.bin");
     let mut out_path = PathBuf::from("target/Lemmata-Regular.ttf");
     let mut names = Names::default();
     let mut plan_path = String::new();
+    let mut subset: Option<String> = None;
 
     let mut index = 0;
     while index < args.len() {
@@ -62,6 +88,7 @@ fn build(args: &[String]) -> Result<(), String> {
             "--out" => out_path = PathBuf::from(value),
             "--family" => names.family.clone_from(value),
             "--plan" => plan_path.clone_from(value),
+            "--subset" => subset = Some(value.clone()),
             other => return Err(format!("unknown option {other:?}\n{USAGE}")),
         }
         index += 2;
@@ -80,6 +107,18 @@ fn build(args: &[String]) -> Result<(), String> {
             contours: lemmata_capture::contours(glyph),
         })
         .collect();
+
+    // The restriction runs on the input rather than on the built font, so the
+    // MATH table is assembled over the glyphs that are left and its ids stay
+    // true. Subsetting a built font would have to renumber them, and the
+    // subsetter does not close over MATH.
+    let mut glyphs = glyphs;
+    if let Some(ranges) = &subset {
+        lemmata_build::font::retain_ranges(&mut glyphs, &parse_ranges(ranges)?);
+        if glyphs.is_empty() {
+            return Err(format!("--subset {ranges} leaves no glyphs"));
+        }
+    }
 
     let plan = if plan_path.is_empty() {
         String::new()

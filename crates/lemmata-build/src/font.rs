@@ -443,6 +443,22 @@ pub(crate) fn glyph_path(contours: &[Vec<QuadifyPoint>]) -> BezPath {
     path
 }
 
+/// Keeps the glyphs that carry a codepoint inside one of `ranges`.
+///
+/// This runs on the input rather than on the built font, which is what keeps
+/// the MATH table honest. Its glyph ids are assigned while the font is built, so
+/// restricting a built font would have to renumber them, and the subsetter does
+/// not close over MATH. Building from the smaller set has the same effect on a
+/// generator, which has nothing to prune that it did not just write.
+pub fn retain_ranges(glyphs: &mut Vec<GlyphData>, ranges: &[(u32, u32)]) {
+    glyphs.retain(|glyph| {
+        glyph
+            .unicodes
+            .iter()
+            .any(|code| ranges.iter().any(|(low, high)| low <= code && code <= high))
+    });
+}
+
 /// Compresses a built font to WOFF2.
 ///
 /// The same font in the container a page serves, and the one a subsetter reads.
