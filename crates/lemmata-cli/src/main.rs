@@ -125,7 +125,7 @@ fn build(args: &[String]) -> Result<(), String> {
     // the size variants of the stretchy glyphs and their assembly pieces.
     // Reporting only the captured count was misleading enough to send me
     // looking for the wrong thing once.
-    let total = glyphs.len() + 1 + lemmata_build::font::derived(&glyphs).len();
+    let total = glyphs.len() + 1 + lemmata_build::font::derived(&glyphs, &metrics).len();
     println!(
         "{}: {} glyphs, {} bytes, {}",
         out_path.display(),

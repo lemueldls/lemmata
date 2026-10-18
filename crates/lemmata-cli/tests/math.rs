@@ -369,6 +369,7 @@ fn stretchy_glyphs_have_assemblies() {
     };
 
     let mut assembled = 0usize;
+    let mut worst = 0i32;
     for (index, glyph) in captured.iter().enumerate() {
         if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
             continue;
@@ -460,6 +461,42 @@ fn stretchy_glyphs_have_assemblies() {
             "{} should repeat exactly one piece",
             glyph.name
         );
+
+        // The repeat seam, which is what a derived extender can get wrong. The
+        // middle piece is a band of a curved glyph, so the ink along its bottom
+        // edge need not match the ink along its top edge, and every repeat
+        // steps by that much. The band is narrow for this reason, and this is
+        // the check that it stayed narrow enough.
+        let repeat = &parts[lemmata_build::assembly::EXTENDER];
+        let full = i32::from(u16::from(repeat.full_advance()));
+        let piece = loca
+            .get_glyf(GlyphId::new(u32::from(repeat.glyph_id().to_u16())), &glyf)
+            .expect("read a glyph")
+            .expect("the extender has an outline");
+        let ReadGlyph::Simple(simple) = piece else {
+            panic!("a stretchy piece is a simple glyph");
+        };
+        let (mut low_min, mut low_max) = (i32::MAX, i32::MIN);
+        let (mut high_min, mut high_max) = (i32::MAX, i32::MIN);
+        for point in simple.points() {
+            let (x, y) = (i32::from(point.x), i32::from(point.y));
+            if y <= 0 {
+                low_min = low_min.min(x);
+                low_max = low_max.max(x);
+            }
+            if y >= full {
+                high_min = high_min.min(x);
+                high_max = high_max.max(x);
+            }
+        }
+        let seam = (high_min - low_min).abs().max((high_max - low_max).abs());
+        assert!(
+            seam <= tolerance,
+            "{}'s extender steps {seam} where it repeats, past the {tolerance} the table allows",
+            glyph.name
+        );
+        worst = worst.max(seam);
+
         let (_, base_low, _, base_high) = span(id);
         let height = base_high - base_low;
         assert!(
@@ -475,7 +512,7 @@ fn stretchy_glyphs_have_assemblies() {
         STRETCHY.len(),
         "every stretchy glyph has an assembly"
     );
-    eprintln!("assemblies: {assembled} glyphs, {tolerance} unit joins");
+    eprintln!("assemblies: {assembled} glyphs, {tolerance} unit joins, worst repeat seam {worst}");
 }
 
 /// `r[math.stretch]`: a glyph a renderer can stretch is an extended shape, so

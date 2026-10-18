@@ -77,7 +77,7 @@ fn built_font_round_trips() {
     assert_eq!(font.head().expect("head").units_per_em(), 1000);
     // The font carries `.notdef`, the captured glyphs, and the derived ones:
     // the size variants of the stretchy glyphs and their assembly pieces.
-    let derived = lemmata_build::font::derived(&glyph_data(&captured));
+    let derived = lemmata_build::font::derived(&glyph_data(&captured), &Metrics::default());
     assert_eq!(
         font.maxp().expect("maxp").num_glyphs() as usize,
         captured.len() + 1 + derived.len()

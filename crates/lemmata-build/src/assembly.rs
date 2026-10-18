@@ -9,20 +9,25 @@
 //! derived rather than drawn, like the size variants and for the same reason:
 //! Iosevka ships no MATH table, so it draws no assembly pieces.
 //!
-//! The band is what makes a piece repeatable. A band whose ink is a straight
-//! stem stacks on itself; a band taken from a curved or barred part of a glyph
-//! repeats that feature, so an extender is only as good as the glyph's middle.
-//! See `docs/math.md`.
+//! The band is what makes a piece repeatable, so the cut is measured: a band is
+//! kept only when the ink along its two cut edges lines up within the overlap
+//! the join uses. The middle is tried first, and the later candidates move up
+//! and narrow, which is what a glyph whose lower middle carries a second stroke
+//! needs. See `docs/math.md`.
 
 use kurbo::{Rect, Shape};
 use lemmata_geom::QuadifyPoint;
 
 use crate::font::{GlyphData, glyph_path};
 
-/// How much of the glyph's height the repeatable extender takes, centred on the
-/// middle. A narrow band keeps the ink close to a straight bar, which is what
-/// the piece has to be to stack on itself.
-const BAND: f64 = 0.25;
+/// The bands a glyph's extender may be cut from, as the fraction of the height
+/// it takes and where its centre sits.
+///
+/// The middle is tried first. A glyph whose lower middle carries a second
+/// stroke, which is what a radical's arm is, repeats both if the band is taken
+/// there, so the later candidates move up and narrow until the band holds one
+/// stroke. A band that never gets there leaves the glyph without an assembly.
+const BANDS: [(f64, f64); 4] = [(0.5, 0.25), (0.6, 0.25), (0.6, 0.15), (0.7, 0.15)];
 
 /// The three pieces, bottom to top. The name is the suffix a piece carries.
 pub const PIECES: [&str; 3] = ["a0", "a1", "a2"];
@@ -82,12 +87,45 @@ fn grounded(contours: Vec<Vec<QuadifyPoint>>) -> Vec<Vec<QuadifyPoint>> {
         .collect()
 }
 
+/// How far a band's ink is offset sideways between its two ends.
+///
+/// Zero means the band stacks on itself exactly. Anything larger is a step every
+/// time the piece repeats, so it is also the amount the join has to hide.
+fn seam(contours: &[Vec<QuadifyPoint>]) -> f64 {
+    let full = contours
+        .iter()
+        .flatten()
+        .fold(0.0_f64, |high, point| high.max(point.y));
+    let (mut low_min, mut low_max) = (f64::INFINITY, f64::NEG_INFINITY);
+    let (mut high_min, mut high_max) = (f64::INFINITY, f64::NEG_INFINITY);
+    for point in contours.iter().flatten() {
+        if point.y <= 0.5 {
+            low_min = low_min.min(point.x);
+            low_max = low_max.max(point.x);
+        }
+        if point.y >= full - 0.5 {
+            high_min = high_min.min(point.x);
+            high_max = high_max.max(point.x);
+        }
+    }
+    if !low_min.is_finite() || !high_min.is_finite() {
+        return f64::INFINITY;
+    }
+
+    (high_min - low_min).abs().max((high_max - low_max).abs())
+}
+
 /// The pieces for every stretchy glyph, encoded from `first_code` upward.
+///
+/// `overlap` is the connector the assembly joins along, which is also the step a
+/// piece may take where it repeats: a step no larger than the overlap is covered
+/// by the neighbouring piece's ink.
 ///
 /// The caller owns `first_code`, because the pieces share the private-use block
 /// with the size variants and two derived glyphs must not share a code.
 #[must_use]
-pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
+pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphData> {
+    let tolerance = f64::from(overlap);
     let mut pieces: Vec<GlyphData> = Vec::new();
     for glyph in glyphs {
         if !glyph
@@ -101,9 +139,26 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
             continue;
         };
         let height = f64::from(y_max - y_min);
+
         // Whole-unit cuts keep the joins on the grid the writer rounds to.
-        let low = height.mul_add(0.5 - BAND / 2.0, f64::from(y_min)).round();
-        let high = height.mul_add(0.5 + BAND / 2.0, f64::from(y_min)).round();
+        let mut cut: Option<(f64, f64)> = None;
+        for (centre, fraction) in BANDS {
+            let low = height
+                .mul_add(centre - fraction / 2.0, f64::from(y_min))
+                .round();
+            let high = height
+                .mul_add(centre + fraction / 2.0, f64::from(y_min))
+                .round();
+            let band = grounded(slice(glyph, low, high));
+            if !band.is_empty() && seam(&band) <= tolerance {
+                cut = Some((low, high));
+                break;
+            }
+        }
+        let Some((low, high)) = cut else {
+            continue;
+        };
+
         // The outer bands reach past the ink so that only the inner cut decides
         // where they end.
         let bands = [
@@ -111,8 +166,7 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
             (low, high),
             (high, f64::from(y_max) + 1.0),
         ];
-
-        let mut cut: Vec<GlyphData> = bands
+        let mut pieces_of: Vec<GlyphData> = bands
             .iter()
             .enumerate()
             .map(|(index, (band_low, band_high))| GlyphData {
@@ -125,10 +179,10 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
         // A glyph with no ink in one of the bands has no assembly, and half an
         // assembly is worse than none: the table would name parts that do not
         // tile.
-        if cut.iter().any(|piece| piece.contours.is_empty()) {
+        if pieces_of.iter().any(|piece| piece.contours.is_empty()) {
             continue;
         }
-        for piece in &mut cut {
+        for piece in &mut pieces_of {
             let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
             piece.unicodes = vec![code];
             pieces.push(piece.clone());

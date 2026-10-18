@@ -135,12 +135,16 @@ impl GlyphData {
 /// The pieces take the private-use codes after the variants, so the two blocks
 /// do not collide.
 #[must_use]
-pub fn derived(glyphs: &[GlyphData]) -> Vec<GlyphData> {
+pub fn derived(glyphs: &[GlyphData], metrics: &Metrics) -> Vec<GlyphData> {
     let variants = crate::variants::derive(glyphs);
     let first_piece_code =
         crate::variants::PRIVATE_USE_START + u32::try_from(variants.len()).unwrap_or(0);
     let mut derived = variants;
-    derived.extend(crate::assembly::derive(glyphs, first_piece_code));
+    derived.extend(crate::assembly::derive(
+        glyphs,
+        first_piece_code,
+        metrics.underline_thickness.unsigned_abs(),
+    ));
 
     derived
 }
@@ -159,7 +163,7 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
     // `maxp.num_glyphs`, where they are ignored until something references one
     // and the reference is out of range.
     let mut with_variants = glyphs.to_vec();
-    with_variants.extend(derived(glyphs));
+    with_variants.extend(derived(glyphs, metrics));
     let glyphs = with_variants.as_slice();
 
     let mut glyf_builder = GlyfLocaBuilder::new();
