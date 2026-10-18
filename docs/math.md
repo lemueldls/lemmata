@@ -94,7 +94,9 @@ It skips when Typst is not installed, like the tests that skip without a capture
 
 `MathVariants` names the sixteen codepoints a renderer may stretch, and each construction carries both things a renderer needs: the sizes it picks from and the assembly it builds when none is tall enough.
 
-The sizes are derived rather than drawn. Scaling a glyph in y alone keeps a vertical stroke at its width, since x is untouched, so a parenthesis grows into something that encloses taller content at the weight the rest of the font is drawn at. Each stretchy glyph gets two, at 1.5 and 2 times its own height, and the test checks each is taller than its base.
+The sizes are derived rather than drawn, and the two families grow differently. A delimiter stretches: a parenthesis is a curve that gets taller while the stroke keeps its width, so scaling y alone is what a taller one looks like. A large operator is not stretched but set at a larger size, so its display form is a scaled drawing, wider as well as taller, and its advance grows with it or it would run into its neighbour. Deriving a taller sigma without widening it is what left it looking thin at display size.
+
+Each stretchy glyph gets two, at 1.5 and 2 times its own size. The test checks that each is taller than its base, that a large operator is wider too, and that a delimiter's width is unchanged.
 
 An assembly is how a renderer goes taller than that: it stacks a bottom piece, repeats a middle one, and caps it with a top piece. The pieces are the glyph cut into three horizontal bands, so the joins are the cuts and the three tile the original outline. They are derived and encoded in the same private-use block as the sizes. The test stacks the parts the way a renderer does and checks that each one's ink spans its declared advance, that consecutive parts cross, that no join overlaps by more than the stroke width the table names as its minimum, and that the middle piece repeats without stepping.
 

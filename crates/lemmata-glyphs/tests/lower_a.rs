@@ -12,7 +12,9 @@
 use std::fs;
 
 use lemmata_geom::{BiKnot, Geometry};
-use lemmata_glyphs::letter::latin::lower_a::{DoubleStorey, HOOK_SLAB_NONE};
+use lemmata_glyphs::letter::latin::lower_a::{
+    HOOK_HALF, HOOK_SLAB_INWARD, HOOK_SLAB_NONE, LowerA, SingleStoreyBar,
+};
 use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::shapes::Design;
 use lemmata_ptl::spiro_kit::{Dispiro, Kit};
@@ -105,7 +107,7 @@ fn lower_a_matches_capture() {
         metrics.contrast,
         metrics.tiny,
     );
-    let body = DoubleStorey {
+    let body = LowerA {
         df: &df,
         metrics: &metrics,
         kit: &kit,
@@ -124,6 +126,9 @@ fn lower_a_matches_capture() {
                 .collect(),
         )
     };
+    let full = |top: f64, bar: SingleStoreyBar, ada: Option<f64>, adb: Option<f64>| {
+        combine(body.full_bar_body(top, bar, None, ada, adb))
+    };
     let cases: Vec<(&str, Geometry)> = vec![
         ("a", from_dispiros(body.serifless(HOOK_SLAB_NONE, None))),
         (
@@ -131,8 +136,66 @@ fn lower_a_matches_capture() {
             from_dispiros(body.serifed(HOOK_SLAB_NONE, None)),
         ),
         (
+            "a.doubleStoreyTailed",
+            from_dispiros(body.tailed(HOOK_SLAB_NONE, None)),
+        ),
+        (
+            "a.doubleStoreyHookInwardSerifedSerifless",
+            from_dispiros(body.serifless(HOOK_SLAB_INWARD, None)),
+        ),
+        (
+            "aHalf.doubleStoreySerifless",
+            from_dispiros(body.serifless(HOOK_HALF, None)),
+        ),
+        ("a.crossing", combine(vec![body.crossing_body(metrics.xh)])),
+        (
             "a.singleStoreySerifless",
-            combine(body.single_storey_serifless(metrics.xh)),
+            full(metrics.xh, SingleStoreyBar::Serifless, None, None),
+        ),
+        (
+            "a.singleStoreySerifed",
+            full(metrics.xh, SingleStoreyBar::BottomSerifed, None, None),
+        ),
+        (
+            "a.singleStoreyDoubleSerifed",
+            full(metrics.xh, SingleStoreyBar::DoubleSerifed, None, None),
+        ),
+        (
+            "a.singleStoreyTailed",
+            full(metrics.xh, SingleStoreyBar::Tailed, None, None),
+        ),
+        (
+            "a.singleStoreyFlatTopSerifless",
+            combine(body.flat_top_body(metrics.xh, SingleStoreyBar::Serifless, None, None, None)),
+        ),
+        (
+            "a.singleStoreyEarlessCornerSerifless",
+            combine(body.earless_corner_body(
+                metrics.xh,
+                SingleStoreyBar::Serifless,
+                None,
+                None,
+                None,
+            )),
+        ),
+        (
+            "a.singleStoreyEarlessRoundedSerifless",
+            combine(body.earless_rounded_body(
+                metrics.xh,
+                SingleStoreyBar::Serifless,
+                None,
+                None,
+                None,
+            )),
+        ),
+        (
+            "aCap.singleStoreySerifless",
+            full(
+                metrics.cap,
+                SingleStoreyBar::Serifless,
+                Some(metrics.arch_depth_a),
+                Some(metrics.arch_depth_b),
+            ),
         ),
     ];
 

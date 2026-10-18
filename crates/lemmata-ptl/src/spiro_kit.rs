@@ -224,6 +224,28 @@ impl Kit {
         }))
     }
 
+    /// `bezControls`: knots mixed between the neighbours along a cubic Bezier.
+    ///
+    /// The four ratios are the Bezier's control points, so the knots land on
+    /// `(0, x1, x2, 1)` in x and `(0, y1, y2, 1)` in y.
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
+    pub fn bez_controls(&self, x1: f64, y1: f64, x2: f64, y2: f64, samples: usize, af: Af) -> Item {
+        let rs = (1..samples)
+            .map(|j| {
+                let t = j as f64 / samples as f64;
+
+                (
+                    crate::util::bez3(0.0, x1, x2, 1.0, t),
+                    crate::util::bez3(0.0, y1, y2, 1.0, t),
+                    t,
+                )
+            })
+            .collect();
+
+        self.also_thru_them(rs, af, KnotType::G2)
+    }
+
     /// A list of controls resolved when the sequence is flattened.
     #[must_use]
     pub fn decor(&self, items: Vec<Item>) -> Item {

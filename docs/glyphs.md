@@ -59,33 +59,53 @@ It survived every earlier test because of coverage. `tests/fairize.rs` and `test
 
 ## The lower-a variants
 
-`lower-a.ptl` builds thirteen `a` variants, and the capture holds all thirteen. Three are ported and verified. The rest need six shared shapes that are not: `Arch.adjust-x.top`, `HSerif.rt`, `ArcStartSerif.InwardL`, `VBar.l`, the `arcvh` and `archv` blends, and `bezControls`.
+`lower-a.ptl` builds thirteen `a` variants, a half-height `aHalf` for each
+serifless double-storey one, and a cap-height `aCap`. The capture holds fourteen
+of them and all fourteen are ported and verified: their bi-knots, expansions and
+outlines match the build's exactly, 507 knots, worst deviation zero.
 
-Two things about that work are worth writing down, because reading the source misled me twice and measuring did not.
+The file's bodies are all ported. `DoubleStorey` carries `HookAndBar` and `Arc`,
+`SingleStorey` carries five bodies over five bars, and `CrossingBody` is
+`a.crossing`. The combinations the capture does not hold are built from the same
+primitives but have no oracle, so they are unverified. The derived glyphs
+(`aSwash`, `aRetroflexHook`, the script forms, `mathbb/a` and the accented
+compositions) need shapes outside this file and are not ported.
 
-**`arcvh` and `archv` are blends, not knots.** A shape that writes `archv` where a bare `g4` knot looks equivalent will have the right number of *items* and the wrong number of *knots*: the blend expands into the pair the solver reads. Emitting `kit.archv(None, None)` instead of a knot is what took `RightwardTailedBar` from five knots to the capture's nine.
+Three things about the work are worth writing down, because reading the source
+misled me and measuring did not.
 
-**The capture holds the flipped shape.** `OBarRight.earlessCorner` reaches its outline through `OBarLeft.toothlessCorner`, which is itself `OBarLeft.earlessCorner` flipped, so the nesting reads as two flips and the shape as unflipped. The capture says otherwise: its first knot for `a.singleStoreyFlatTopSerifless` is `(64.01, 0.00)`, which is the *top* knot of an unflipped corner seen through one flip, not the `yend` knot the source suggests. Dumping the capture's knots and aligning them against the port's is the way to settle it, and it is how the `SmoothA` bug and the `archv` bug were both found.
+**`arcvh` and `archv` are blends, not knots.** A shape that writes `archv` where
+a bare `g4` knot looks equivalent will have the right number of *items* and the
+wrong number of *knots*: the blend expands into the pair the solver reads.
+Emitting `kit.archv(None, None)` instead of a knot is what took
+`RightwardTailedBar` from five knots to the capture's nine. The blends are also
+independent of the angles: `blendPre -- {}` suppresses the arc while leaving the
+key knot's position to `mixR`, which is what `InwardSlabArcStart` and the
+toothless corner's rise branch both do.
 
-Two measurements narrow the rest. Aligning the earless corner's first knot against the capture gives `ours (126.20, 200.01)` against `theirs (64.01, 0.00)`, so both of its inputs are wrong in the same way: `HSwToV(sw - fine)` is about sixty units too wide, which says the `fine` that reaches the ring is far below `sw` where the capture needs the two to be nearly equal, and `y_end = bot + ada + TINY` is two hundred where the capture wants `TINY`, which says the arch depth reaching the corner is zero rather than the `smallArchDepth` the plan carries. Both are values the source passes down a chain of wrappers, and both are cheaper to read off a single ring than off a whole glyph.
+**The capture holds the unflipped knots.** `OBarRight.earlessCorner` reaches its
+outline through `OBarLeft.toothlessCorner`, which is itself
+`OBarLeft.earlessCorner` flipped, so the nesting reads as two flips and the shape
+as unflipped. The capture says otherwise: the node it holds for
+`a.singleStoreyFlatTopSerifless` is a `DiSpiro` inside a `Transformed`, so its
+knots are the *unflipped* corner and the flip is one, not zero. Flipping again in
+the port is a flip too many, which put the first knot at 126.20 where the capture
+has 64.01.
 
-The capture's ring for `a.singleStoreyFlatTopSerifless` has twenty-three knots, and they say what the two constants are without any tracing:
+**PTL's arguments are siblings, not nested.** `RightwardTailedBar` writes
 
 ```
-  0 (   64.01,    0.00)     flat:  left + HSwToV(sw - fine),  yend
-  1 (  250.00,    0.00)
-  2 (  333.38,   13.45)     the arch from the bar's foot
-  ...
-  7 (  444.00,  200.00)
-  8 (  444.00,  320.00)     the straight side, so right + OX reaches 444
-  ...
- 14 (  285.10,  528.00)     the top, overshooting XH by the overshoot
-  ...
- 22 (  126.20,  319.99)     curl:  left + TINY,  top
+local hookDepth : Math.max SideJut
+    AdviceStroke 8
+    0.625 * (SB - 0)
 ```
 
-The first and last knots pin it: `yend` is zero, and `left + TINY` is 126.20 while the bar sits at 397.15, so the ring's `left` is not the glyph's sidebearing and its `top` is not the x-height. The four numbers a variant needs are all in that list, which is why dumping the ring is cheaper than porting the body and aligning twenty-three knots at a time.
+and the two indented lines sit at the *same* level, so `Math.max` takes three
+arguments and `AdviceStroke 8` is the one-argument call. Reading the second line
+as an argument of `AdviceStroke` gives `AdviceStroke(8, 0.625 * SB)`, which
+saturates to the full stroke and puts the tail's depth at 70 instead of the
+capture's 46.15. That misreading is what the tail's `hookTurn` error was.
 
-The list also says the knots are already transformed. `collect_di_spiro` walks only `Combine` and `Boolean`, and it reaches this node, so the node is not wrapped in a `Transformed`: `composite-proc` bakes `FlipAround` into the knots it produces. Applying a flip in the port on top of that is a flip too many, which is what put the first knot at 126.20 instead of 64.01.
-
-The remaining two constants are the tail's `hookTurn`, where the port reads `AdviceStroke 16` as taking an extra scalar of one and the capture says otherwise, and the earless corner's `yend`, where the capture's `tiny` says the arch depth that reaches it is zero rather than the `smallArchDepth` of two hundred the plan carries.
+Dumping the capture's knots and aligning them against the port's is the way to
+settle all three, and it is how the `SmoothA` bug, the `archv` bug and the flip
+were found.

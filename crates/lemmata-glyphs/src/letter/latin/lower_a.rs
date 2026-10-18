@@ -1,12 +1,20 @@
-//! The double-storey `a` from `letter/latin/lower-a.ptl`.
+//! The lower-case `a` from `letter/latin/lower-a.ptl`.
 //!
-//! `DoubleStorey.Serifless` is the shape RefA-Regular's `a` uses: a union of
-//! `HookAndBar` and `Arc`. This module carries those two bodies and the
-//! variant's stroke advice, which is what the port needs before the rest of the
-//! file's variant table can be filled in.
+//! The file builds three families. `DoubleStorey` is the `a` the default
+//! variant selects, a union of `HookAndBar` and `Arc`. `SingleStorey` is the
+//! ring family the `a.*` table draws, one of five bodies over one of five bars.
+//! `CrossingBody` is `a.crossing`.
 //!
-//! The single-storey bodies and the `a`-derived glyphs (the turned, script and
-//! accented forms) are not ported.
+//! Two of the single-storey rings reach the glyph through two nested flips.
+//! `OBarRight.earlessCorner` is `OBarLeft.toothlessCorner` flipped, and
+//! `OBarLeft.toothlessCorner` is `OBarLeft.earlessCorner` flipped, so the
+//! source reads as unflipped and is not. The capture settles it: it holds the
+//! unflipped knots inside a `Transformed` node, so the port flips once, at the
+//! point upstream does.
+//!
+//! `aSwash`, `aRetroflexHook`, the script forms, `mathbb/a` and the accented
+//! compositions are built from these bodies plus shapes outside this file.
+//! They are not ported.
 
 // The arithmetic mirrors upstream's expression order and stays clear of fused
 // multiply-add, which would round differently from JavaScript. The names are
@@ -14,15 +22,17 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use kurbo::Vec2;
-use lemmata_geom::KnotType;
-use lemmata_ptl::control::{Af, Item};
+use lemmata_geom::{Geometry, KnotType};
+use lemmata_ptl::control::{Af, Item, UserControlKnot};
 use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::metrics::Metrics;
 use lemmata_ptl::shapes::{
-    ArchArgs, ArchParams, Design, HookArgs, HookParams, arch, arch_depth_b_clamped, downward,
-    leftward, rightward, upward, ysmooth_mid_l,
+    ArchArgs, ArchParams, CenterAtArgs, Design, FlatSide, HookArgs, HookParams, arch,
+    arch_depth_b_clamped, center_at, downward, flatside_ld, flatside_lu, flatside_ru, knot_of,
+    leftward, rightward, upward, ysmooth_mid_l, ysmooth_mid_r,
 };
-use lemmata_ptl::spiro_kit::{Dispiro, Kit};
+use lemmata_ptl::spiro_kit::{Direction, Dispiro, Family, Kit, Position};
+use lemmata_ptl::util::mix;
 
 /// What an `OBar` shape takes: the ring it sits in and the stroke it is drawn
 /// with.
@@ -44,15 +54,42 @@ pub const HOOK_SLAB_CLASSICAL: i32 = 1;
 pub const HOOK_SLAB_INWARD: i32 = 2;
 pub const HOOK_HALF: i32 = 3;
 
-/// The double-storey `a`'s two bodies.
-pub struct DoubleStorey<'a> {
+/// The bars a single-storey body can carry.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SingleStoreyBar {
+    Serifless,
+    BottomSerifed,
+    DoubleSerifed,
+    Tailed,
+    TailedSerifed,
+}
+
+/// The single-storey bodies, which differ in how the ring meets the bar.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SingleStoreyBody {
+    /// `FullBarBody`: the whole flat-sided ring.
+    FullBar,
+    /// `TopCutBody`: the ring cut by the bar's top half.
+    TopCut,
+    /// `FlatTopBody`: the ring with the ear replaced by a corner.
+    FlatTop,
+    /// `EarlessCornerBody`: the ring cut short of the ear by `DToothlessRise`.
+    EarlessCorner,
+    /// `EarlessRoundedBody`: the ring with the ear rounded into the bar.
+    EarlessRounded,
+}
+
+/// The context every `a` body reads.
+pub struct LowerA<'a> {
     pub df: &'a DivFrame,
     pub metrics: &'a Metrics,
     pub kit: &'a Kit,
     pub design: &'a Design,
 }
 
-impl DoubleStorey<'_> {
+impl LowerA<'_> {
+    // `DoubleStorey`'s stroke advice.
+
     /// `Sw`: the stroke advice this variant uses.
     #[must_use]
     pub fn sw(&self) -> f64 {
@@ -91,20 +128,32 @@ impl DoubleStorey<'_> {
         )
     }
 
+    // The shared arithmetic.
+
     const fn left_sb(&self) -> f64 {
         self.df.sb
     }
 
-    const fn right_sb(&self) -> f64 {
+    fn right_sb(&self) -> f64 {
         self.df.width - self.df.sb
     }
 
-    const fn middle(&self) -> f64 {
-        0.5 * self.df.width
+    fn middle(&self) -> f64 {
+        mix(self.left_sb(), self.right_sb(), 0.5)
     }
 
-    const fn hsw_to_v(&self, value: f64) -> f64 {
+    fn hsw_to_v(&self, value: f64) -> f64 {
         value * self.metrics.hv_contrast
+    }
+
+    /// `Arch.adjust-x.top`.
+    fn adjust_x_top(&self, x: f64, sw: f64) -> f64 {
+        x - self.metrics.correction_o_mid_x * sw
+    }
+
+    /// `Arch.adjust-x.bot`.
+    fn adjust_x_bot(&self, x: f64, sw: f64) -> f64 {
+        x + self.metrics.correction_o_mid_x * sw
     }
 
     const fn hook_params(&self) -> HookParams {
@@ -130,10 +179,27 @@ impl DoubleStorey<'_> {
         }
     }
 
-    /// `HookAndBar`, the hook and the bar it sits on.
+    /// The `OBar` ring the single-storey bodies sit in.
+    fn ring(&self, top: f64, sw: f64, ada: f64, adb: f64) -> OBarRing {
+        OBarRing {
+            top,
+            bot: 0.0,
+            left: self.left_sb(),
+            right: self.right_sb(),
+            sw,
+            fine: self.metrics.shoulder_fine * (sw / self.metrics.stroke),
+            ada,
+            adb,
+        }
+    }
+
+    // `DoubleStorey`.
+
+    /// `HookAndBar`: the hook and the bar it sits on, plus the inward serif the
+    /// inward hook style adds.
     ///
-    /// Only `HOOK-SLAB-NONE` is ported; the other hook styles add serifs or a
-    /// half-height hook.
+    /// Only the styles the variant table selects are built. `HOOK-SLAB-CLASSICAL`
+    /// is a `TODO` upstream and never reaches a glyph.
     #[must_use]
     pub fn hook_and_bar(
         &self,
@@ -141,37 +207,72 @@ impl DoubleStorey<'_> {
         y0: f64,
         stroke: Option<f64>,
         fine: Option<f64>,
-    ) -> Dispiro {
+    ) -> Vec<Dispiro> {
         let metrics = self.metrics;
         let sw = stroke.unwrap_or_else(|| self.sw());
-        let fine = fine.unwrap_or(sw);
+        let fine_value = fine.unwrap_or(sw);
 
-        let bar_right_x = self.right_sb() - self.hsw_to_v(sw - fine);
-        let hook_left_x = self.left_sb();
+        let bar_right_x = self.right_sb() - self.hsw_to_v(sw - fine_value);
+        let hook_left_x = match hook_style {
+            HOOK_HALF => (bar_right_x
+                - self.hsw_to_v(fine_value + 0.125 * sw)
+                - metrics.tiny
+                - (metrics.tan_slope * sw).abs())
+            .min(
+                self.adjust_x_top(
+                    bar_right_x - self.hsw_to_v(0.5 * fine_value) - metrics.hook_x,
+                    mix(sw, fine_value, 0.5),
+                ) + metrics.ox_hook,
+            ),
+            _ => self.left_sb(),
+        };
+
         let bar_y = (metrics.xh - self.smooth_b())
-            .max(y0 + metrics.tiny + self.hsw_to_v((metrics.tan_slope * fine).abs()));
+            .max(y0 + metrics.tiny + self.hsw_to_v((metrics.tan_slope * fine_value).abs()));
+        let flat_af = fine.map_or_else(Vec::new, |f| self.kit.widths_rhs(Some(f)));
 
         let mut items = vec![Item::Af(self.kit.widths_rhs(Some(sw)))];
-
         match hook_style {
-            HOOK_SLAB_NONE => {
-                // The g4 knot the hook's terminal replaces, and the flat knot
-                // the hook resolves against.
-                let terminal_knot = lemmata_ptl::control::UserControlKnot {
+            HOOK_SLAB_INWARD => {
+                items.extend(self.inward_slab_arc_start_ltr_rhs(
+                    hook_left_x,
+                    metrics.xh,
+                    sw,
+                    fine_value,
+                    bar_right_x,
+                    bar_y,
+                ));
+            }
+            HOOK_HALF => {
+                items.push(self.kit.pair(
+                    Family::G4,
+                    Direction::Right,
+                    Position::Start,
+                    hook_left_x,
+                    metrics.xh - metrics.o,
+                    Vec::new(),
+                ));
+                items.push(self.kit.archv(None, None));
+            }
+            _ => {
+                let terminal = UserControlKnot {
                     ty: KnotType::G4,
                     x: hook_left_x,
                     y: metrics.xh - metrics.a_hook,
                     af: Vec::new(),
                 };
-                let straight = lemmata_ptl::control::UserControlKnot {
+                let straight = UserControlKnot {
                     ty: KnotType::Left,
                     x: bar_right_x,
                     y: bar_y,
                     af: Vec::new(),
                 };
-                let hook = lemmata_ptl::shapes::hook_start(
+                let lemmata_ptl::shapes::HookOut {
+                    items: hook_items,
+                    terminal,
+                } = lemmata_ptl::shapes::hook_start(
                     self.kit,
-                    &terminal_knot,
+                    &terminal,
                     &straight,
                     &HookArgs {
                         y_ref: metrics.xh,
@@ -183,23 +284,15 @@ impl DoubleStorey<'_> {
                     },
                     &self.hook_params(),
                 );
-                let lemmata_ptl::shapes::HookOut {
-                    items: hook_items,
-                    terminal,
-                } = hook;
                 items.push(
                     self.kit
                         .knot(terminal.ty, terminal.x, terminal.y, terminal.af),
                 );
                 items.extend(hook_items);
             }
-            other => panic!("hook style {other} is not ported"),
         }
 
-        items.push(
-            self.kit
-                .knot(KnotType::Left, bar_right_x, bar_y, Vec::new()),
-        );
+        items.push(self.kit.knot(KnotType::Left, bar_right_x, bar_y, flat_af));
         items.push(self.kit.knot(
             KnotType::Right,
             bar_right_x,
@@ -207,12 +300,85 @@ impl DoubleStorey<'_> {
             self.kit.heading(downward(metrics.hv_contrast)),
         ));
 
-        self.kit.dispiro(items)
+        let mut shapes = vec![self.kit.dispiro(items)];
+        if hook_style == HOOK_SLAB_INWARD {
+            shapes.push(self.arc_start_serif_inward_l(
+                self.left_sb(),
+                metrics.xh,
+                sw,
+                metrics.a_hook,
+            ));
+        }
+
+        shapes
     }
 
-    /// `Arc`, the shoulder on the left.
+    /// `InwardSlabArcStart.LtrRhs`: the hook's inward slab and the arch it
+    /// turns into.
+    fn inward_slab_arc_start_ltr_rhs(
+        &self,
+        ex: f64,
+        cy: f64,
+        sw: f64,
+        sw_after: f64,
+        bar_right_x: f64,
+        bar_y: f64,
+    ) -> Vec<Item> {
+        let metrics = self.metrics;
+        let slab = UserControlKnot {
+            ty: KnotType::G2,
+            x: ex,
+            y: cy - metrics.d_toothless_rise,
+            af: self.kit.widths_rhs(Some(sw)),
+        };
+        let straight = UserControlKnot {
+            ty: KnotType::Left,
+            x: bar_right_x,
+            y: bar_y,
+            af: Vec::new(),
+        };
+        let mut items = vec![self.kit.knot(slab.ty, slab.x, slab.y, slab.af.clone())];
+        items.extend(arch(
+            self.kit,
+            &ArchArgs {
+                y: cy,
+                p: None,
+                sw,
+                compact: false,
+                o: metrics.o,
+                angle_pre: None,
+                angle_post: None,
+                blend_pre: Some(false),
+                blend_post: None,
+                sw_before: Some(sw),
+                sw_after: Some(sw_after),
+                lhs: false,
+            },
+            &slab,
+            &straight,
+            &self.arch_params(),
+        ));
+
+        items
+    }
+
+    /// `ArcStartSerif.InwardL`: the slab under the hook's inward serif.
+    fn arc_start_serif_inward_l(&self, cx: f64, cy: f64, stroke: f64, hook: f64) -> Dispiro {
+        let metrics = self.metrics;
+        let depth = hook.max(metrics.d_toothless_rise + stroke);
+
+        self.vbar_l(
+            cx,
+            cy - depth,
+            cy - metrics.d_toothless_rise,
+            arc_start_serif_width(stroke, metrics.v_jut_stroke),
+        )
+    }
+
+    /// `Arc`: the shoulder on the left.
     ///
-    /// Only kind 0 is ported, which is what the serifless variant uses.
+    /// Kind 0 is what the serifless and serifed variants use; kind 1 is
+    /// `FlatBottom`, kind 2 `ToothlessRounded`.
     #[must_use]
     pub fn arc(
         &self,
@@ -227,8 +393,8 @@ impl DoubleStorey<'_> {
         let fine = fine.unwrap_or(self.df.shoulder_fine);
         let bbd = bbd.unwrap_or(0.0);
 
-        let bar_top = lemmata_ptl::util::mix(0.0, metrics.xh, self.design.a_bar_pos)
-            + sw * (0.5 + self.design.a_bar_stroke_adj);
+        let bar_top =
+            mix(0.0, metrics.xh, self.design.a_bar_pos) + sw * (0.5 + self.design.a_bar_stroke_adj);
         let ada = self
             .df
             .arch_depth_a_of(metrics.small_arch_depth * 0.9, Some(sw));
@@ -250,7 +416,7 @@ impl DoubleStorey<'_> {
         ));
         items.push(self.kit.knot(
             KnotType::Right,
-            lemmata_ptl::util::mix(self.right_sb(), self.middle(), 0.9),
+            mix(self.right_sb(), self.middle(), 0.9),
             bar_top,
             Vec::new(),
         ));
@@ -265,7 +431,7 @@ impl DoubleStorey<'_> {
             metrics.arch_depth_a,
             metrics.arch_depth_b,
         ) - self.hsw_to_v(left_slope_s) * metrics.smooth_adjust;
-        let arch_knot = lemmata_ptl::control::UserControlKnot {
+        let arch_knot = UserControlKnot {
             ty: KnotType::G4,
             x: arch_x,
             y: arch_y,
@@ -282,7 +448,7 @@ impl DoubleStorey<'_> {
                 let flat_y =
                     (bar_top - metrics.tiny - self.hsw_to_v((fine * metrics.tan_slope).abs()))
                         .min(0.0 + ada);
-                let straight = lemmata_ptl::control::UserControlKnot {
+                let straight = UserControlKnot {
                     ty: KnotType::Left,
                     x: flat_x,
                     y: flat_y,
@@ -298,6 +464,8 @@ impl DoubleStorey<'_> {
                         o: metrics.o,
                         angle_pre: None,
                         angle_post: None,
+                        blend_pre: None,
+                        blend_post: None,
                         sw_before: Some(sw),
                         sw_after: Some(fine),
                         lhs: true,
@@ -317,10 +485,311 @@ impl DoubleStorey<'_> {
                     self.kit.heading(upward(metrics.hv_contrast)),
                 ));
             }
+            1 => {
+                if rise == 0.0 {
+                    items.push(self.kit.arcvh(None, None));
+                    items.push(self.kit.knot(
+                        KnotType::Left,
+                        self.adjust_x_bot(self.middle(), sw),
+                        0.0,
+                        Vec::new(),
+                    ));
+                    items.push(self.kit.knot(
+                        KnotType::Right,
+                        self.right_sb() + metrics.o,
+                        0.0,
+                        self.kit.heading(rightward()),
+                    ));
+                } else {
+                    let end = UserControlKnot {
+                        ty: KnotType::G4,
+                        x: self.right_sb(),
+                        y: rise,
+                        af: self.kit.widths_lhs(Some(sw)),
+                    };
+                    items.extend(arch(
+                        self.kit,
+                        &ArchArgs {
+                            y: 0.0,
+                            p: None,
+                            sw,
+                            compact: false,
+                            o: metrics.o,
+                            angle_pre: None,
+                            angle_post: None,
+                            blend_pre: None,
+                            blend_post: Some(false),
+                            sw_before: Some(sw),
+                            sw_after: Some(sw),
+                            lhs: true,
+                        },
+                        &arch_knot,
+                        &end,
+                        &self.arch_params(),
+                    ));
+                    items.push(self.kit.knot(end.ty, end.x, end.y, end.af));
+                }
+            }
+            2 => {
+                let end = UserControlKnot {
+                    ty: KnotType::Left,
+                    x: self.right_sb(),
+                    y: rise.min(ysmooth_mid_r(
+                        bar_top,
+                        0.0,
+                        Some(ada2),
+                        Some(adb2),
+                        metrics.arch_depth_a,
+                        metrics.arch_depth_b,
+                    )),
+                    af: Vec::new(),
+                };
+                items.extend(arch(
+                    self.kit,
+                    &ArchArgs {
+                        y: 0.0,
+                        p: None,
+                        sw,
+                        compact: false,
+                        o: metrics.o,
+                        angle_pre: None,
+                        angle_post: None,
+                        blend_pre: None,
+                        blend_post: None,
+                        sw_before: Some(sw),
+                        sw_after: Some(sw),
+                        lhs: true,
+                    },
+                    &arch_knot,
+                    &end,
+                    &self.arch_params(),
+                ));
+                items.push(self.kit.knot(end.ty, end.x, end.y, end.af));
+                items.push(self.kit.knot(
+                    KnotType::Right,
+                    self.right_sb(),
+                    rise + metrics.tiny + self.hsw_to_v((sw * metrics.tan_slope).abs()),
+                    self.kit.heading(upward(metrics.hv_contrast)),
+                ));
+            }
             other => panic!("arc kind {other} is not ported"),
         }
 
-        let _ = rise;
+        self.kit.dispiro(items)
+    }
+
+    /// `Serifless`: the hook and bar unioned with the arc.
+    #[must_use]
+    pub fn serifless(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
+        let mut shapes = self.hook_and_bar(hook_style, 0.0, stroke, None);
+        shapes.push(self.arc(0, 0.0, stroke, None, None));
+
+        shapes
+    }
+
+    /// `Serifed`: `Serifless` plus the bottom-right serif.
+    #[must_use]
+    pub fn serifed(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
+        let mut shapes = self.serifless(hook_style, stroke);
+        let sw_ref = stroke.unwrap_or_else(|| self.sw());
+        shapes.push(self.hserif_rb(
+            self.right_sb(),
+            0.0,
+            self.serif_side_jut(sw_ref),
+            self.df.mvs,
+        ));
+
+        shapes
+    }
+
+    /// `Tailed`: the hook and bar, the arc, and the tail off the bar's foot.
+    #[must_use]
+    pub fn tailed(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
+        let mut shapes = self.hook_and_bar(hook_style, self.smooth_a(), stroke, None);
+        shapes.push(self.arc(0, 0.0, stroke, None, None));
+        shapes.push(self.rightward_tailed_bar(
+            self.right_sb(),
+            0.0,
+            self.metrics.xh - self.smooth_b(),
+            stroke.unwrap_or_else(|| self.sw()),
+        ));
+
+        shapes
+    }
+
+    /// `FlatBottomSerifless`.
+    #[must_use]
+    pub fn flat_bottom_serifless(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
+        let mut shapes = self.hook_and_bar(hook_style, 0.0, stroke, None);
+        shapes.push(self.arc(1, 0.0, stroke, None, None));
+
+        shapes
+    }
+
+    /// `FlatBottomSerifed`.
+    #[must_use]
+    pub fn flat_bottom_serifed(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
+        let mut shapes = self.flat_bottom_serifless(hook_style, stroke);
+        let sw_ref = stroke.unwrap_or_else(|| self.sw());
+        shapes.push(self.hserif_rb(
+            self.right_sb(),
+            0.0,
+            self.serif_side_jut(sw_ref),
+            self.df.mvs,
+        ));
+
+        shapes
+    }
+
+    /// `ToothlessCorner`.
+    #[must_use]
+    pub fn toothless_corner(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
+        let rise = self.metrics.d_toothless_rise;
+        let mut shapes = self.hook_and_bar(hook_style, rise, stroke, None);
+        shapes.push(self.arc(1, rise, stroke, None, None));
+
+        shapes
+    }
+
+    /// `ToothlessRounded`.
+    #[must_use]
+    pub fn toothless_rounded(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
+        let rise = self.smooth_a();
+        let mut shapes = self.hook_and_bar(hook_style, rise, stroke, None);
+        shapes.push(self.arc(2, rise, stroke, None, None));
+
+        shapes
+    }
+
+    // `SingleStorey`.
+
+    /// `VBar.r`.
+    #[must_use]
+    pub fn vbar_r(&self, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
+        self.vbar(x - self.hsw_to_v(0.5 * sw), y_down, y_up, sw)
+    }
+
+    /// `VBar.l`.
+    #[must_use]
+    pub fn vbar_l(&self, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
+        self.vbar(x + self.hsw_to_v(0.5 * sw), y_down, y_up, sw)
+    }
+
+    fn vbar(&self, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
+        let heading = if y_down < y_up {
+            upward(self.metrics.hv_contrast)
+        } else {
+            downward(self.metrics.hv_contrast)
+        };
+        let items = vec![
+            Item::Af(self.kit.widths_center(Some(sw))),
+            self.kit
+                .knot(KnotType::Left, x, y_down, self.kit.heading(heading)),
+            self.kit
+                .knot(KnotType::Right, x, y_up, self.kit.heading(heading)),
+        ];
+
+        self.kit.dispiro(items)
+    }
+
+    /// `HSerif.rb`: the outer serif on the bar's right foot.
+    fn hserif_rb(&self, x: f64, y: f64, length: f64, sw: f64) -> Dispiro {
+        let items = vec![
+            Item::Af(self.kit.widths_lhs(Some(sw))),
+            self.kit.knot(
+                KnotType::Left,
+                x - self.hsw_to_v(0.5 * sw),
+                y,
+                self.kit.heading(rightward()),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                x + length + sw * self.metrics.serif_shift_x,
+                y,
+                Vec::new(),
+            ),
+        ];
+
+        self.kit.dispiro(items)
+    }
+
+    /// `HSerif.rt`: the outer serif on the bar's right shoulder.
+    fn hserif_rt(&self, x: f64, y: f64, length: f64, sw: f64) -> Dispiro {
+        let items = vec![
+            Item::Af(self.kit.widths_rhs(Some(sw))),
+            self.kit.knot(
+                KnotType::Left,
+                x - self.hsw_to_v(0.5 * sw),
+                y,
+                self.kit.heading(rightward()),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                x + length - sw * self.metrics.serif_shift_x,
+                y,
+                Vec::new(),
+            ),
+        ];
+
+        self.kit.dispiro(items)
+    }
+
+    /// `CSerifFrame`'s `sideJut`, which is `jut` less half the ink.
+    fn serif_side_jut(&self, sw_ref: f64) -> f64 {
+        let metrics = self.metrics;
+        let ink = self.hsw_to_v(sw_ref);
+        let co_ink = self.hsw_to_v(metrics.stroke - sw_ref);
+        let h_split = 2.0_f64.max(self.df.h_pack);
+        let jut = (metrics.jut - 0.5 * co_ink).min(mix(
+            0.5 * ink,
+            metrics.jut,
+            (self.df.adws() * 2.25 / h_split).min(1.0),
+        ));
+
+        jut - 0.5 * ink
+    }
+
+    /// `RightwardTailedBar`: the bar's foot turned right.
+    #[must_use]
+    pub fn rightward_tailed_bar(&self, x: f64, low: f64, high: f64, sw: f64) -> Dispiro {
+        let metrics = self.metrics;
+        // `Math.max` takes three arguments here: the indented `AdviceStroke 8`
+        // and `0.625 * (SB - 0)` sit at the same level, so both are siblings of
+        // `SideJut` rather than one being an argument of the other.
+        let hook_depth = metrics
+            .side_jut
+            .max(self.df.advice_stroke(8.0, 1.0))
+            .max(0.625 * self.df.sb);
+        let advice16 = self.df.advice_stroke(16.0, 1.0);
+        let hook_turn = advice16.max(hook_depth - advice16);
+        let items = vec![
+            Item::Af(self.kit.widths_lhs(Some(sw))),
+            self.kit.knot(
+                KnotType::Left,
+                x - self.hsw_to_v(sw),
+                high,
+                self.kit.heading(downward(metrics.hv_contrast)),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                x - self.hsw_to_v(sw),
+                low + metrics.o + sw + hook_turn,
+                self.kit.heading(downward(metrics.hv_contrast)),
+            ),
+            self.kit.arcvh(None, None),
+            self.kit.knot(
+                KnotType::Left,
+                x + hook_turn,
+                low + metrics.o,
+                self.kit.heading(rightward()),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                x + hook_depth + 0.0_f64.max(sw * metrics.tan_slope),
+                low + metrics.o,
+                Vec::new(),
+            ),
+        ];
 
         self.kit.dispiro(items)
     }
@@ -342,7 +811,7 @@ impl DoubleStorey<'_> {
         } = *ring;
         let x = left + self.hsw_to_v(sw - fine);
 
-        let flat_side = |x: f64, ox: f64, af: Af| lemmata_ptl::shapes::FlatSide {
+        let flat_side = |x: f64, ox: f64, af: Af| FlatSide {
             x,
             d: bot,
             u: top,
@@ -351,10 +820,9 @@ impl DoubleStorey<'_> {
             ox,
             af,
         };
-        let start = lemmata_ptl::shapes::flatside_ld(self.kit, &flat_side(x, 0.0, Vec::new()));
-        let middle =
-            lemmata_ptl::shapes::flatside_ru(self.kit, &flat_side(right, metrics.ox, Vec::new()));
-        let end = lemmata_ptl::shapes::flatside_ld(
+        let start = flatside_ld(self.kit, &flat_side(x, 0.0, Vec::new()));
+        let middle = flatside_ru(self.kit, &flat_side(right, metrics.ox, Vec::new()));
+        let end = flatside_ld(
             self.kit,
             &flat_side(x, 0.0, self.kit.widths_lhs(Some(fine))),
         );
@@ -367,6 +835,8 @@ impl DoubleStorey<'_> {
             o: metrics.o,
             angle_pre: None,
             angle_post: None,
+            blend_pre: None,
+            blend_post: None,
             sw_before: Some(fine),
             sw_after: Some(sw),
             lhs: true,
@@ -383,16 +853,16 @@ impl DoubleStorey<'_> {
         items.extend(arch(
             self.kit,
             &arch_bottom,
-            &lemmata_ptl::shapes::knot_of(start.last().expect("flatside item")),
-            &lemmata_ptl::shapes::knot_of(&middle[0]),
+            &knot_of(start.last().expect("flatside item")),
+            &knot_of(&middle[0]),
             &params,
         ));
         items.extend(middle.iter().cloned());
         items.extend(arch(
             self.kit,
             &arch_top,
-            &lemmata_ptl::shapes::knot_of(middle.last().expect("flatside item")),
-            &lemmata_ptl::shapes::knot_of(&end[0]),
+            &knot_of(middle.last().expect("flatside item")),
+            &knot_of(&end[0]),
             &params,
         ));
         items.extend(end);
@@ -400,130 +870,534 @@ impl DoubleStorey<'_> {
         self.kit.dispiro(items)
     }
 
+    /// `OBarLeft.toothlessCorner`: the left side cut at `ystart` with the bar's
+    /// foot replaced by a corner at `rise`.
+    #[must_use]
+    pub fn obar_left_toothless_corner(&self, ring: &OBarRing, rise: f64, ystart: f64) -> Dispiro {
+        let metrics = self.metrics;
+        let OBarRing {
+            top,
+            bot,
+            left,
+            right,
+            sw,
+            fine,
+            ada,
+            adb,
+        } = *ring;
+        let x = left + self.hsw_to_v(sw - fine);
+        let flat_y = (top - ada).max(ystart + metrics.tiny);
+        let flat = UserControlKnot {
+            ty: KnotType::Left,
+            x,
+            y: flat_y,
+            af: self.kit.widths_lhs(Some(fine)),
+        };
+        let right_side = flatside_ru(
+            self.kit,
+            &FlatSide {
+                x: right,
+                d: bot,
+                u: top,
+                ada,
+                adb,
+                ox: metrics.ox,
+                af: Vec::new(),
+            },
+        );
+
+        let mut items = vec![Item::Af(self.kit.widths_lhs(Some(sw)))];
+        if rise == 0.0 {
+            items.push(self.kit.knot(
+                KnotType::Left,
+                left + metrics.tiny,
+                bot,
+                self.kit.heading(rightward()),
+            ));
+            items.push(self.kit.knot(
+                KnotType::Right,
+                self.adjust_x_bot(mix(left, right, 0.5), sw),
+                bot,
+                Vec::new(),
+            ));
+            items.push(self.kit.archv(None, None));
+        } else {
+            let corner = UserControlKnot {
+                ty: KnotType::G4,
+                x: left,
+                y: bot + rise,
+                af: Vec::new(),
+            };
+            items.push(
+                self.kit
+                    .knot(corner.ty, corner.x, corner.y, corner.af.clone()),
+            );
+            items.extend(arch(
+                self.kit,
+                &ArchArgs {
+                    y: bot,
+                    p: None,
+                    sw,
+                    compact: false,
+                    o: metrics.o,
+                    angle_pre: None,
+                    angle_post: None,
+                    blend_pre: Some(false),
+                    blend_post: None,
+                    sw_before: Some(sw),
+                    sw_after: Some(sw),
+                    lhs: true,
+                },
+                &corner,
+                &knot_of(&right_side[0]),
+                &self.arch_params(),
+            ));
+        }
+
+        items.extend(right_side.iter().cloned());
+        items.extend(arch(
+            self.kit,
+            &ArchArgs {
+                y: top,
+                p: None,
+                sw,
+                compact: false,
+                o: metrics.o,
+                angle_pre: None,
+                angle_post: None,
+                blend_pre: None,
+                blend_post: None,
+                sw_before: Some(sw),
+                sw_after: Some(fine),
+                lhs: true,
+            },
+            &knot_of(right_side.last().expect("flatside item")),
+            &flat,
+            &self.arch_params(),
+        ));
+        items.push(self.kit.knot(flat.ty, flat.x, flat.y, flat.af));
+        items.push(
+            self.kit
+                .knot(KnotType::Right, x, ystart, self.kit.widths_lhs(Some(fine))),
+        );
+
+        self.kit.dispiro(items)
+    }
+
+    /// `OBarLeft.toothlessRounded`: the left side cut at `ystart` with the bar's
+    /// foot rounded into the bar at `yTerminal`.
+    #[must_use]
+    pub fn obar_left_toothless_rounded(
+        &self,
+        ring: &OBarRing,
+        y_terminal: f64,
+        ystart: f64,
+    ) -> Dispiro {
+        let metrics = self.metrics;
+        let OBarRing {
+            top,
+            bot,
+            left,
+            right,
+            sw,
+            fine,
+            ada,
+            adb,
+        } = *ring;
+        let x = left + self.hsw_to_v(sw - fine);
+        let flat_y = (top - ada).max(ystart + metrics.tiny);
+        let flat = UserControlKnot {
+            ty: KnotType::Left,
+            x,
+            y: flat_y,
+            af: self.kit.widths_lhs(Some(fine)),
+        };
+        let right_side = flatside_ru(
+            self.kit,
+            &FlatSide {
+                x: right,
+                d: bot,
+                u: top,
+                ada,
+                adb,
+                ox: metrics.ox,
+                af: Vec::new(),
+            },
+        );
+
+        let mut items = vec![
+            Item::Af(self.kit.widths_lhs(Some(sw))),
+            self.kit.knot(
+                KnotType::Left,
+                left,
+                y_terminal,
+                self.kit
+                    .widths_lhs_heading(Some(sw), downward(metrics.hv_contrast)),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                left,
+                (bot + adb).min(y_terminal - metrics.tiny),
+                Vec::new(),
+            ),
+        ];
+        items.extend(arch(
+            self.kit,
+            &ArchArgs {
+                y: bot,
+                p: None,
+                sw,
+                compact: false,
+                o: metrics.o,
+                angle_pre: None,
+                angle_post: None,
+                blend_pre: None,
+                blend_post: None,
+                sw_before: Some(sw),
+                sw_after: Some(sw),
+                lhs: true,
+            },
+            &knot_of(items.last().expect("knot")),
+            &knot_of(&right_side[0]),
+            &self.arch_params(),
+        ));
+        items.extend(right_side.iter().cloned());
+        items.extend(arch(
+            self.kit,
+            &ArchArgs {
+                y: top,
+                p: None,
+                sw,
+                compact: false,
+                o: metrics.o,
+                angle_pre: None,
+                angle_post: None,
+                blend_pre: None,
+                blend_post: None,
+                sw_before: Some(sw),
+                sw_after: Some(fine),
+                lhs: true,
+            },
+            &knot_of(right_side.last().expect("flatside item")),
+            &flat,
+            &self.arch_params(),
+        ));
+        items.push(self.kit.knot(flat.ty, flat.x, flat.y, flat.af));
+        items.push(
+            self.kit
+                .knot(KnotType::Right, x, ystart, self.kit.widths_lhs(Some(fine))),
+        );
+
+        self.kit.dispiro(items)
+    }
+
     /// `OBarRight.shape`: the left shape rotated half a turn about the ring.
     #[must_use]
-    pub fn obar_right_shape(&self, ring: &OBarRing) -> lemmata_geom::Geometry {
-        let shape = self.obar_left_shape(ring);
-        let mid_x = lemmata_ptl::util::mix(ring.left, ring.right, 0.5);
-        let mid_y = lemmata_ptl::util::mix(ring.bot, ring.top, 0.5);
-        let flip = kurbo::Affine::translate((mid_x, mid_y))
-            * kurbo::Affine::scale_non_uniform(-1.0, -1.0)
-            * kurbo::Affine::translate((-mid_x, -mid_y));
+    pub fn obar_right_shape(&self, ring: &OBarRing) -> Geometry {
+        flip(&self.obar_left_shape(ring), ring)
+    }
 
-        lemmata_geom::Geometry::Transformed {
-            tf: flip,
-            geom: Box::new(shape.geometry(kurbo::Affine::IDENTITY)),
+    /// `OBarRight.earlessCorner`, which is `OBarLeft.toothlessCorner` flipped.
+    #[must_use]
+    pub fn obar_right_earless_corner(&self, ring: &OBarRing, rise: f64, yend: f64) -> Geometry {
+        flip(
+            &self.obar_left_toothless_corner(ring, rise, ring.top - yend),
+            ring,
+        )
+    }
+
+    /// `OBarRight.earlessRounded`, which is `OBarLeft.toothlessRounded` flipped.
+    #[must_use]
+    pub fn obar_right_earless_rounded(
+        &self,
+        ring: &OBarRing,
+        y_terminal: f64,
+        yend: f64,
+    ) -> Geometry {
+        flip(
+            &self.obar_left_toothless_rounded(ring, ring.top - y_terminal, ring.top - yend),
+            ring,
+        )
+    }
+
+    /// The bars a single-storey body carries.
+    fn bar(&self, bar: SingleStoreyBar, top: f64, sw: f64) -> Vec<Geometry> {
+        let metrics = self.metrics;
+        let side_jut = self.serif_side_jut(sw);
+        match bar {
+            SingleStoreyBar::Serifless => {
+                vec![
+                    self.vbar_r(self.right_sb(), 0.0, top, sw)
+                        .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
+            SingleStoreyBar::BottomSerifed => vec![
+                self.vbar_r(self.right_sb(), 0.0, top, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+                self.hserif_rb(self.right_sb(), 0.0, side_jut, metrics.stroke)
+                    .geometry(kurbo::Affine::IDENTITY),
+            ],
+            SingleStoreyBar::DoubleSerifed => vec![
+                self.vbar_r(self.right_sb(), 0.0, top, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+                self.hserif_rt(self.right_sb(), top, side_jut, metrics.stroke)
+                    .geometry(kurbo::Affine::IDENTITY),
+                self.hserif_rb(self.right_sb(), 0.0, side_jut, metrics.stroke)
+                    .geometry(kurbo::Affine::IDENTITY),
+            ],
+            SingleStoreyBar::Tailed => vec![
+                self.rightward_tailed_bar(self.right_sb(), 0.0, top, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+            ],
+            SingleStoreyBar::TailedSerifed => vec![
+                self.rightward_tailed_bar(self.right_sb(), 0.0, top, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+                self.hserif_rt(self.right_sb(), top, side_jut, metrics.stroke)
+                    .geometry(kurbo::Affine::IDENTITY),
+            ],
         }
     }
 
-    /// `VBar.r`.
+    /// `SingleStorey.FullBarBody`.
     #[must_use]
-    pub fn vbar_r(&self, x: f64, y_down: f64, y_up: f64, sw: f64) -> lemmata_geom::Geometry {
-        let heading = if y_down < y_up {
-            upward(self.metrics.hv_contrast)
-        } else {
-            downward(self.metrics.hv_contrast)
-        };
-        let x = x - self.hsw_to_v(0.5 * sw);
-        let items = vec![
-            Item::Af(self.kit.widths_center(Some(sw))),
-            self.kit
-                .knot(KnotType::Left, x, y_down, self.kit.heading(heading)),
-            self.kit
-                .knot(KnotType::Right, x, y_up, self.kit.heading(heading)),
-        ];
+    pub fn full_bar_body(
+        &self,
+        top: f64,
+        bar: SingleStoreyBar,
+        stroke: Option<f64>,
+        ada: Option<f64>,
+        adb: Option<f64>,
+    ) -> Vec<Geometry> {
+        let (sw, ada, adb) = self.body_stroke(stroke, ada, adb);
+        let ring = self.ring(top, sw, ada, adb);
+        let mut shapes = vec![self.obar_right_shape(&ring)];
+        shapes.extend(self.bar(bar, top, sw));
 
-        self.kit.dispiro(items).geometry(kurbo::Affine::IDENTITY)
+        shapes
     }
 
-    /// `SingleStorey.FullBarBody` with `SeriflessBar`, which is
-    /// `singleStoreySerifless`.
+    /// `SingleStorey.TopCutBody`: the ring cut by the bar's top half.
     #[must_use]
-    pub fn single_storey_serifless(&self, top: f64) -> Vec<lemmata_geom::Geometry> {
+    pub fn top_cut_body(
+        &self,
+        top: f64,
+        bar: SingleStoreyBar,
+        stroke: Option<f64>,
+        ada: Option<f64>,
+        adb: Option<f64>,
+    ) -> Vec<Geometry> {
+        let (sw, ada, adb) = self.body_stroke(stroke, ada, adb);
+        let ring = self.ring(top, sw, ada, adb);
+        let half_stroke = 0.5 * sw;
+        let cut = self.kit.spiro_outline(vec![
+            self.kit
+                .knot(KnotType::Corner, self.right_sb(), top, Vec::new()),
+            self.kit.knot(
+                KnotType::Corner,
+                self.right_sb(),
+                top - half_stroke,
+                Vec::new(),
+            ),
+            self.kit.knot(
+                KnotType::Corner,
+                self.right_sb() - self.hsw_to_v(sw),
+                top - half_stroke,
+                Vec::new(),
+            ),
+        ]);
+
+        let mut shapes = vec![self.obar_right_shape(&ring)];
+        shapes.extend(self.bar(bar, top - half_stroke, sw));
+        shapes.push(Geometry::Spiro {
+            gizmo: kurbo::Affine::IDENTITY,
+            closed: cut.closed,
+            knots: cut.knots,
+        });
+
+        shapes
+    }
+
+    /// `SingleStorey.FlatTopBody`.
+    #[must_use]
+    pub fn flat_top_body(
+        &self,
+        top: f64,
+        bar: SingleStoreyBar,
+        stroke: Option<f64>,
+        ada: Option<f64>,
+        adb: Option<f64>,
+    ) -> Vec<Geometry> {
+        let (sw, ada, adb) = self.body_stroke(stroke, ada, adb);
+        let ring = self.ring(top, sw, ada, adb);
+        let yend = ring.bot + ring.ada + self.metrics.tiny;
+        let mut shapes = vec![self.obar_right_earless_corner(&ring, 0.0, yend)];
+        shapes.extend(self.bar(bar, top, sw));
+
+        shapes
+    }
+
+    /// `SingleStorey.EarlessCornerBody`.
+    #[must_use]
+    pub fn earless_corner_body(
+        &self,
+        top: f64,
+        bar: SingleStoreyBar,
+        stroke: Option<f64>,
+        ada: Option<f64>,
+        adb: Option<f64>,
+    ) -> Vec<Geometry> {
+        let (sw, ada, adb) = self.body_stroke(stroke, ada, adb);
+        let ring = self.ring(top, sw, ada, adb);
+        let yend = ring.bot + ring.ada + self.metrics.tiny;
+        let mut shapes =
+            vec![self.obar_right_earless_corner(&ring, self.metrics.d_toothless_rise, yend)];
+        shapes.extend(self.bar(bar, top - self.metrics.d_toothless_rise, sw));
+
+        shapes
+    }
+
+    /// `SingleStorey.EarlessRoundedBody`.
+    #[must_use]
+    pub fn earless_rounded_body(
+        &self,
+        top: f64,
+        bar: SingleStoreyBar,
+        stroke: Option<f64>,
+        ada: Option<f64>,
+        adb: Option<f64>,
+    ) -> Vec<Geometry> {
+        let (sw, ada, adb) = self.body_stroke(stroke, ada, adb);
+        let ring = self.ring(top, sw, ada, adb);
+        let yend = ring.bot + ring.ada + self.metrics.tiny;
+        let mut shapes = vec![self.obar_right_earless_rounded(&ring, ring.ada, yend)];
+        shapes.extend(self.bar(bar, top - ring.adb, sw));
+
+        shapes
+    }
+
+    /// The fallbacks a body's stroke and arch depths take.
+    fn body_stroke(
+        &self,
+        stroke: Option<f64>,
+        ada: Option<f64>,
+        adb: Option<f64>,
+    ) -> (f64, f64, f64) {
+        let sw = stroke.unwrap_or(self.df.mvs);
+        let ada = ada.unwrap_or_else(|| {
+            self.df
+                .arch_depth_a_of(self.metrics.small_arch_depth, Some(sw))
+        });
+        let adb = adb.unwrap_or_else(|| {
+            self.df
+                .arch_depth_b_of(self.metrics.small_arch_depth, Some(sw))
+        });
+
+        (sw, ada, adb)
+    }
+
+    // `CrossingBody`.
+
+    /// `CrossingBody`, which is `a.crossing`.
+    #[must_use]
+    pub fn crossing_body(&self, top: f64) -> Geometry {
         let metrics = self.metrics;
         let sw = self.df.mvs;
         let ada = self.df.arch_depth_a_of(metrics.small_arch_depth, Some(sw));
         let adb = self.df.arch_depth_b_of(metrics.small_arch_depth, Some(sw));
-        let fine = metrics.shoulder_fine * (sw / metrics.stroke);
+        let middle = mix(self.left_sb(), self.right_sb(), 0.42);
+        let fine = self.df.advice_stroke(3.25, 1.0);
+        let (k1, k2, k3, k4) = (0.25, 0.50, 0.35, 1.00);
+        let params = self.arch_params();
 
-        vec![
-            self.obar_right_shape(&OBarRing {
+        let mut items = vec![
+            self.kit.knot(
+                KnotType::G4,
+                self.right_sb() - metrics.ox * 1.75,
                 top,
-                bot: 0.0,
-                left: self.left_sb(),
-                right: self.right_sb(),
-                sw,
-                fine,
+                self.kit
+                    .widths_rhs_heading(Some(fine), downward(metrics.hv_contrast)),
+            ),
+            self.kit.bez_controls(k1, k2, k3, k4, 6, Vec::new()),
+            center_at(
+                self.kit,
+                &CenterAtArgs {
+                    x: middle,
+                    y: 0.0,
+                    sw,
+                    compact: false,
+                    o: metrics.o,
+                    sw_before: fine,
+                    sw_after: sw,
+                    lhs: false,
+                    rtl: true,
+                    at_bot: true,
+                },
+                &params,
+            ),
+            self.kit.archv(None, None),
+        ];
+        items.extend(flatside_lu(
+            self.kit,
+            &FlatSide {
+                x: self.left_sb(),
+                d: 0.0,
+                u: top,
                 ada,
                 adb,
-            }),
-            self.vbar_r(self.right_sb(), 0.0, top, sw),
-        ]
-    }
-
-    /// `DoubleStorey.Serifless`: the union's two operands.
-    #[must_use]
-    pub fn serifless(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
-        vec![
-            self.hook_and_bar(hook_style, 0.0, stroke, None),
-            self.arc(0, 0.0, stroke, None, None),
-        ]
-    }
-
-    /// `DoubleStorey.Serifed`: the serifless union plus the bottom-right serif.
-    #[must_use]
-    pub fn serifed(&self, hook_style: i32, stroke: Option<f64>) -> Vec<Dispiro> {
-        let mut operands = self.serifless(hook_style, stroke);
-        operands.push(self.bottom_right_serif());
-
-        operands
-    }
-
-    /// `SerifFrame.fromDf ... .rb.outer`, which is `HSerif.rb`.
-    ///
-    /// Only the bottom-right outer serif is ported: it is the one the serifed
-    /// double-storey variants use, and it needs the frame's `jut` and nothing
-    /// else from the serif frame.
-    #[must_use]
-    pub fn bottom_right_serif(&self) -> Dispiro {
-        let metrics = self.metrics;
-        let sw_ref = self.sw();
-        let sw_serif = self.df.mvs;
-        let left = self.left_sb();
-        let right = self.right_sb();
-
-        // `CSerifFrame`'s constructor, reduced to `jut` and `sideJut`.
-        let ink = self.hsw_to_v(sw_ref);
-        let co_ink = self.hsw_to_v(metrics.stroke - sw_ref);
-        let h_split = 2.0_f64.max(self.df.h_pack);
-        let jut = (metrics.jut - 0.5 * co_ink).min(lemmata_ptl::util::mix(
-            0.5 * ink,
-            metrics.jut,
-            (self.df.adws() * 2.25 / h_split).min(1.0),
+                ox: metrics.ox * 2.0,
+                af: self.kit.widths_rhs(Some(sw)),
+            },
         ));
-        let side_jut = jut - 0.5 * ink;
-        let _ = (left, right, h_split);
-
-        // `HSerif.rb right bot sideJut swSerif`.
-        let x = right;
-        let y = 0.0;
-        let sw = sw_serif;
-        let items = vec![
-            Item::Af(self.kit.widths_lhs(Some(sw))),
+        items.push(self.kit.arcvh(None, None));
+        items.push(center_at(
+            self.kit,
+            &CenterAtArgs {
+                x: middle,
+                y: top,
+                sw,
+                compact: false,
+                o: metrics.o,
+                sw_before: sw,
+                sw_after: fine,
+                lhs: false,
+                rtl: false,
+                at_bot: false,
+            },
+            &params,
+        ));
+        items.push(
+            self.kit
+                .bez_controls(1.0 - k3, 1.0 - k4, 1.0 - k1, 1.0 - k2, 6, Vec::new()),
+        );
+        items.push(
             self.kit.knot(
-                KnotType::Left,
-                x - self.hsw_to_v(0.5 * sw),
-                y,
-                self.kit.heading(rightward()),
+                KnotType::G4,
+                self.right_sb() - metrics.ox * 2.0,
+                0.0,
+                self.kit
+                    .widths_rhs_heading(Some(fine), downward(metrics.hv_contrast)),
             ),
-            self.kit.knot(
-                KnotType::Right,
-                x + side_jut + sw * metrics.serif_shift_x,
-                y,
-                Vec::new(),
-            ),
-        ];
+        );
 
-        self.kit.dispiro(items)
+        self.kit.dispiro(items).geometry(kurbo::Affine::IDENTITY)
     }
+}
+
+/// `FlipAround` about the ring's centre, as a node the tree carries.
+fn flip(shape: &Dispiro, ring: &OBarRing) -> Geometry {
+    let mid_x = mix(ring.left, ring.right, 0.5);
+    let mid_y = mix(ring.bot, ring.top, 0.5);
+    let tf = kurbo::Affine::translate((mid_x, mid_y))
+        * kurbo::Affine::scale_non_uniform(-1.0, -1.0)
+        * kurbo::Affine::translate((-mid_x, -mid_y));
+
+    Geometry::Transformed {
+        tf,
+        geom: Box::new(shape.geometry(kurbo::Affine::IDENTITY)),
+    }
+}
+
+/// `ArcStartSerifWidth`: `clamp(stroke * 0.875, stroke, VJutStroke)`.
+fn arc_start_serif_width(stroke: f64, v_jut_stroke: f64) -> f64 {
+    (stroke * 0.875).max(stroke).min(v_jut_stroke)
 }

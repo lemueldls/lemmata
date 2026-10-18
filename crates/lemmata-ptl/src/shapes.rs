@@ -214,6 +214,33 @@ pub fn flatside_ru(kit: &Kit, side: &FlatSide) -> Vec<Item> {
     }
 }
 
+/// `flatside.lu`: the left side of a flat-sided ring, drawn upwards.
+#[must_use]
+pub fn flatside_lu(kit: &Kit, side: &FlatSide) -> Vec<Item> {
+    let FlatSide {
+        x,
+        d,
+        u,
+        ada,
+        adb,
+        ox,
+        af,
+    } = side;
+    if u - d > ada + adb {
+        vec![
+            kit.knot(KnotType::Left, x + ox, d + adb, af.clone()),
+            kit.knot(KnotType::Right, x + ox, u - ada, af.clone()),
+        ]
+    } else {
+        vec![kit.knot(
+            KnotType::G4,
+            x + ox,
+            ysmooth_mid_l(*u, *d, Some(*ada), Some(*adb), *ada, *adb),
+            af.clone(),
+        )]
+    }
+}
+
 /// The knot an item carries, which an interpolator next to it resolves against.
 #[must_use]
 pub fn knot_of(item: &Item) -> UserControlKnot {
@@ -346,6 +373,10 @@ pub struct ArchArgs {
     pub o: f64,
     pub angle_pre: Option<f64>,
     pub angle_post: Option<f64>,
+    /// `blendPre`. `None` follows `angle_pre`: an arc when no angle is given.
+    pub blend_pre: Option<bool>,
+    /// `blendPost`. `None` follows `angle_post`.
+    pub blend_post: Option<bool>,
     pub sw_before: Option<f64>,
     pub sw_after: Option<f64>,
     pub lhs: bool,
@@ -402,16 +433,69 @@ pub fn arch(
 
     let mut items = Vec::new();
     // `blendPre` defaults to an arc when no pre angle is given, and `blendPost`
-    // to one when no post angle is given.
-    if args.angle_pre.is_none() {
+    // to one when no post angle is given. A caller can suppress either.
+    if args.blend_pre.unwrap_or_else(|| args.angle_pre.is_none()) {
         items.push(kit.arcvh(None, None));
     }
     items.push(knot);
-    if args.angle_post.is_none() {
+    if args.blend_post.unwrap_or_else(|| args.angle_post.is_none()) {
         items.push(kit.archv(None, None));
     }
 
     items
+}
+
+/// What `Arch.lhs.centerAt` / `Arch.rhs.centerAt` takes.
+///
+/// The booleans are the four switches upstream's `args` object carries.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Clone, Copy, Debug)]
+pub struct CenterAtArgs {
+    pub x: f64,
+    pub y: f64,
+    pub sw: f64,
+    pub compact: bool,
+    pub o: f64,
+    pub sw_before: f64,
+    pub sw_after: f64,
+    pub lhs: bool,
+    pub rtl: bool,
+    pub at_bot: bool,
+}
+
+/// `Arch.lhs.centerAt` / `Arch.rhs.centerAt`.
+///
+/// Where [`arch`] resolves its knot against the neighbours it sits between,
+/// `centerAt` takes the position and the direction as given and emits one
+/// directed pair. No blend sits either side of it.
+#[must_use]
+pub fn center_at(kit: &Kit, args: &CenterAtArgs, params: &ArchParams) -> Item {
+    let do_adj = !args.compact;
+    let skew = (params.hv_contrast * 0.5 * (args.sw_after - args.sw_before)) / args.sw;
+    let heading = Vec2::new(
+        boole_pn(args.rtl) * (boole_pn(args.lhs) * skew + boole(do_adj) * params.tan_slope),
+        boole_pn(args.lhs) * boole_pn(args.at_bot),
+    );
+    let italic_adj = boole(do_adj) * boole_pn(args.at_bot) * params.correction_o_mid_x * args.sw;
+    let overshoot = boole_pn(args.at_bot) * args.o;
+    let af = if args.lhs {
+        kit.widths_lhs_heading(Some(args.sw), heading)
+    } else {
+        kit.widths_rhs_heading(Some(args.sw), heading)
+    };
+
+    kit.pair(
+        Family::G2,
+        if args.rtl {
+            Direction::Left
+        } else {
+            Direction::Right
+        },
+        Position::Mid,
+        args.x + italic_adj,
+        args.y + overshoot,
+        af,
+    )
 }
 
 /// The metrics the hook helpers read.

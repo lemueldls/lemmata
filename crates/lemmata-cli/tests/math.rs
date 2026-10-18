@@ -292,6 +292,23 @@ fn stretchy_glyphs_are_covered() {
         high - low
     };
 
+    let width = |id: GlyphId| -> i32 {
+        let glyph = loca
+            .get_glyf(id, &glyf)
+            .expect("read a glyph")
+            .unwrap_or_else(|| panic!("glyph {id} has no outline"));
+        let ReadGlyph::Simple(simple) = glyph else {
+            panic!("a stretchy glyph is a simple glyph");
+        };
+        let mut low = i32::MAX;
+        let mut high = i32::MIN;
+        for point in simple.points() {
+            low = low.min(i32::from(point.x));
+            high = high.max(i32::from(point.x));
+        }
+        high - low
+    };
+
     let mut derived = 0usize;
     for (index, glyph) in captured.iter().enumerate() {
         if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
@@ -318,6 +335,29 @@ fn stretchy_glyphs_are_covered() {
                 "{}'s derived size is {grown} tall against a base of {base}",
                 glyph.name
             );
+            // A large operator is set bigger, so its display form is wider as
+            // well as taller. A delimiter only stretches, and the stroke keeps
+            // the width it was drawn at.
+            let large = glyph
+                .unicodes
+                .iter()
+                .any(|code| lemmata_build::variants::LARGE_OPERATORS.contains(code));
+            let narrow = width(id);
+            let wide = width(GlyphId::new(u32::from(variant)));
+            if large {
+                assert!(
+                    wide > narrow,
+                    "{}'s derived size is {wide} wide against a base of {narrow}, and a \
+                     large operator should grow in both axes",
+                    glyph.name
+                );
+            } else {
+                assert_eq!(
+                    wide, narrow,
+                    "{}'s derived size changed width, and a delimiter should stretch only",
+                    glyph.name
+                );
+            }
             derived += 1;
         }
     }
