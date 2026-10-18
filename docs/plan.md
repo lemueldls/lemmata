@@ -22,6 +22,19 @@ The tree is data, and the data is upstream's. `params/parameters.toml`, `shape-w
 
 Verified against the pinned build rather than against fixtures: the reference shape, sans serifs at normal spacing and weight 400, produces **all 91 parameters the build derived**, none missing and none wrong.
 
+`param::metric_override` is the rest of the layer: a plan may override any of twenty-seven metrics by name, with a number or with an expression over the defaults, the shape and a `blend` function. It carries a small recursive-descent evaluator, and its number literal accumulates in `f64` rather than parsing an integer, because the order changes the last bit. A field that cannot be overridden is skipped and reported, which is what upstream does.
+
+`Para::from_named` turns the layer's keys into the structure the metrics code reads, and the capture reads through the same mapping rather than a second copy of it.
+
+Both oracles are upstream's own, and both pass over the whole set:
+
+| check | result |
+| --- | --- |
+| the parameter set, against the build's 91 parameters | 0 missing, 0 wrong |
+| the metrics, from the plan's shape rather than from the capture | 105 fields, worst deviation 1.4e-14 |
+
+The second is the whole chain: a shape, the parameter walk, `Para`, `Metrics::calculate`. It agrees with the pinned build to the last bits that `tan` and `tanh` differ between V8 and Rust, which is the same residual the capture-based check has.
+
 What is not ported, and where it belongs:
 
 | piece | why not, and where it goes |
@@ -29,10 +42,7 @@ What is not ported, and where it belongs:
 | `variant.mjs` (571) with `variants.toml` (13,540) | names and orders glyph variants rather than measuring them. Layout work. |
 | `ligation.mjs` (65) with `ligation-set.toml` (737) | ligature sets. Layout work. |
 | `subset-filter.mjs` (52) | build-time subsetting, not parameters. |
-| `metric-override.mjs` (244) | the plan's explicit per-metric overrides. Belongs here and is the next piece. |
 
 ## What is left before the shapes move
 
-Three things, in order. `Para` from the parameter map, which is a name mapping over the keys the layer produces. Then `Metrics::calculate` over it, checked against the 105 metrics the build derived, which is the next oracle up. Then a glyph source that reads those numbers, which is the strategy question in `docs/glyph-strategy.md`.
-
-The plan reaches the font today, verifiably. It does not reach the outlines, and the parameter layer is what stands between them.
+One thing: a glyph source that reads the numbers. A plan now reaches the parameter set and the metrics, verifiably; what it does not reach is the outlines, because those still come from the recorded capture. That is the strategy question in `docs/glyph-strategy.md`.

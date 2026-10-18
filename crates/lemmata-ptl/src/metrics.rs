@@ -278,6 +278,98 @@ impl WeightControl {
     }
 }
 
+impl Para {
+    /// Builds a `Para` from the named parameters, in Iosevka's names.
+    ///
+    /// The names are the ones the parameter layer produces and the capture
+    /// records, so the same mapping reads either. A key the caller cannot supply
+    /// is an error rather than a zero: a missing `stroke` would divide by zero
+    /// before anyone noticed.
+    ///
+    /// # Errors
+    ///
+    /// Returns the name of the first missing key.
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn from_named(
+        get: impl Fn(&str) -> Option<f64>,
+        flag: impl Fn(&str) -> Option<bool>,
+    ) -> Result<Self, String> {
+        Ok(Para {
+            width: require(&get, "width")?,
+            sb: require(&get, "sb")?,
+            cap: require(&get, "cap")?,
+            x_height: require(&get, "xHeight")?,
+            ascender: require(&get, "ascender")?,
+            descender: get("descender"),
+            symbol_mid: require(&get, "symbolMid")?,
+            paren_size: require(&get, "parenSize")?,
+            oper_size: require(&get, "operSize")?,
+            tack_size: require(&get, "tackSize")?,
+            plus_size: require(&get, "plusSize")?,
+            pict_size: require(&get, "pictSize")?,
+            bgop_size: require(&get, "bgopSize")?,
+            bgtk_size: require(&get, "bgtkSize")?,
+            contrast: get("contrast"),
+            slope_angle: require(&get, "slopeAngle")?,
+            is_quasi_proportional: flag("isQuasiProportional").unwrap_or(false),
+            spacing: get("spacing").map_or(0, |value| value as i32),
+            overshoot: require(&get, "overshoot")?,
+            overshootx: require(&get, "overshootx")?,
+            oxhook: require(&get, "oxhook")?,
+            hook: require(&get, "hook")?,
+            ahook: require(&get, "ahook")?,
+            shook: require(&get, "shook")?,
+            rhook: require(&get, "rhook")?,
+            jhook: require(&get, "jhook")?,
+            hookx: require(&get, "hookx")?,
+            tail_x: require(&get, "tailX")?,
+            tail_y: require(&get, "tailY")?,
+            diag_tail_angle: require(&get, "diagTailAngle")?,
+            diag_tail_depth: require(&get, "diagTailDepth")?,
+            arch_depth: require(&get, "archDepth")?,
+            small_arch_depth: require(&get, "smallArchDepth")?,
+            stroke: require(&get, "stroke")?,
+            dot_size: get("dotSize"),
+            period_size: get("periodSize"),
+            jut: require(&get, "jut")?,
+            long_jut: require(&get, "longjut")?,
+            vjut: require(&get, "vjut")?,
+            long_vjut: get("longvjut"),
+            accent_stack_offset: require(&get, "accentStackOffset")?,
+            accent_width: require(&get, "accentWidth")?,
+            accent_clearance: require(&get, "accentClearance")?,
+            accent_height: require(&get, "accentHeight")?,
+            cthin: get("cthin"),
+            cthinb: get("cthinb"),
+            slab: require(&get, "slab")?,
+            jbalance: get("jbalance"),
+            jbalance2: get("jbalance2"),
+            tbalance: get("tbalance"),
+            tbalance2: get("tbalance2"),
+            rbalance: get("rbalance"),
+            rbalance2: get("rbalance2"),
+            fbalance: get("fbalance"),
+            onebalance: get("onebalance"),
+            ess_ratio: get("essRatio"),
+            ess_ratio_upper: get("essRatioUpper"),
+            ess_ratio_lower: get("essRatioLower"),
+            ess_ratio_question: get("essRatioQuestion"),
+            shoulder_fine_min: require(&get, "shoulderFineMin")?,
+            ref_stroke: require(&get, "refStroke")?,
+            canonical_stroke_width_min: require(&get, "canonicalStrokeWidthMin")?,
+            canonical_stroke_width_max: require(&get, "canonicalStrokeWidthMax")?,
+            leading: require(&get, "leading")?,
+            descender_pad: get("descenderPad"),
+            win_metric_ascender_pad: get("winMetricAscenderPad"),
+            win_metric_descender_pad: get("winMetricDescenderPad"),
+        })
+    }
+}
+
+fn require(get: &impl Fn(&str) -> Option<f64>, key: &str) -> Result<f64, String> {
+    get(key).ok_or_else(|| format!("the parameter {key} is missing"))
+}
+
 impl Metrics {
     /// `calculateMetrics`.
     #[must_use]

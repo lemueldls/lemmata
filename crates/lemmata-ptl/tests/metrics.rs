@@ -8,7 +8,9 @@
 
 use std::fs;
 
-use lemmata_ptl::metrics::Metrics;
+use lemmata_ptl::metrics::{Metrics, Para};
+use lemmata_ptl::param::toml::Value as ParamValue;
+use lemmata_ptl::param::{Shape, init, load_data};
 use serde_json::Value;
 
 use lemmata_capture::dump_path;
@@ -159,6 +161,70 @@ fn metrics_match_upstream() {
     }
     eprintln!(
         "metrics: {compared} fields compared, worst deviation {:.3e} on {}",
+        worst.0, worst.1
+    );
+    assert!(
+        mismatches.is_empty(),
+        "{} of {compared} metrics differ:\n  {}",
+        mismatches.len(),
+        mismatches.join("\n  ")
+    );
+}
+
+const PARAMETERS: &str = include_str!("../../../vendor/Iosevka/params/parameters.toml");
+const WEIGHTS: &str = include_str!("../../../vendor/Iosevka/params/shape-weight.toml");
+const WIDTHS: &str = include_str!("../../../vendor/Iosevka/params/shape-width.toml");
+const SLOPES: &str = include_str!("../../../vendor/Iosevka/params/shape-slope.toml");
+
+/// The whole chain: the parameter layer derives a set from the plan's shape,
+/// the set becomes a `Para`, and the metrics follow. This is the check that the
+/// plan reaches the numbers a glyph definition would read.
+#[test]
+fn param_derives_the_same_metrics() {
+    let path = dump_path();
+    let name = format!("{}.metrics.json", path.display());
+    let Ok(text) = fs::read_to_string(&name) else {
+        eprintln!("skipping: no metrics at {name}");
+        return;
+    };
+    let value: Value = serde_json::from_str(&text).expect("parse metrics");
+    let expected = &value["metrics"];
+
+    let data = load_data(PARAMETERS, WEIGHTS, WIDTHS, SLOPES).expect("load the parameter data");
+    let shape = Shape {
+        serifs: Some("sans".to_string()),
+        spacing: Some("normal".to_string()),
+        weight: 400.0,
+        width: 500.0,
+        slope_angle: 0.0,
+        slope: "Upright".to_string(),
+    };
+    let hive = init(&data, &shape);
+    let para = Para::from_named(
+        |key| hive.get(key).and_then(ParamValue::as_f64),
+        |key| hive.get(key).and_then(ParamValue::as_bool),
+    )
+    .expect("the parameter set is complete");
+    let ours = Metrics::calculate(&para);
+
+    let mut worst = (0.0_f64, String::new());
+    let mut mismatches = Vec::new();
+    let mut compared = 0;
+    for (name, actual) in fields(&ours) {
+        let Some(theirs) = expected.get(name).and_then(Value::as_f64) else {
+            continue;
+        };
+        compared += 1;
+        let deviation = (actual - theirs).abs();
+        if deviation > worst.0 {
+            worst = (deviation, name.to_string());
+        }
+        if deviation > TOLERANCE {
+            mismatches.push(format!("{name}: ours {actual}, theirs {theirs}"));
+        }
+    }
+    eprintln!(
+        "param metrics: {compared} fields compared, worst deviation {:.3e} on {}",
         worst.0, worst.1
     );
     assert!(

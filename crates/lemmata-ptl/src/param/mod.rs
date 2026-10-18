@@ -16,6 +16,7 @@
 //! Those belong to the layout work.
 
 pub mod interpolate;
+pub mod metric_override;
 pub mod toml;
 
 use std::collections::BTreeMap;

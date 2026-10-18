@@ -3,7 +3,7 @@
 
 use std::collections::BTreeMap;
 
-use lemmata_ptl::param::{Shape, init, load_data, toml::Value};
+use lemmata_ptl::param::{Shape, init, load_data, metric_override, toml::Value};
 
 const PARAMETERS: &str = include_str!("../../../vendor/Iosevka/params/parameters.toml");
 const WEIGHTS: &str = include_str!("../../../vendor/Iosevka/params/shape-weight.toml");
@@ -92,4 +92,62 @@ fn matches_the_parameters_the_build_derived() {
         wrong.is_empty() && missing.is_empty(),
         "see the report above"
     );
+}
+
+#[test]
+fn metric_overrides_read_expressions() {
+    let data = data();
+    let shape = reference_shape();
+    let mut overrides = BTreeMap::new();
+    overrides.insert(
+        "cap".to_string(),
+        Value::Str("700 + weight / 4".to_string()),
+    );
+    overrides.insert("xHeight".to_string(), Value::Int(545));
+    overrides.insert(
+        "symbolMid".to_string(),
+        Value::Str("blend(weight, [400, 340], [700, 360])".to_string()),
+    );
+    overrides.insert("notAField".to_string(), Value::Float(1.0));
+
+    let mut hive = init(&data, &shape);
+    let skipped = metric_override::apply(&mut hive, &overrides, &shape).expect("apply");
+
+    // 700 + 400 / 4
+    assert_eq!(hive["cap"].as_f64(), Some(800.0));
+    // A number is taken as it stands.
+    assert_eq!(hive["xHeight"].as_f64(), Some(545.0));
+    // A control point of the blend, so the interpolant is not involved.
+    assert_eq!(hive["symbolMid"].as_f64(), Some(340.0));
+    // Upstream reports the field and carries on rather than failing the build.
+    assert_eq!(skipped, vec!["notAField".to_string()]);
+}
+
+#[test]
+fn metric_overrides_report_bad_expressions() {
+    let data = data();
+    let shape = reference_shape();
+    let mut overrides = BTreeMap::new();
+    overrides.insert("cap".to_string(), Value::Str("700 +".to_string()));
+    let mut hive = init(&data, &shape);
+    assert!(metric_override::apply(&mut hive, &overrides, &shape).is_err());
+
+    let mut overrides = BTreeMap::new();
+    overrides.insert("cap".to_string(), Value::Str("nope(1)".to_string()));
+    assert!(metric_override::apply(&mut hive, &overrides, &shape).is_err());
+}
+
+#[test]
+fn metric_overrides_read_the_defaults() {
+    let data = data();
+    let shape = reference_shape();
+    let mut overrides = BTreeMap::new();
+    overrides.insert(
+        "ascender".to_string(),
+        Value::Str("default_cap + 230".to_string()),
+    );
+    let mut hive = init(&data, &shape);
+    metric_override::apply(&mut hive, &overrides, &shape).expect("apply");
+    // cap is 735 in `parameters.toml`.
+    assert_eq!(hive["ascender"].as_f64(), Some(965.0));
 }
