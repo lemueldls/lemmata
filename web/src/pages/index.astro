@@ -466,7 +466,14 @@ const variants = [
       $("#rule-asc").textContent = metrics.ascender;
       $("#rule-x").textContent = metrics.xHeight;
       $("#rules").hidden = false;
-      stage.style.setProperty("--cell", `${(metrics.advance / 1000) * points}px`);
+
+      // A cell is one advance plus the tracking the wordmark is set with, which
+      // is negative here. Leaving the tracking out is what put the grid out of
+      // step with the letters, by a little per cell and a lot by the last one.
+      const tracking =
+        Number.parseFloat(getComputedStyle($(".wordmark")).letterSpacing) || 0;
+      const cell = (metrics.advance / 1000) * points + tracking;
+      stage.style.setProperty("--cell", `${cell}px`);
     };
 
     // The sheet is the font's own character map, in code point order, drawn in

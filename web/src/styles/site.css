@@ -174,7 +174,7 @@ code {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
 }
 
 /* Small parts ---------------------------------------------------------- */
@@ -187,6 +187,20 @@ code {
   border: 1px solid var(--rule-2);
   color: var(--dim);
   font-size: var(--step--2);
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* A tag is text, not a control: the border belongs to the things that do
+   something when you click them. The padding is the chip's border plus its
+   padding, so a tag and a button in the same row are the same height. */
+.tag {
+  padding: 4px 0;
+  color: var(--faint);
+  font-size: var(--step--2);
+  line-height: 1.5;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -809,6 +823,9 @@ a:focus-visible {
   place-items: center;
   background: var(--bg);
   transition: opacity 320ms ease;
+  /* One tick is one cell of the meter, and the fill steps cell by cell, so the
+     ruler and the bar are on the same scale by construction. */
+  --tick: 20px;
 }
 
 .boot[data-done] {
@@ -819,16 +836,14 @@ a:focus-visible {
 .boot__meter {
   display: grid;
   gap: 10px;
-  width: min(320px, 68vw);
+  width: min(calc(var(--tick) * 16), 68vw);
 }
 
 .boot__ticks {
   height: 8px;
-  background-image: repeating-linear-gradient(
-    90deg,
-    var(--rule-2) 0 1px,
-    transparent 1px 26px
-  );
+  background-image: linear-gradient(90deg, var(--rule-2) 0 1px, transparent 1px);
+  background-size: calc(100% / 16) 100%;
+  border-right: 1px solid var(--rule-2);
 }
 
 .boot__track {
@@ -839,29 +854,28 @@ a:focus-visible {
 
 .boot__track i {
   display: block;
-  width: 42%;
+  width: 100%;
   height: 100%;
   background: var(--accent);
-  animation: boot-sweep 1.15s ease-in-out infinite;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: boot-fill 1.3s steps(16, end) forwards;
 }
 
 .boot[data-done] .boot__track i {
-  width: 100%;
+  transform: scaleX(1);
   animation: none;
 }
 
-@keyframes boot-sweep {
-  from {
-    transform: translateX(-105%);
-  }
+@keyframes boot-fill {
   to {
-    transform: translateX(340%);
+    transform: scaleX(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .boot__track i {
-    width: 100%;
+    transform: scaleX(1);
     animation: none;
   }
 }
