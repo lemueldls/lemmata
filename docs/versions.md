@@ -11,8 +11,6 @@ Pinned 17 October 2026. Update only together with a drift report.
 | figue | 5.0.0-rc.6 | CLI arguments and config files |
 | picante | 3.0.0-rc.5 | incremental queries |
 | rediff | 0.50.0-rc.7 | structural test diffs |
-| vox | 0.10.0-rc.7 | RPC for the web front end |
-| vox-schema | 0.10.0-rc.7 | schema for the RPC boundary |
 
 ## Font stack
 
