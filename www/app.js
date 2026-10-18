@@ -2,9 +2,10 @@
 // in `lemmata_web`, so this only fetches the input, hands it over, and offers
 // the result as a download.
 
-import init, { build_font, output_name } from "./pkg/lemmata_web.js";
+import init, { build_font, default_plan, output_name } from "./pkg/lemmata_web.js";
 
 const status = document.querySelector("#status");
+const planField = document.querySelector("#plan");
 const build = document.querySelector("#build");
 const download = document.querySelector("#download");
 
@@ -26,6 +27,7 @@ try {
   await init();
   state.name = output_name();
   state.ready = true;
+  if (!planField.value) planField.value = default_plan();
   say("Ready.");
 } catch (error) {
   report(error);
@@ -42,9 +44,10 @@ build.addEventListener("click", async () => {
 
     say("Building...");
     const started = performance.now();
-    const bytes = build_font(capture);
+    const bytes = build_font(capture, planField.value);
     const elapsed = performance.now() - started;
 
+    state.plan = planField.value;
     state.byteLength = bytes.length;
     state.error = null;
 

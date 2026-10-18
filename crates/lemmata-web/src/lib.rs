@@ -9,7 +9,7 @@
 //! generate outlines on their own this takes a plan instead, and the call shape
 //! is the part that survives: bytes in, font bytes out.
 
-use lemmata_build::font::{GlyphData, Metrics, Names};
+use lemmata_build::font::{GlyphData, Names};
 use wasm_bindgen::prelude::*;
 
 /// Rounds a captured advance to the units the font table stores.
@@ -18,13 +18,17 @@ fn advance_to_u16(advance: f64) -> u16 {
     advance.round().clamp(0.0, f64::from(u16::MAX)) as u16
 }
 
-/// Builds a font from a capture.
+/// Builds a font from a capture and a plan.
+///
+/// The plan is a JSON object; any key it omits takes its default, so the page
+/// can send only what a control changed. Outlines still come from the capture.
 ///
 /// # Errors
 ///
-/// Returns a message when the capture does not decode or the font does not
-/// assemble.
-pub fn build(capture: &[u8]) -> Result<Vec<u8>, String> {
+/// Returns a message when the capture does not decode, the plan does not parse,
+/// or the font does not assemble.
+pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
+    let metrics = lemmata_plan::from_json(plan)?.to_font_metrics();
     let captured = lemmata_capture::load(capture)?;
     let glyphs: Vec<GlyphData> = captured
         .iter()
@@ -36,7 +40,7 @@ pub fn build(capture: &[u8]) -> Result<Vec<u8>, String> {
         })
         .collect();
 
-    lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default())
+    lemmata_build::font::build(&glyphs, &metrics, &Names::default())
 }
 
 /// The same build, for the page.
@@ -45,8 +49,24 @@ pub fn build(capture: &[u8]) -> Result<Vec<u8>, String> {
 ///
 /// Returns the message from [`build`] as a JavaScript string.
 #[wasm_bindgen]
-pub fn build_font(capture: &[u8]) -> Result<Vec<u8>, JsValue> {
-    build(capture).map_err(|message| JsValue::from_str(&message))
+pub fn build_font(capture: &[u8], plan: &str) -> Result<Vec<u8>, JsValue> {
+    build(capture, plan).map_err(|message| JsValue::from_str(&message))
+}
+
+/// The plan every key defaults to, so the page can show one.
+#[must_use]
+#[wasm_bindgen]
+pub fn default_plan() -> String {
+    let plan = lemmata_plan::Plan::default();
+    format!(
+        "{{\n  \"capHeight\": {},\n  \"xHeight\": {},\n  \"ascender\": {},\n  \"descender\": {},\n  \"italicAngle\": {},\n  \"weight\": {}\n}}",
+        plan.cap_height,
+        plan.x_height,
+        plan.ascender,
+        plan.descender,
+        plan.italic_angle,
+        plan.weight_class
+    )
 }
 
 /// The name the page offers the download under.

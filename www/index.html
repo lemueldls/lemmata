@@ -24,6 +24,17 @@
         cursor: pointer;
       }
       button[disabled] { opacity: 0.5; cursor: progress; }
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        font: 13px/1.5 ui-monospace, monospace;
+        padding: 0.75rem 1rem;
+        border-radius: 0.4rem;
+        border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+        background: transparent;
+        color: inherit;
+        resize: vertical;
+      }
       pre {
         background: color-mix(in oklab, currentColor 8%, transparent);
         padding: 0.75rem 1rem;
@@ -44,6 +55,12 @@
       <button id="build">Build a font</button>
       <a id="download" hidden download>Download</a>
     </div>
+    <p>
+      The plan. Every key defaults, so this is the font's metrics as they stand
+      today; change one and the tables follow. Outlines still come from the
+      recorded glyph set, so they do not change yet.
+    </p>
+    <textarea id="plan" spellcheck="false" rows="8"></textarea>
     <pre id="status">Ready.</pre>
     <script type="module" src="./app.js"></script>
   </body>

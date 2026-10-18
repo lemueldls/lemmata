@@ -28,7 +28,7 @@ fn builds_a_font_from_the_capture() {
         return;
     };
 
-    let bytes = lemmata_web::build(&capture).expect("build");
+    let bytes = lemmata_web::build(&capture, "").expect("build");
 
     // The font has to be readable by something other than the writer, so it
     // is reopened the way a renderer would open it.
@@ -44,8 +44,12 @@ fn builds_a_font_from_the_capture() {
 
     // Two runs of the same input have to agree, since the page has no other
     // way to tell a good build from a corrupted one.
-    let again = lemmata_web::build(&capture).expect("build again");
+    let again = lemmata_web::build(&capture, "").expect("build again");
     assert_eq!(bytes, again, "the build is not deterministic");
+
+    // A plan reaches the font, so the page's controls are not decoration.
+    let taller = lemmata_web::build(&capture, r#"{"capHeight": 800}"#).expect("build with a plan");
+    assert_ne!(bytes, taller, "the plan did not reach the font");
 
     eprintln!("web build: {} bytes", bytes.len());
 }
