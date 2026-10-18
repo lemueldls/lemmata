@@ -915,6 +915,57 @@ a:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* Texture healing ------------------------------------------------------ */
+
+/* Two lines of the same text: one as the font sets it, and one with the narrow
+   letters' sidebearings given to their wide neighbours. The grid behind them is
+   one cell per advance, which is what shows that the ink moved and the cell did
+   not. */
+.heal-lines {
+  display: grid;
+  gap: 20px;
+  padding: 16px;
+}
+
+.heal-line {
+  display: grid;
+  gap: 8px;
+}
+
+.heal-label {
+  color: var(--faint);
+  font-size: var(--step--2);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.heal-text {
+  --shift: 0.14em;
+  margin: 0;
+  font-family: var(--built);
+  font-size: clamp(18px, 2.4vw, 26px);
+  line-height: 1.9;
+  white-space: pre;
+  /* One cell per advance, set from the font's tables once it is here. */
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--rule) 0 1px,
+    transparent 1px var(--cell, 12px)
+  );
+}
+
+/* The margin that moves the glyph and its opposite, which gives the advance
+   back. A positive left margin moves the ink right and the next box left. */
+.heal[data-side="right"] {
+  margin-left: var(--shift);
+  margin-right: calc(-1 * var(--shift));
+}
+
+.heal[data-side="left"] {
+  margin-left: calc(-1 * var(--shift));
+  margin-right: var(--shift);
+}
+
 /* The proof closes the way a proof closes. */
 .qed {
   justify-self: end;

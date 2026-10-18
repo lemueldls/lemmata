@@ -10,6 +10,10 @@
 //
 //   Stub: spec.optical-sizes  the plan has no optical size key behind this row
 //   Stub: spec.script-style   needs the script letters, and an ssty feature
+//   Stub: texture.healing     the narrow letters have no shifted spelling and
+//                             the writer emits no `calt`, so the page moves the
+//                             ink with margins. What must not move, the
+//                             advance, does not.
 //   Stub: variant.picker      the capture carries one spelling per glyph, so
 //                             the picker sets the selection and reports it;
 //                             wire it to the worker once a plan can name the
@@ -48,13 +52,15 @@ a silk purse from a sow's ear, and no small beer`,
 i. ii. iii. iv. v. 1st 2nd 3rd 4th`,
 };
 
-// Stub: spec.optical-sizes, spec.script-style. The last two rows describe work
-// the page does not do yet, and are on the page the way the finished typeface
-// will describe itself.
+// Stub: spec.optical-sizes, spec.script-style. Those rows describe work the page
+// does not do yet, and are on the page the way the finished typeface will
+// describe itself. Texture healing above them is demonstrated in the page rather
+// than carried by the font, which `texture.healing` further down records.
 const spec = [
   { name: "Metrics", note: "Every key in the plan reaches the font's tables." },
   { name: "Parameters", note: "The parameter tables, read as upstream writes them." },
   { name: "Variants", note: "Every letter in as many spellings as you care to compare." },
+  { name: "Texture healing", note: "A narrow letter gives its sidebearings to a wide neighbour, and the cell stays where it was." },
   { name: "Math", note: "The constants, the italic corrections, and the delimiters that grow to fit." },
   { name: "Optical sizes", note: "A cut for footnotes and a cut for display, from one plan." },
   { name: "Script style", note: "Letters drawn for the size of the body they sit in." },
@@ -152,6 +158,31 @@ const variants = [
           <div class="panel__foot">
             <p class="status" id="sample-status" data-state="note">Waiting for the build…</p>
             <button class="btn" id="present" type="button">Present</button>
+          </div>
+        </div>
+
+        <div class="subhead">
+          <h3>Texture healing</h3>
+          <p class="note" id="heal-measure">Reading the font…</p>
+        </div>
+        <div class="panel">
+          <div class="panel__body heal-lines" id="heal-lines">
+            <div class="heal-line">
+              <span class="heal-label">plain</span>
+              <p class="heal-text" id="heal-plain"></p>
+            </div>
+            <div class="heal-line">
+              <span class="heal-label">healed</span>
+              <p class="heal-text" id="heal-healed"></p>
+            </div>
+          </div>
+          <div class="panel__foot">
+            <p class="note">
+              A monospace cell is one width for every letter, so a narrow one
+              leaves a gap beside a wide one. Healing moves the narrow letter's
+              sidebearings to its wider neighbour and leaves the cell where it
+              was, which is what the grid under both lines is for.
+            </p>
           </div>
         </div>
 
@@ -407,6 +438,35 @@ const variants = [
       });
     }
 
+    // Texture healing, demonstrated with margins.
+    //
+    // Stub: texture.healing. A font that carries this has a second spelling of
+    // each narrow letter, shifted in its sidebearings, and a `calt` feature that
+    // swaps it in beside a wide neighbour. Neither is here: the spellings would
+    // have to come out of the glyph source and the feature needs a GSUB the
+    // writer does not produce. Margins are enough to show the effect, and the
+    // one thing that must not move does not: the advance, so the cell stays.
+    const HEAL_SAMPLE = "millim minimum willow filial";
+    const narrow = new Set("iltfjr");
+    const wide = new Set("mw");
+    const heal = (text) =>
+      [...text]
+        .map((character, index) => {
+          const before = wide.has(text[index - 1] ?? "");
+          const after = wide.has(text[index + 1] ?? "");
+          if (!narrow.has(character) || (!before && !after)) {
+            return escape(character);
+          }
+
+          return `<span class="heal" data-side="${after ? "right" : "left"}">${escape(character)}</span>`;
+        })
+        .join("");
+
+    const plainLine = $("#heal-plain");
+    const healedLine = $("#heal-healed");
+    plainLine.textContent = HEAL_SAMPLE;
+    healedLine.innerHTML = heal(HEAL_SAMPLE);
+
     // The wordmark is set to the width of the measure, in the font it ships, so
     // the grid behind it is the grid the letters sit on. The rules label their
     // own lines at the right end of the measure, so the column they need is
@@ -574,6 +634,17 @@ const variants = [
       sheet(map);
       $("#glyph-count").textContent =
         `${map.size} characters · ${drawn} glyphs drawn`;
+
+      // The healing block is on the same grid as the hero, at the size that
+      // block is set in, and the count is the number of characters: one cell
+      // each, before and after the ink moves.
+      const healSize = Number.parseFloat(
+        getComputedStyle($(".heal-text")).fontSize,
+      );
+      const cell = (metrics.advance / 1000) * healSize;
+      $("#heal-lines").style.setProperty("--cell", `${cell}px`);
+      $("#heal-measure").textContent =
+        `${HEAL_SAMPLE.length} cells of ${Math.round(cell)} px, either line`;
 
       const points = fit();
       if (points) drawRules(metrics, points);
