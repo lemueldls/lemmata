@@ -29,8 +29,13 @@ math {
   --rule-2: #2c313c;
   /* The accent is for machine output and nothing else: hashes, counts, timings
      and status lines. It reads as verified, which is the claim the numbers make,
-     and it pairs with the red below the way a light does with its switch. */
-  --accent: #86d98f;
+     and it pairs with the red below the way a light does with its switch.
+     One colour for both themes. A value that clears 4.5:1 against near-black is
+     too bright for paper and one that clears it against paper is too dark for
+     near-black, so the accent is mixed toward whatever the theme's own ink is:
+     it lightens on the dark theme and darkens on paper, from one value. */
+  --accent-base: #3e9e5c;
+  --accent: color-mix(in oklab, var(--accent-base) 72%, var(--ink));
   --bad: #ff9d9d;
   --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
 
@@ -67,7 +72,6 @@ math {
   --faint: #8b929c;
   --rule: #e3e1da;
   --rule-2: #cdcbc3;
-  --accent: #1f7a3d;
   --bad: #b3261e;
   --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
 }

@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <title>Lemmata</title>
   <style>
-    /* A tab strip is a dark place in most browsers and a light one in some. */
+    /* One green for both, because the tile is what changes: a tab strip is a
+       dark place in most browsers and a light one in some. */
     rect.tile { fill: #0b0c0f; }
-    rect.dot { fill: #86d98f; }
+    rect.dot { fill: #3e9e5c; }
     @media (prefers-color-scheme: light) {
       rect.tile { fill: #f7f7f5; }
-      rect.dot { fill: #1f7a3d; }
     }
   </style>
   <rect class="tile" width="32" height="32" rx="7" />
