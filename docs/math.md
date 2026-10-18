@@ -92,6 +92,12 @@ That is the same shape as the script letters in `r[math.alphabets]`: a gap in th
 
 ## What is deferred
 
-`MathVariants` holds the size variants and the assembly recipes a stretchy delimiter is built from. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis. Those are new glyph designs rather than table code, and they are the last of the table's three parts.
+`MathVariants` names the stretchy glyphs, and each construction has no variants and no assembly. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis.
 
-Math kerning and the extended shape coverage inside `MathGlyphInfo` are also unwritten. Neither is needed by a simple equation.
+The variants turned out to be derivable rather than drawn. Scaling a glyph in y alone keeps a vertical stroke at its width, since x is untouched, so a parenthesis stretches into something that encloses taller content at the weight the rest of the font is drawn at. That much works: the derived glyphs build, `read-fonts` accepts them, and the Typst harness passes with them in the font.
+
+What does not work is naming them. A `MathGlyphConstruction` carrying variant records makes Typst reject the whole font with `failed to subset font: malformed font`, while `read-fonts` accepts the same bytes. The glyph ids and `AdvanceMeasurement` were both checked, and neither was the cause. The next step is to run `ots-sanitize` over a build that has the records, since it names a malformed table where a renderer only shrugs. `nix develop` provides it.
+
+The assemblies are further off. An assembly joins pieces along a connector, and the pieces are glyphs the font does not have: a parenthesis is one curve with no straight middle to cut an extender out of.
+
+Math kerning, the extended shape coverage inside `MathGlyphInfo`, and the horizontal constructions are also unwritten. None is needed by a simple equation.
