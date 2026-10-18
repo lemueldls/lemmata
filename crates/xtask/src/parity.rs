@@ -150,5 +150,35 @@ pub fn check() -> Result<(), String> {
     ]))?;
     run(Command::new("node")
         .current_dir(root())
-        .arg("harness/parity.mjs"))
+        .arg("harness/parity.mjs"))?;
+
+    // The browser half reads the built site, so the package it embeds and the
+    // site around it are rebuilt here too. Leaving either to a manual step is
+    // how the suite came to check a stale font: the page reported a hash from
+    // before the constants were written while both other builds were current,
+    // and every rebuild of the package went to a directory the tests do not
+    // read.
+    run(Command::new("wasm-pack").current_dir(root()).args([
+        "build",
+        "crates/lemmata-web",
+        "--target",
+        "web",
+        "--out-dir",
+        "../../web/pkg",
+        "--offline",
+    ]))?;
+
+    // `pnpm` and a browser come from `nix develop .#browser`, so the last two
+    // steps are skipped rather than failed when the shell is the default one.
+    if Command::new("pnpm").arg("--version").output().is_err() {
+        println!("parity: native and node agree; the browser half needs `nix develop .#browser`");
+
+        return Ok(());
+    }
+    run(Command::new("pnpm")
+        .current_dir(root())
+        .args(["--dir", "web", "build"]))?;
+    run(Command::new("pnpm")
+        .current_dir(root())
+        .args(["--dir", "harness/browser", "test"]))
 }

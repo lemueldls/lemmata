@@ -150,7 +150,9 @@ Three builds are compared against that one fingerprint, and all three agree:
 | wasm under node | `harness/parity.mjs` | `node harness/parity.mjs` |
 | the actual page | `harness/browser/parity.spec.mjs` | `pnpm --dir harness/browser test` |
 
-`cargo xtask parity` runs all three. `cargo xtask regen` rebuilds the fingerprint, carrying the upstream commit over from the file it replaces, and regenerating twice produces the same file.
+`cargo xtask parity` runs all three, and it builds what each one reads. The browser half reads the built site rather than the sources, so the wasm package it embeds and the Astro build around it are rebuilt by the same command before the suite runs. Leaving either to a manual step is how the suite came to check a stale font: the page reported a hash from before the MATH constants were written while the native and node builds were current, and every rebuild of the package went to a directory the tests do not read. That half also needs `pnpm`, so it is skipped with a line saying so when the shell is the default one rather than the browser one.
+
+`cargo xtask regen` rebuilds the fingerprint, carrying the upstream commit over from the file it replaces, and regenerating twice produces the same file.
 
 The profile does not move the bytes — checked before the fingerprint was written — so one hash covers a debug `cargo test` and a release wasm build.
 
