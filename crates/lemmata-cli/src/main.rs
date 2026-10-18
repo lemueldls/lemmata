@@ -121,11 +121,16 @@ fn build(args: &[String]) -> Result<(), String> {
     let bytes = lemmata_build::font::build(&glyphs, &metrics, &names)?;
     std::fs::write(&out_path, &bytes)
         .map_err(|error| format!("writing {}: {error}", out_path.display()))?;
+    // The font carries `.notdef`, the captured glyphs, and the size variants
+    // derived from the stretchy ones. Reporting only the captured count was
+    // misleading enough to send me looking for the wrong thing once.
+    let total = glyphs.len() + 1 + lemmata_build::variants::derive(&glyphs).len();
     println!(
-        "{}: {} glyphs, {} bytes",
+        "{}: {} glyphs, {} bytes, {}",
         out_path.display(),
-        glyphs.len() + 1,
-        bytes.len()
+        total,
+        bytes.len(),
+        names.subfamily.to_lowercase()
     );
 
     Ok(())
