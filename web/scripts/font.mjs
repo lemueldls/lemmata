@@ -43,12 +43,19 @@ const golden = JSON.parse(
 
 /// The command line, from the repository's manifest, for one output. A `.woff2`
 /// extension is what compresses it.
+///
+/// `--release`, because the native leg of the recorded pair is built that way
+/// and the profile changes the bytes: an optimised build folds a different set
+/// of floating point operations, and this font is floating point all the way
+/// down. A debug build here produces a font that is the same typeface and not
+/// the same file, which is a difference the landing would print.
 const build = (capture, out, family) =>
   execFileSync(
     "cargo",
     [
       "run",
       "--quiet",
+      "--release",
       "--manifest-path",
       join(root, "Cargo.toml"),
       "-p",

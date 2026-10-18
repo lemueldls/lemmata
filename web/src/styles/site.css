@@ -461,9 +461,10 @@ kbd {
 
 .subhead {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
+  gap: 6px 16px;
   border-top: 1px solid var(--rule);
   padding-top: 16px;
 }
@@ -940,12 +941,11 @@ a:focus-visible {
 }
 
 .heal-text {
-  --shift: 0.14em;
   margin: 0;
   font-family: var(--built);
-  /* Large on purpose: the shift is a fraction of the cell, and at reading sizes
-     it is a change you have to be told about to see. */
-  font-size: clamp(26px, 3.6vw, 44px);
+  /* Large on purpose: the shift is a sixteenth of the advance, and at a reading
+     size that is a change you have to be told about to see. */
+  font-size: clamp(28px, 4vw, 48px);
   line-height: 1.9;
   overflow-x: auto;
   white-space: pre;
@@ -957,16 +957,10 @@ a:focus-visible {
   );
 }
 
-/* The margin that moves the glyph and its opposite, which gives the advance
-   back. A positive left margin moves the ink right and the next box left. */
-.heal[data-side="right"] {
-  margin-left: var(--shift);
-  margin-right: calc(-1 * var(--shift));
-}
-
-.heal[data-side="left"] {
-  margin-left: calc(-1 * var(--shift));
-  margin-right: var(--shift);
+/* The only difference between the two lines. `calt` is on by default, so the
+   line that shows the healing is the one with nothing set. */
+.heal-text--plain {
+  font-feature-settings: "calt" 0;
 }
 
 /* The proof closes the way a proof closes. */

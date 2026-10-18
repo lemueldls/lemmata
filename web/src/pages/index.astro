@@ -10,12 +10,6 @@
 //
 //   Stub: spec.optical-sizes  the plan has no optical size key behind this row
 //   Stub: spec.script-style   needs the script letters, and an ssty feature
-//   Stub: texture.healing     the narrow letters have no shifted spelling, and
-//                             `calt` needs a contextual lookup, which the layout
-//                             crate does not write: every feature it builds is a
-//                             single substitution. Until then the page moves the
-//                             ink with margins. What must not move, the advance,
-//                             does not.
 //   Stub: variant.picker      the capture carries one spelling per glyph, so
 //                             the picker sets the selection and reports it;
 //                             wire it to the worker once a plan can name the
@@ -170,20 +164,22 @@ const variants = [
         <div class="panel">
           <div class="panel__body heal-lines" id="heal-lines">
             <div class="heal-line">
-              <span class="heal-label">plain</span>
-              <p class="heal-text" id="heal-plain"></p>
+              <span class="heal-label">calt off</span>
+              <p class="heal-text heal-text--plain" id="heal-plain"></p>
             </div>
             <div class="heal-line">
-              <span class="heal-label">healed</span>
+              <span class="heal-label">calt on</span>
               <p class="heal-text" id="heal-healed"></p>
             </div>
           </div>
           <div class="panel__foot">
             <p class="note">
-              A monospace cell is one width for every letter, so a narrow one
-              leaves a gap beside a wide one. Healing moves the narrow letter's
-              sidebearings to its wider neighbour and leaves the cell where it
-              was, which is what the grid under both lines is for.
+              A monospace cell is one width for every letter, so the letters that
+              leave the cell empty sit beside the ones that fill it. Healing
+              moves the drawing within the cell and gives the space to the
+              neighbour that wants it, which is a sixteenth of the advance and
+              never the advance itself. Both lines end in the same column, and
+              the grid is what shows it.
             </p>
           </div>
         </div>
@@ -440,36 +436,14 @@ const variants = [
       });
     }
 
-    // Texture healing, demonstrated with margins.
-    //
-    // Stub: texture.healing. A font that carries this has a second spelling of
-    // each narrow letter, shifted in its sidebearings, and a `calt` feature that
-    // swaps it in beside a wide neighbour. The spellings are a translation of
-    // the captured outlines rather than new drawing, the way the dotless forms
-    // are, but `calt` needs a contextual lookup and every feature
-    // `lemmata-layout` builds today is a single substitution. Margins are enough
-    // to show the effect, and the one thing that must not move does not: the
-    // advance, so the cell stays.
+    // Texture healing is in the font, so the two lines differ by one setting.
+    // `calt` is on by default, which means the line that shows the healing is
+    // the one with nothing set, and the other is where it is switched off.
+    // Which letters give and which take is measured from the capture rather than
+    // listed: the emptiest quarter of the cell gives and the fullest takes.
     const HEAL_SAMPLE = "millim minimum willow filial";
-    const narrow = new Set("iltfjr");
-    const wide = new Set("mw");
-    const heal = (text) =>
-      [...text]
-        .map((character, index) => {
-          const before = wide.has(text[index - 1] ?? "");
-          const after = wide.has(text[index + 1] ?? "");
-          if (!narrow.has(character) || (!before && !after)) {
-            return escape(character);
-          }
-
-          return `<span class="heal" data-side="${after ? "right" : "left"}">${escape(character)}</span>`;
-        })
-        .join("");
-
-    const plainLine = $("#heal-plain");
-    const healedLine = $("#heal-healed");
-    plainLine.textContent = HEAL_SAMPLE;
-    healedLine.innerHTML = heal(HEAL_SAMPLE);
+    $("#heal-plain").textContent = HEAL_SAMPLE;
+    $("#heal-healed").textContent = HEAL_SAMPLE;
 
     // The wordmark is set to the width of the measure, in the font it ships, so
     // the grid behind it is the grid the letters sit on. The rules label their
@@ -641,15 +615,26 @@ const variants = [
 
       // The healing block is on the same grid as the hero, at the size that
       // block is set in, and the count is the number of characters: one cell
-      // each, before and after the ink moves.
+      // each, before and after the drawing moves. The last number is the one
+      // worth having, and it is measured: the same text either way, so the two
+      // lines are the same width to the last hundredth, which is the whole claim
+      // texture healing makes.
       const healGrid = () => {
         const size = Number.parseFloat(
           getComputedStyle($(".heal-text")).fontSize,
         );
         const cell = (metrics.advance / 1000) * size;
         $("#heal-lines").style.setProperty("--cell", `${cell}px`);
+        const width = (selector) => {
+          const range = document.createRange();
+          range.selectNodeContents($(selector));
+
+          return range.getBoundingClientRect().width;
+        };
+        const healed = width("#heal-healed") - width("#heal-plain");
         $("#heal-measure").textContent =
-          `${HEAL_SAMPLE.length} cells of ${Math.round(cell)} px, either line`;
+          `${HEAL_SAMPLE.length} cells of ${Math.round(cell)} px · ` +
+          `the advance moves ${healed.toFixed(2)} px`;
       };
       healGrid();
 
