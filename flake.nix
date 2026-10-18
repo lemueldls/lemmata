@@ -47,6 +47,12 @@
             playwright-driver
             playwright-driver.browsers
           ];
+
+          # Playwright looks in ~/.cache/ms-playwright by default, so it has to
+          # be told where the store put the engines. Without this the suite fails
+          # with "Executable doesn't exist" and suggests downloading a browser
+          # that the shell has already provided.
+          PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
         };
 
         default = pkgs.mkShell {

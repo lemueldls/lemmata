@@ -90,6 +90,14 @@ Sixteen codepoints can stretch. The font has twelve: the capture set carried the
 
 That is the same shape as the script letters in `r[math.alphabets]`: a gap in the glyph source, pinned rather than hidden.
 
+## The browser
+
+`corpus/equations.mathml` is the same eleven equations as MathML. `www/math.html` builds the font in the page from the math capture, registers it as a face, and sets the corpus in it. `harness/browser/math.spec.mjs` runs that through a real browser and checks the family is what rendered: a renderer that cannot serve the corpus falls back, and the fallback changes the measurement.
+
+That is `r[math.mathml]`'s rendering half. What it does not check is "correct stretching and spacing": the delimiters have size variants now but no assemblies, so a delimiter taller than the largest variant is still drawn short, and judging that needs a visual comparison rather than a measurement.
+
+The browser shell needed `PLAYWRIGHT_BROWSERS_PATH`. Playwright looks in `~/.cache/ms-playwright` by default and the shell provides the engines from the store, so without it the suite fails with "Executable doesn't exist" and suggests downloading a browser that is already there.
+
 ## What is deferred
 
 `MathVariants` names the stretchy glyphs, and each construction has no variants and no assembly. Iosevka has no MATH table, so it has no size variants to inherit: a font with no MATH table has no reason to draw three widths of a parenthesis.

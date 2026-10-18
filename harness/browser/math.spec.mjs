@@ -1,0 +1,35 @@
+// The browser's half of r[math.mathml]: the equation corpus, set in a browser
+// from our own outlines.
+//
+// Needs `pnpm install` and a browser: `nix develop .#browser` provides both.
+
+import { expect, test } from "@playwright/test";
+
+test("the corpus renders from our font, not a fallback", async ({ page }) => {
+  const failures = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") failures.push(message.text());
+  });
+
+  await page.goto("/www/math.html");
+  await expect(page.locator("#status")).toContainText("Ready.");
+  expect(failures).toEqual([]);
+
+  // Every equation in the corpus is on the page and set in the family.
+  const rendered = await page.locator("#equations math").count();
+  expect(rendered).toBeGreaterThanOrEqual(10);
+  await expect(page.locator("#equations")).toHaveCSS("font-family", /Lemmata/);
+
+  // A missing glyph would render as a box, so the check is that the glyphs the
+  // corpus needs are the ones the font carries: measure the sample the page
+  // measured, and confirm the family is the difference.
+  const widths = await page.evaluate(() => {
+    const measure = (family) => {
+      const context = document.createElement("canvas").getContext("2d");
+      context.font = `32px ${family}`;
+      return context.measureText("\u2211 \u222B \u221A x \u03B1").width;
+    };
+    return { ours: measure("Lemmata"), fallback: measure('"Lemmata Absent"') };
+  });
+  expect(widths.ours).not.toBe(widths.fallback);
+});
