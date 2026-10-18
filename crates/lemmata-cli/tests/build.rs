@@ -3,6 +3,7 @@
 //! Skips when no capture is present, like the other reference tests.
 
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 /// Rounds a captured advance to the units the font table stores.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -560,5 +561,45 @@ fn license_records_are_present() {
     assert!(
         text.contains("SIL Open Font License v1.1"),
         "the shipped text is the OFL itself"
+    );
+}
+
+/// `r[build.valid]`'s other half: `ots-sanitize` accepts what the writer
+/// produces.
+///
+/// Skips when the tool is absent, like the tests that skip without a capture.
+/// `nix develop` provides it, and it is the gate that would name a malformed
+/// table rather than leaving a renderer to reject the font with a shrug.
+#[test]
+fn ots_sanitize_accepts_the_font() {
+    if Command::new("ots-sanitize")
+        .arg("--version")
+        .output()
+        .is_err()
+    {
+        eprintln!("skipping: ots-sanitize is not installed");
+        return;
+    }
+    let Some((bytes, _)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+
+    let path = workspace_path("target/ots-sanitize-check.ttf");
+    std::fs::write(&path, &bytes).expect("write the font for the sanitizer");
+    let output = Command::new("ots-sanitize")
+        .arg(&path)
+        .output()
+        .expect("run ots-sanitize");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "ots-sanitize rejected the font:\n{stderr}"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("sanitized successfully") || stderr.contains("sanitized successfully"),
+        "ots-sanitize said something unexpected:\n{stdout}{stderr}"
     );
 }
