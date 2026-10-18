@@ -250,23 +250,18 @@ fn stretchy_glyphs_are_covered() {
         missing.is_empty(),
         "the font has these but the table does not name them: {missing:?}"
     );
-    // Sixteen codepoints can stretch. The font has twelve of them: the capture
-    // set carried the parentheses but not the brackets or the braces, so those
-    // four are absent rather than uncovered. Pinning the count is what makes
-    // the day they arrive visible.
-    assert_eq!(covered, 12, "the number of stretchy glyphs the font has");
+    // Every stretchy codepoint is in the font. This counted twelve until the
+    // capture set grew to carry the brackets and the braces: the assertion
+    // named the gap, so the day it closed was visible.
     let absent: Vec<u32> = STRETCHY
         .iter()
         .copied()
         .filter(|code| !captured.iter().any(|glyph| glyph.unicodes.contains(code)))
         .collect();
-    assert_eq!(
-        absent,
-        [0x005B, 0x005D, 0x007B, 0x007D],
-        "the only stretchy glyphs the font lacks should be the brackets and braces"
+    assert!(
+        absent.is_empty(),
+        "the font lacks these stretchy glyphs: {absent:?}"
     );
-    eprintln!(
-        "stretchy: {covered} of {} covered, absent {absent:?}",
-        STRETCHY.len()
-    );
+    assert_eq!(covered, STRETCHY.len(), "every stretchy glyph is covered");
+    eprintln!("stretchy: {covered} of {} covered", STRETCHY.len());
 }
