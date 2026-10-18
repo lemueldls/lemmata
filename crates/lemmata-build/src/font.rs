@@ -14,6 +14,7 @@ use lemmata_geom::{QuadifyKind, QuadifyPoint};
 use write_fonts::FontBuilder;
 use write_fonts::tables::cmap::Cmap;
 use write_fonts::tables::glyf::{GlyfLocaBuilder, Glyph, SimpleGlyph};
+use write_fonts::tables::gsub::Gsub;
 use write_fonts::tables::head::{Flags, Head, MacStyle};
 use write_fonts::tables::hhea::Hhea;
 use write_fonts::tables::hmtx::{Hmtx, LongMetric};
@@ -21,6 +22,7 @@ use write_fonts::tables::maxp::Maxp;
 use write_fonts::tables::name::{Name, NameRecord};
 use write_fonts::tables::os2::{Os2, SelectionFlags};
 use write_fonts::tables::post::Post;
+use write_fonts::types::GlyphId16;
 use write_fonts::types::{
     FWord, Fixed, GlyphId, LongDateTime, NameId, Tag, UfWord, Version16Dot16,
 };
@@ -136,17 +138,48 @@ impl GlyphData {
 /// do not collide.
 #[must_use]
 pub fn derived(glyphs: &[GlyphData], metrics: &Metrics) -> Vec<GlyphData> {
-    let variants = crate::variants::derive(glyphs);
-    let first_piece_code =
-        crate::variants::PRIVATE_USE_START + u32::try_from(variants.len()).unwrap_or(0);
-    let mut derived = variants;
-    derived.extend(crate::assembly::derive(
+    let mut derived = crate::variants::derive(glyphs);
+    let next_code = |derived: &[GlyphData]| {
+        crate::variants::PRIVATE_USE_START + u32::try_from(derived.len()).unwrap_or(0)
+    };
+    let pieces = crate::assembly::derive(
         glyphs,
-        first_piece_code,
+        next_code(&derived),
         metrics.underline_thickness.unsigned_abs(),
-    ));
+    );
+    derived.extend(pieces);
+    let dotless = crate::dotless::derive(glyphs, f64::from(metrics.x_height), next_code(&derived));
+    derived.extend(dotless);
 
     derived
+}
+
+/// The substitutions the font carries.
+///
+/// One feature so far: `dtls`, the dotless forms, which the specification asks
+/// for and which the derivation can produce from the dot's own contour. A pair
+/// is found by name, the way the MATH table finds its derived glyphs, so the
+/// derivation and the substitution cannot come to name different glyphs.
+fn substitutions(glyphs: &[GlyphData]) -> Gsub {
+    let mut pairs = Vec::new();
+    for (index, glyph) in glyphs.iter().enumerate() {
+        let Some(base) = glyph.name.strip_suffix(".dotless") else {
+            continue;
+        };
+        let Some(base_index) = glyphs.iter().position(|other| other.name == base) else {
+            continue;
+        };
+        let (Ok(from), Ok(to)) = (u16::try_from(base_index + 1), u16::try_from(index + 1)) else {
+            continue;
+        };
+        pairs.push((GlyphId16::new(from), GlyphId16::new(to)));
+    }
+
+    lemmata_layout::gsub(&[lemmata_layout::Feature {
+        tag: Tag::new(b"dtls"),
+        script: Tag::new(b"math"),
+        substitutions: pairs,
+    }])
 }
 
 /// Builds a TrueType font.
@@ -378,6 +411,7 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
     let name = build_name_table(names, metrics);
 
     let math = crate::math::table(metrics, &crate::math::MathProfile::default(), glyphs);
+    let gsub = substitutions(glyphs);
 
     let bytes = FontBuilder::new()
         .add_table(&head)
@@ -402,6 +436,8 @@ pub fn build(glyphs: &[GlyphData], metrics: &Metrics, names: &Names) -> Result<V
         .map_err(|error| format!("loca: {error}"))?
         .add_table(&math)
         .map_err(|error| format!("MATH: {error}"))?
+        .add_table(&gsub)
+        .map_err(|error| format!("GSUB: {error}"))?
         .build();
 
     Ok(bytes)

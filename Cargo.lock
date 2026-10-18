@@ -209,6 +209,7 @@ version = "0.1.0"
 dependencies = [
  "kurbo",
  "lemmata-geom",
+ "lemmata-layout",
  "ttf2woff2",
  "write-fonts",
 ]
@@ -255,6 +256,13 @@ dependencies = [
  "lemmata-geom",
  "lemmata-ptl",
  "serde_json",
+]
+
+[[package]]
+name = "lemmata-layout"
+version = "0.1.0"
+dependencies = [
+ "write-fonts",
 ]
 
 [[package]]

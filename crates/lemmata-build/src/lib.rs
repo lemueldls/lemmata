@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 
 pub mod assembly;
+pub mod dotless;
 pub mod font;
 pub mod math;
 pub mod variants;

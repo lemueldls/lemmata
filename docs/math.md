@@ -116,6 +116,14 @@ The harness does not show stretching. Chromium lays the corpus out and sets it i
 
 The browser shell needed `PLAYWRIGHT_BROWSERS_PATH`. Playwright looks in `~/.cache/ms-playwright` by default and the shell provides the engines from the store, so without it the suite fails with "Executable doesn't exist" and suggests downloading a browser that is already there.
 
+## The layout tags
+
+The specification names three layout tags for math, and one is written. `dtls`, the dotless forms, is a single substitution under the `math` script: `i` and `j` draw their dot as a contour of its own, so the form is the same glyph with that contour removed. `crates/lemmata-layout` builds the GSUB around it, since `write-fonts` has the tables but no builders for the script, feature and lookup lists.
+
+What separates a tittle from an accent is worth recording, because an accent is also a small mark above the letter. A dot is filled and as tall as it is wide, while a grave is long and thin and a circumflex is hollow against its box. Without that test the derivation produced a dotless `aGrave`, a dotless `aCircumflex` and a dotless `Xi`.
+
+`ssty` and `flac` are not written. `ssty` needs forms that look right when the engine scales them, which is a design rather than a derivation, and `flac` needs flattened accents drawn. Both wait on the same crate, which now exists.
+
 ## What is deferred
 
 Two things went wrong while deriving the glyphs and both are worth keeping.

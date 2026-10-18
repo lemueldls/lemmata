@@ -11,7 +11,7 @@ use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
 use read_fonts::tables::glyf::Glyph as ReadGlyph;
 use read_fonts::tables::math::{PartFlags, StretchAxis};
-use read_fonts::types::GlyphId;
+use read_fonts::types::{GlyphId, Tag};
 use read_fonts::{FontRef, TableProvider};
 
 fn math_dump_path() -> PathBuf {
@@ -590,4 +590,65 @@ fn stretched_glyphs_are_extended_shapes() {
     // have no reason to move.
     assert_eq!(coverage.iter().count(), covered);
     eprintln!("extended shapes: {covered} glyphs");
+}
+
+/// `r[math.script-style]`'s inventory: the dotless forms the specification asks
+/// for, and the `dtls` feature that names them.
+#[test]
+fn dotless_forms_are_carried_by_dtls() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let gsub = font.gsub().expect("the font carries a GSUB");
+    let tags: Vec<Tag> = gsub
+        .feature_list()
+        .expect("a feature list")
+        .feature_records()
+        .iter()
+        .map(|record| record.feature_tag())
+        .collect();
+    assert!(
+        tags.contains(&Tag::new(b"dtls")),
+        "the features are {tags:?}"
+    );
+    assert!(
+        !gsub
+            .lookup_list()
+            .expect("a lookup list")
+            .lookups()
+            .is_empty(),
+        "the feature has nothing to point at"
+    );
+
+    // The forms are dotless: the derivation drops the dot contour and nothing
+    // else, so each one is exactly one contour shorter than its base.
+    let glyphs: Vec<GlyphData> = captured
+        .iter()
+        .map(|glyph| GlyphData {
+            name: glyph.name.clone(),
+            unicodes: glyph.unicodes.clone(),
+            advance: advance_to_u16(glyph.advance),
+            contours: lemmata_capture::contours(glyph),
+        })
+        .collect();
+    let forms = lemmata_build::dotless::derive(&glyphs, f64::from(Metrics::default().x_height), 0);
+    assert!(!forms.is_empty(), "the corpus has letters carrying a dot");
+    for form in &forms {
+        let base = glyphs
+            .iter()
+            .find(|glyph| form.name == lemmata_build::dotless::dotless_name(&glyph.name))
+            .unwrap_or_else(|| panic!("{} has no base", form.name));
+        assert_eq!(
+            form.contours.len() + 1,
+            base.contours.len(),
+            "{} should drop one contour",
+            form.name
+        );
+        let (_, _, _, top) = form.bounding_box().expect("the form has ink");
+        let (_, _, _, base_top) = base.bounding_box().expect("the base has ink");
+        assert!(top < base_top, "{} should be shorter", form.name);
+    }
+    eprintln!("dtls: {} dotless forms", forms.len());
 }
