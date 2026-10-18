@@ -154,6 +154,6 @@ Three builds are compared against that one fingerprint, and all three agree:
 
 The profile does not move the bytes — checked before the fingerprint was written — so one hash covers a debug `cargo test` and a release wasm build.
 
-`harness/parity.mjs` has no dependencies on purpose: node's own crypto and a `wasm-pack --target nodejs` build are enough, so the pair can be checked offline and in CI. The browser suite is the one that needs an install, and `nix develop .#browser` provides a matched Playwright driver and browser; the default shell does not, because it has to build from the store alone.
+`harness/parity.mjs` has no dependencies on purpose: node's own crypto and a `wasm-pack --target nodejs` build are enough, so the pair can be checked offline and in CI. The browser suite is the one that needs an install: `pnpm --dir harness/browser install` and `pnpm --dir harness/browser exec playwright install chromium` are enough, and `nix develop .#browser` is the hermetic alternative, providing a matched driver and browser without a download. The default shell does not carry them, because it has to build from the store alone.
 
 What the browser suite still owes §7.1 beyond parity: the MathML torture page, offline mode, and the latency bench behind `r[wasm.responsive]`.
