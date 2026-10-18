@@ -38,6 +38,12 @@ pub fn tan(x: f64) -> f64 {
     libm::tan(x)
 }
 
+/// `atan2`, which the CLI uses for the italic angle.
+#[must_use]
+pub fn atan2(y: f64, x: f64) -> f64 {
+    libm::atan2(y, x)
+}
+
 /// `tanh`, which the weight-control sigmoid is built on.
 #[must_use]
 pub fn tanh(x: f64) -> f64 {

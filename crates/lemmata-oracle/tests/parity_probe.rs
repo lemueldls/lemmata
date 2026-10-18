@@ -17,9 +17,12 @@ use lemmata_oracle::{flatten, outlines};
 fn nearest(p: Point, polyline: &[Point]) -> f64 {
     polyline
         .iter()
-        .map(|q| ((p.x - q.x).powi(2) + (p.y - q.y).powi(2)).sqrt())
+        .map(|q| (p - *q).hypot())
         .fold(f64::INFINITY, f64::min)
 }
+
+/// The project's own tolerance for two outlines being the same shape.
+const BUDGET: f64 = 5.0;
 
 fn deviation(a: &[Point], b: &[Point]) -> f64 {
     a.iter().map(|p| nearest(*p, b)).fold(0.0, f64::max)
@@ -68,8 +71,6 @@ fn native_and_browser_agree_visually() {
     for (d, gid) in ranked.iter().take(6) {
         eprintln!("   gid {gid}: {d:.4}");
     }
-    // The project's own tolerance for two outlines being the same shape.
-    const BUDGET: f64 = 5.0;
     assert!(
         worst.0 <= BUDGET,
         "worst deviation {:.4} font units, over the {BUDGET} budget",

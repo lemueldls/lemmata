@@ -84,7 +84,10 @@ fn build(args: &[String]) -> Result<(), String> {
         .map_or([1.0, 0.0, 0.0, 1.0, 0.0, 0.0], |glyph| {
             glyph.gizmo.as_coeffs()
         });
-    let italic_angle = coefficients[2].atan2(coefficients[0]).to_degrees();
+    // Through `lemmata_geom::math` for the same reason the rest of the pipeline
+    // is: the host and wasm32 have different `atan2` in the last bit, and this
+    // value reaches the `post` table.
+    let italic_angle = lemmata_geom::math::atan2(coefficients[2], coefficients[0]).to_degrees();
     let metrics = Metrics {
         italic_angle,
         ..Metrics::default()

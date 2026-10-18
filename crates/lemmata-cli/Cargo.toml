@@ -15,6 +15,7 @@ workspace = true
 [dependencies]
 lemmata-build = { path = "../lemmata-build" }
 lemmata-capture = { path = "../lemmata-capture" }
+lemmata-geom = { path = "../lemmata-geom" }
 
 [dev-dependencies]
 read-fonts.workspace = true
