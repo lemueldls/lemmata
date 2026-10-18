@@ -9,7 +9,12 @@
 //   Stub: variant.picker      in `VariantPicker.vue`
 import { useLemmataFont } from "~/composables/font";
 
-useHead({ title: "A typeface built from a plan" });
+useHead({
+  title: "A typeface built from a plan",
+  // The cover stays until the font is read, and the scripts that read it are the
+  // only thing that can take it away. Without them it has to go by the rule.
+  noscript: [{ innerHTML: "<style>.boot{display:none}</style>" }],
+});
 
 const font = useLemmataFont();
 

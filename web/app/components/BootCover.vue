@@ -7,8 +7,10 @@
 // ready. It is in the prerendered HTML, so it is painted first rather than
 // appearing after hydration.
 //
-// A failed load and a slow one both end it, because a cover that never leaves is
-// worse than a fallback face.
+// The bar follows the font rather than a clock: the download is read in chunks
+// and counted, and the steps after it move it the rest of the way. A failed load
+// and a slow one both end it, because a cover that never leaves is worse than a
+// fallback face.
 import { useLemmataFont } from "~/composables/font";
 
 const font = useLemmataFont();
@@ -32,7 +34,7 @@ watch(
   { immediate: true },
 );
 
-onMounted(() => setTimeout(leave, 8000));
+onMounted(() => setTimeout(leave, 12000));
 </script>
 
 <template>
@@ -44,14 +46,9 @@ onMounted(() => setTimeout(leave, 8000));
   >
     <div class="boot__meter">
       <span class="boot__ticks" />
-      <span class="boot__track"><i /></span>
+      <span class="boot__track">
+        <i :style="{ transform: `scaleX(${font.progress})` }" />
+      </span>
     </div>
   </div>
-  <noscript>
-    <style>
-      .boot {
-        display: none;
-      }
-    </style>
-  </noscript>
 </template>
