@@ -1,0 +1,50 @@
+# Where the ported sources came from.
+#
+# The commit is the pinned upstream one, the same the font's name record carries
+# and the parity fingerprint was generated from. Three readers of one fact, and
+# each is checked against another, so none of them can drift quietly.
+#
+# Every `ours` path has to exist, every `upstream` path has to exist in
+# `vendor/Iosevka`, and every ported glyph definition has to be here. The
+# provenance suite walks the crate for the last of those.
+
+commit = "2487637bb71f41b2a66134afd9faa6c316e5a438"
+
+# Ported glyph definitions, one entry per file in `lemmata-glyphs`.
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_a.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-a.ptl"
+
+# The runtime the definitions are written against. Not glyphs, but they came
+# from upstream the same way, and a port would build on them.
+[[layer]]
+ours = "crates/lemmata-ptl/src/control.rs"
+upstream = "packages/geometry/src/spiro-control.mjs"
+
+[[layer]]
+ours = "crates/lemmata-ptl/src/spiro_kit.rs"
+upstream = "packages/font-kits/src/spiro-kit.mjs"
+
+[[layer]]
+ours = "crates/lemmata-ptl/src/letter_model.rs"
+upstream = "packages/font-kits/src/letter-model.mjs"
+
+[[layer]]
+ours = "crates/lemmata-ptl/src/metrics.rs"
+upstream = "packages/font-glyphs/src/meta/aesthetics.ptl"
+
+[[layer]]
+ours = "crates/lemmata-ptl/src/glyph.rs"
+upstream = "packages/glyph/src/glyph.mjs"
+
+[[layer]]
+ours = "crates/lemmata-ptl/src/store.rs"
+upstream = "packages/glyph/src/store.mjs"
+
+[[layer]]
+ours = "crates/lemmata-ptl/src/shapes.rs"
+upstream = "packages/font-glyphs/src/common/shapes.ptl"
+
+[[layer]]
+ours = "crates/lemmata-ptl/src/util.rs"
+upstream = "packages/util/src/monotonic-interpolate.mjs"
