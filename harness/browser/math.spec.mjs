@@ -23,6 +23,10 @@ test("the corpus renders from our font, not a fallback", async ({ page }) => {
   // A missing glyph would render as a box, so the check is that the glyphs the
   // corpus needs are the ones the font carries: measure the sample the page
   // measured, and confirm the family is the difference.
+  // Reported, not asserted. Whether a browser stretches a delimiter to its
+  // content is the browser's business; the geometric test is what covers the
+  // pieces, and `docs/math.md` records what this one does not show.
+  console.log("delimiters", await page.getAttribute("body", "data-measure"));
   const widths = await page.evaluate(() => {
     const measure = (family) => {
       const context = document.createElement("canvas").getContext("2d");

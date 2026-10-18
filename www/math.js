@@ -39,6 +39,21 @@ async function run() {
   const fallback = widthOf('"Lemmata Absent"', "\u2211 \u222B \u221A x \u03B1");
   const rendered = document.querySelectorAll("#equations math").length;
 
+  // A delimiter grown to fit its content is built by stacking pieces, so it
+  // stays as wide as the glyph it was cut from, while a renderer with no
+  // assembly scales the whole glyph and widens it. Recording both measures
+  // leaves the difference visible without asserting on it: whether a browser
+  // stretches at all is the browser's business, and the geometric test is what
+  // covers the pieces.
+  document.body.dataset.measure = JSON.stringify(
+    [...document.querySelectorAll("#equations mo")]
+      .filter((mo) => mo.textContent === "(" || mo.textContent === ")")
+      .map((mo) => {
+        const box = mo.getBoundingClientRect();
+        return { width: Math.round(box.width), height: Math.round(box.height) };
+      }),
+  );
+
   status.textContent =
     ours !== fallback && rendered > 0
       ? `Ready. ${rendered} equations.`

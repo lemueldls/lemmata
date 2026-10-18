@@ -12,3 +12,4 @@
 <math display="block"><msqrt><mfrac><mn>1</mn><mn>2</mn></mfrac></msqrt></math>
 <math display="block"><mrow><mo>(</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>)</mo></mrow></math>
 <math display="block"><mi>&#x03B1;</mi><mo>+</mo><mi>&#x03B2;</mi><mo>=</mo><mi>&#x03B3;</mi></math>
+<math display="block"><mrow><mo>(</mo><mtable><mtr><mtd><mn>1</mn></mtd><mtd><mn>2</mn></mtd></mtr><mtr><mtd><mn>3</mn></mtd><mtd><mn>4</mn></mtd></mtr></mtable><mo>)</mo></mrow></math>

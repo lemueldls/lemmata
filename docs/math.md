@@ -98,9 +98,11 @@ The band is what makes a piece repeatable, so the derivation measures it: it cut
 
 ## The browser
 
-`corpus/equations.mathml` is the same eleven equations as MathML. `www/math.html` builds the font in the page from the math capture, registers it as a face, and sets the corpus in it. `harness/browser/math.spec.mjs` runs that through a real browser and checks the family is what rendered: a renderer that cannot serve the corpus falls back, and the fallback changes the measurement.
+`corpus/equations.mathml` is the same twelve equations as MathML. `www/math.html` builds the font in the page from the math capture, registers it as a face, and sets the corpus in it. `harness/browser/math.spec.mjs` runs that through a real browser and checks the family is what rendered: a renderer that cannot serve the corpus falls back, and the fallback changes the measurement.
 
-That is `r[math.mathml]`'s rendering half. What it does not check is "correct stretching and spacing": the delimiters have sizes and assemblies now, but whether a stretched one looks right is a visual question, and the pieces it stretches with are derived rather than drawn.
+That is `r[math.mathml]`'s rendering half. The page's stylesheet must not set `display` on a `math` element. `display: block` replaces the `block math` the user agent stylesheet gives `math[display="block"]`, and every token inside is then laid out on a line of its own with no `mrow` to run. The page did exactly that until a screenshot of it showed the equations stacked vertically. The `display` attribute on each `math` element is what puts it on its own line.
+
+The harness does not show stretching. Chromium lays the corpus out and sets it in our font, but the delimiter boxes stay at the base glyph's size however tall the content between them is, and a large operator is not enlarged either. A second page built with a known-good math font, New Computer Modern Math, measured the same, but that font never loaded in the harness, so the measurement does not settle whether the limit is the browser or our MATH table. What covers the pieces is the geometric test in `crates/lemmata-cli/tests/math.rs`, which is what `r[math.stretch]` asks for, and Typst's `\left` and `\right` exercise an assembly end to end.
 
 The browser shell needed `PLAYWRIGHT_BROWSERS_PATH`. Playwright looks in `~/.cache/ms-playwright` by default and the shell provides the engines from the store, so without it the suite fails with "Executable doesn't exist" and suggests downloading a browser that is already there.
 
