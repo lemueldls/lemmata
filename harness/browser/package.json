@@ -1,0 +1,12 @@
+{
+  "name": "lemmata-browser-suite",
+  "private": true,
+  "type": "module",
+  "description": "The browser suite from PLAN.md 7.1: parity, offline, latency.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0"
+  }
+}

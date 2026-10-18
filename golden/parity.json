@@ -1,0 +1,11 @@
+{
+  "capture": "0c46143d628099d9baba25e7a445efb1055793601330b07567d336f0c2a6dd57",
+  "font": "4a4eb715217f785b093aeb858b91f561c096b120a346d5df440fde02993a1112",
+  "oracle": "parity",
+  "plan": {},
+  "toolchain": {
+    "rustc": "1.101.0-nightly (5c543b0b8 2026-09-29)",
+    "wasm-bindgen": "0.2.129"
+  },
+  "upstream": "2487637bb71f41b2a66134afd9faa6c316e5a438"
+}

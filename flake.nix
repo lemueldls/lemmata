@@ -36,6 +36,19 @@
     in
     {
       devShells = forAllSystems (pkgs: {
+        # The browser suite in §7.1 needs a real browser and a driver. They are
+        # not in the default shell because the default shell has to build from the
+        # store alone, and these are large. `pnpm install` inside harness/browser
+        # needs the network too.
+        browser = pkgs.mkShell {
+          packages = with pkgs; [
+            nodejs_22
+            pnpm
+            playwright-driver
+            playwright-driver.browsers
+          ];
+        };
+
         default = pkgs.mkShell {
           packages = with pkgs; [
             # The toolchain is the one rust-toolchain.toml pins, components and
@@ -48,8 +61,11 @@
             clang
             pkg-config
 
-            # `cargo xtask` needs neither, but the oracle and web tests do.
+            # `cargo xtask parity` builds the wasm side with this, and the
+            # oracle and web tests need node.
             nodejs_22
+            wasm-pack
+            pnpm
 
             # The validity gates the plan asks for. `ots-sanitize` is
             # r[build.valid]'s other half, and taplo owns the TOML formatting.

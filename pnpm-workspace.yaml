@@ -1,0 +1,5 @@
+# The browser suite is the only JavaScript here, and it is kept out of the Rust
+# build. `harness/parity.mjs` deliberately has no dependencies: it runs on node
+# alone, offline, so the parity pair can be checked without an install.
+packages:
+  - harness/*

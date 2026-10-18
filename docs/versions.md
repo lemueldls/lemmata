@@ -18,6 +18,7 @@ Pinned 17 October 2026. Update only together with a drift report.
 | --- | --- |
 | read-fonts | 0.45.1 |
 | write-fonts | 0.54.1 |
+| sha2 | 0.10.9 |
 | skrifa | 0.48.0 |
 | kurbo | 0.13.1 |
 | libm | 0.2.16 |

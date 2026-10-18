@@ -137,3 +137,23 @@ The earlier passes had patched the specific literal strings I happened to read, 
 Verified: the expansion of `k` is identical, all seventy-two glyphs' expansion hashes are identical, and the two builds are **byte-identical** with a worst deviation of **0.000000** font units. `r[wasm.parity]` and `r[wasm.parity-bytes]` both hold.
 
 The lesson is the audit, not the arithmetic: grepping for the calls I remembered instead of the set that exists, and reading a truncated list as a complete one, cost more than every wrong hypothesis in this document put together.
+
+## The parity pair, and where it is checked
+
+`r[wasm.parity-bytes]` asks for byte-identical pairs to be tracked per pinned toolchain and for a failure when a pair that was byte-identical stops being so. `golden/parity.json` is that record: the upstream commit, the capture it was built from, the plan, the toolchain (`rustc` and `wasm-bindgen`), and the font's sha256. `golden/README.md`'s rule applies, so updating it means a drift report.
+
+Three builds are compared against that one fingerprint, and all three agree:
+
+| build | where | how to run |
+| --- | --- | --- |
+| native | `crates/lemmata-web/tests/parity.rs` | `cargo test -p lemmata-web --test parity` |
+| wasm under node | `harness/parity.mjs` | `node harness/parity.mjs` |
+| the actual page | `harness/browser/parity.spec.mjs` | `pnpm --dir harness/browser test` |
+
+`cargo xtask parity` runs all three. `cargo xtask regen` rebuilds the fingerprint, carrying the upstream commit over from the file it replaces, and regenerating twice produces the same file.
+
+The profile does not move the bytes — checked before the fingerprint was written — so one hash covers a debug `cargo test` and a release wasm build.
+
+`harness/parity.mjs` has no dependencies on purpose: node's own crypto and a `wasm-pack --target nodejs` build are enough, so the pair can be checked offline and in CI. The browser suite is the one that needs an install, and `nix develop .#browser` provides a matched Playwright driver and browser; the default shell does not, because it has to build from the store alone.
+
+What the browser suite still owes §7.1 beyond parity: the MathML torture page, offline mode, and the latency bench behind `r[wasm.responsive]`.
