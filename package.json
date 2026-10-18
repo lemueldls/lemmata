@@ -1,0 +1,15 @@
+{
+  "name": "lemmata",
+  "private": true,
+  "type": "module",
+  "description": "The JavaScript entry points. The Rust ones are `cargo xtask`.",
+  "scripts": {
+    "browser": "pnpm --dir harness/browser test",
+    "fmt": "cargo fmt --all",
+    "lint": "cargo clippy --workspace --all-targets",
+    "parity": "cargo xtask parity",
+    "port-status": "cargo xtask port-status",
+    "regen": "cargo xtask regen",
+    "test": "cargo test --workspace"
+  }
+}
