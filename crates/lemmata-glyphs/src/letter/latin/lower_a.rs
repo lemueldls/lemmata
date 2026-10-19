@@ -23,30 +23,19 @@
 
 use kurbo::Vec2;
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::{Af, Item, UserControlKnot};
+use lemmata_ptl::control::{Item, UserControlKnot};
 use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::metrics::Metrics;
+use lemmata_ptl::shapes;
 use lemmata_ptl::shapes::{
-    ArchArgs, ArchParams, CenterAtArgs, Design, FlatSide, HookArgs, HookParams, arch,
-    arch_depth_b_clamped, center_at, downward, flatside_ld, flatside_lu, flatside_ru, knot_of,
-    leftward, rightward, upward, ysmooth_mid_l, ysmooth_mid_r,
+    ArchArgs, ArchParams, CenterAtArgs, Design, FlatSide, HookArgs, HookParams, OBarContext, arch,
+    arch_depth_b_clamped, center_at, downward, flatside_lu, leftward, rightward, upward,
+    ysmooth_mid_l, ysmooth_mid_r,
 };
+
+pub use lemmata_ptl::shapes::OBarRing;
 use lemmata_ptl::spiro_kit::{Direction, Dispiro, Family, Kit, Position};
 use lemmata_ptl::util::mix;
-
-/// What an `OBar` shape takes: the ring it sits in and the stroke it is drawn
-/// with.
-#[derive(Clone, Copy, Debug)]
-pub struct OBarRing {
-    pub top: f64,
-    pub bot: f64,
-    pub left: f64,
-    pub right: f64,
-    pub sw: f64,
-    pub fine: f64,
-    pub ada: f64,
-    pub adb: f64,
-}
 
 /// The hook styles `DoubleStorey` takes.
 pub const HOOK_SLAB_NONE: i32 = 0;
@@ -794,198 +783,28 @@ impl LowerA<'_> {
         self.kit.dispiro(items)
     }
 
-    /// `OBarLeft.shape`: the flat-sided ring's left side.
+    /// The ring, as [`shapes::OBarContext`] sees it.
+    const fn obar_context(&self) -> OBarContext<'_> {
+        OBarContext {
+            kit: self.kit,
+            metrics: self.metrics,
+            design: self.design,
+        }
+    }
+
+    /// `OBarLeft.shape`, in [`shapes`].
     #[must_use]
     pub fn obar_left_shape(&self, ring: &OBarRing) -> Dispiro {
-        let metrics = self.metrics;
-        let params = self.arch_params();
-        let OBarRing {
-            top,
-            bot,
-            left,
-            right,
-            sw,
-            fine,
-            ada,
-            adb,
-        } = *ring;
-        let x = left + self.hsw_to_v(sw - fine);
-
-        let flat_side = |x: f64, ox: f64, af: Af| FlatSide {
-            x,
-            d: bot,
-            u: top,
-            ada,
-            adb,
-            ox,
-            af,
-        };
-        let start = flatside_ld(self.kit, &flat_side(x, 0.0, Vec::new()));
-        let middle = flatside_ru(self.kit, &flat_side(right, metrics.ox, Vec::new()));
-        let end = flatside_ld(
-            self.kit,
-            &flat_side(x, 0.0, self.kit.widths_lhs(Some(fine))),
-        );
-
-        let arch_bottom = ArchArgs {
-            y: bot,
-            p: None,
-            sw,
-            compact: false,
-            o: metrics.o,
-            angle_pre: None,
-            angle_post: None,
-            blend_pre: None,
-            blend_post: None,
-            sw_before: Some(fine),
-            sw_after: Some(sw),
-            lhs: true,
-        };
-        let arch_top = ArchArgs {
-            y: top,
-            sw_before: Some(sw),
-            sw_after: Some(fine),
-            ..arch_bottom
-        };
-
-        let mut items = vec![Item::Af(self.kit.widths_lhs(Some(fine)))];
-        items.extend(start.iter().cloned());
-        items.extend(arch(
-            self.kit,
-            &arch_bottom,
-            &knot_of(start.last().expect("flatside item")),
-            &knot_of(&middle[0]),
-            &params,
-        ));
-        items.extend(middle.iter().cloned());
-        items.extend(arch(
-            self.kit,
-            &arch_top,
-            &knot_of(middle.last().expect("flatside item")),
-            &knot_of(&end[0]),
-            &params,
-        ));
-        items.extend(end);
-
-        self.kit.dispiro(items)
+        shapes::obar_left_shape(&self.obar_context(), ring)
     }
 
-    /// `OBarLeft.toothlessCorner`: the left side cut at `ystart` with the bar's
-    /// foot replaced by a corner at `rise`.
+    /// `OBarLeft.toothlessCorner`, in [`shapes`].
     #[must_use]
     pub fn obar_left_toothless_corner(&self, ring: &OBarRing, rise: f64, ystart: f64) -> Dispiro {
-        let metrics = self.metrics;
-        let OBarRing {
-            top,
-            bot,
-            left,
-            right,
-            sw,
-            fine,
-            ada,
-            adb,
-        } = *ring;
-        let x = left + self.hsw_to_v(sw - fine);
-        let flat_y = (top - ada).max(ystart + metrics.tiny);
-        let flat = UserControlKnot {
-            ty: KnotType::Left,
-            x,
-            y: flat_y,
-            af: self.kit.widths_lhs(Some(fine)),
-        };
-        let right_side = flatside_ru(
-            self.kit,
-            &FlatSide {
-                x: right,
-                d: bot,
-                u: top,
-                ada,
-                adb,
-                ox: metrics.ox,
-                af: Vec::new(),
-            },
-        );
-
-        let mut items = vec![Item::Af(self.kit.widths_lhs(Some(sw)))];
-        if rise == 0.0 {
-            items.push(self.kit.knot(
-                KnotType::Left,
-                left + metrics.tiny,
-                bot,
-                self.kit.heading(rightward()),
-            ));
-            items.push(self.kit.knot(
-                KnotType::Right,
-                self.adjust_x_bot(mix(left, right, 0.5), sw),
-                bot,
-                Vec::new(),
-            ));
-            items.push(self.kit.archv(None, None));
-        } else {
-            let corner = UserControlKnot {
-                ty: KnotType::G4,
-                x: left,
-                y: bot + rise,
-                af: Vec::new(),
-            };
-            items.push(
-                self.kit
-                    .knot(corner.ty, corner.x, corner.y, corner.af.clone()),
-            );
-            items.extend(arch(
-                self.kit,
-                &ArchArgs {
-                    y: bot,
-                    p: None,
-                    sw,
-                    compact: false,
-                    o: metrics.o,
-                    angle_pre: None,
-                    angle_post: None,
-                    blend_pre: Some(false),
-                    blend_post: None,
-                    sw_before: Some(sw),
-                    sw_after: Some(sw),
-                    lhs: true,
-                },
-                &corner,
-                &knot_of(&right_side[0]),
-                &self.arch_params(),
-            ));
-        }
-
-        items.extend(right_side.iter().cloned());
-        items.extend(arch(
-            self.kit,
-            &ArchArgs {
-                y: top,
-                p: None,
-                sw,
-                compact: false,
-                o: metrics.o,
-                angle_pre: None,
-                angle_post: None,
-                blend_pre: None,
-                blend_post: None,
-                sw_before: Some(sw),
-                sw_after: Some(fine),
-                lhs: true,
-            },
-            &knot_of(right_side.last().expect("flatside item")),
-            &flat,
-            &self.arch_params(),
-        ));
-        items.push(self.kit.knot(flat.ty, flat.x, flat.y, flat.af));
-        items.push(
-            self.kit
-                .knot(KnotType::Right, x, ystart, self.kit.widths_lhs(Some(fine))),
-        );
-
-        self.kit.dispiro(items)
+        shapes::obar_left_toothless_corner(&self.obar_context(), ring, rise, ystart)
     }
 
-    /// `OBarLeft.toothlessRounded`: the left side cut at `ystart` with the bar's
-    /// foot rounded into the bar at `yTerminal`.
+    /// `OBarLeft.toothlessRounded`, in [`shapes`].
     #[must_use]
     pub fn obar_left_toothless_rounded(
         &self,
@@ -993,120 +812,22 @@ impl LowerA<'_> {
         y_terminal: f64,
         ystart: f64,
     ) -> Dispiro {
-        let metrics = self.metrics;
-        let OBarRing {
-            top,
-            bot,
-            left,
-            right,
-            sw,
-            fine,
-            ada,
-            adb,
-        } = *ring;
-        let x = left + self.hsw_to_v(sw - fine);
-        let flat_y = (top - ada).max(ystart + metrics.tiny);
-        let flat = UserControlKnot {
-            ty: KnotType::Left,
-            x,
-            y: flat_y,
-            af: self.kit.widths_lhs(Some(fine)),
-        };
-        let right_side = flatside_ru(
-            self.kit,
-            &FlatSide {
-                x: right,
-                d: bot,
-                u: top,
-                ada,
-                adb,
-                ox: metrics.ox,
-                af: Vec::new(),
-            },
-        );
-
-        let mut items = vec![
-            Item::Af(self.kit.widths_lhs(Some(sw))),
-            self.kit.knot(
-                KnotType::Left,
-                left,
-                y_terminal,
-                self.kit
-                    .widths_lhs_heading(Some(sw), downward(metrics.hv_contrast)),
-            ),
-            self.kit.knot(
-                KnotType::Right,
-                left,
-                (bot + adb).min(y_terminal - metrics.tiny),
-                Vec::new(),
-            ),
-        ];
-        items.extend(arch(
-            self.kit,
-            &ArchArgs {
-                y: bot,
-                p: None,
-                sw,
-                compact: false,
-                o: metrics.o,
-                angle_pre: None,
-                angle_post: None,
-                blend_pre: None,
-                blend_post: None,
-                sw_before: Some(sw),
-                sw_after: Some(sw),
-                lhs: true,
-            },
-            &knot_of(items.last().expect("knot")),
-            &knot_of(&right_side[0]),
-            &self.arch_params(),
-        ));
-        items.extend(right_side.iter().cloned());
-        items.extend(arch(
-            self.kit,
-            &ArchArgs {
-                y: top,
-                p: None,
-                sw,
-                compact: false,
-                o: metrics.o,
-                angle_pre: None,
-                angle_post: None,
-                blend_pre: None,
-                blend_post: None,
-                sw_before: Some(sw),
-                sw_after: Some(fine),
-                lhs: true,
-            },
-            &knot_of(right_side.last().expect("flatside item")),
-            &flat,
-            &self.arch_params(),
-        ));
-        items.push(self.kit.knot(flat.ty, flat.x, flat.y, flat.af));
-        items.push(
-            self.kit
-                .knot(KnotType::Right, x, ystart, self.kit.widths_lhs(Some(fine))),
-        );
-
-        self.kit.dispiro(items)
+        shapes::obar_left_toothless_rounded(&self.obar_context(), ring, y_terminal, ystart)
     }
 
-    /// `OBarRight.shape`: the left shape rotated half a turn about the ring.
+    /// `OBarRight.shape`, in [`shapes`].
     #[must_use]
     pub fn obar_right_shape(&self, ring: &OBarRing) -> Geometry {
-        flip(&self.obar_left_shape(ring), ring)
+        shapes::obar_right_shape(&self.obar_context(), ring)
     }
 
-    /// `OBarRight.earlessCorner`, which is `OBarLeft.toothlessCorner` flipped.
+    /// `OBarRight.earlessCorner`, in [`shapes`].
     #[must_use]
     pub fn obar_right_earless_corner(&self, ring: &OBarRing, rise: f64, yend: f64) -> Geometry {
-        flip(
-            &self.obar_left_toothless_corner(ring, rise, ring.top - yend),
-            ring,
-        )
+        shapes::obar_right_earless_corner(&self.obar_context(), ring, rise, yend)
     }
 
-    /// `OBarRight.earlessRounded`, which is `OBarLeft.toothlessRounded` flipped.
+    /// `OBarRight.earlessRounded`, in [`shapes`].
     #[must_use]
     pub fn obar_right_earless_rounded(
         &self,
@@ -1114,10 +835,7 @@ impl LowerA<'_> {
         y_terminal: f64,
         yend: f64,
     ) -> Geometry {
-        flip(
-            &self.obar_left_toothless_rounded(ring, ring.top - y_terminal, ring.top - yend),
-            ring,
-        )
+        shapes::obar_right_earless_rounded(&self.obar_context(), ring, y_terminal, yend)
     }
 
     /// The bars a single-storey body carries.
@@ -1384,19 +1102,6 @@ impl LowerA<'_> {
 }
 
 /// `FlipAround` about the ring's centre, as a node the tree carries.
-fn flip(shape: &Dispiro, ring: &OBarRing) -> Geometry {
-    let mid_x = mix(ring.left, ring.right, 0.5);
-    let mid_y = mix(ring.bot, ring.top, 0.5);
-    let tf = kurbo::Affine::translate((mid_x, mid_y))
-        * kurbo::Affine::scale_non_uniform(-1.0, -1.0)
-        * kurbo::Affine::translate((-mid_x, -mid_y));
-
-    Geometry::Transformed {
-        tf,
-        geom: Box::new(shape.geometry(kurbo::Affine::IDENTITY)),
-    }
-}
-
 /// `ArcStartSerifWidth`: `clamp(stroke * 0.875, stroke, VJutStroke)`.
 fn arc_start_serif_width(stroke: f64, v_jut_stroke: f64) -> f64 {
     (stroke * 0.875).max(stroke).min(v_jut_stroke)
