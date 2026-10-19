@@ -17,38 +17,49 @@ const shown = ref(false);
 const ascender = ref<string | number>("");
 const xHeight = ref<string | number>("");
 
+interface Fitted {
+  points: number;
+  cell: number;
+}
+
 /// Sets the wordmark to what is left of the measure once the labels have their
-/// column, and answers the size it landed on.
-function fit(): number {
+/// column, and answers the size it landed on and the width of one letter.
+///
+/// The cell is the rendered width divided by the number of characters rather
+/// than the font's advance on its own. The wordmark is set with negative
+/// tracking, and a cell that ignores it drifts a little per letter and most of a
+/// letter by the last one. Taking it from the text means any later change to the
+/// tracking is already in the number.
+function fit(): Fitted | null {
   const element = word.value;
   const holder = stage.value;
-  if (!element || !holder || !holder.clientWidth) return 0;
+  if (!element || !holder || !holder.clientWidth) return null;
   const text = element.firstChild;
-  if (!text) return 0;
+  if (!text) return null;
+  const characters = text.textContent?.length ?? 0;
+  if (!characters) return null;
   element.style.fontSize = "100px";
   const range = document.createRange();
   range.selectNode(text);
   const width = range.getBoundingClientRect().width;
-  if (!width) return 0;
+  if (!width) return null;
   const room = Math.max(holder.clientWidth - 132, holder.clientWidth * 0.55);
   const points = Math.min((100 * room) / width, 340);
   element.style.fontSize = `${points}px`;
 
-  return points;
+  return { points, cell: room / characters };
 }
 
 function draw(): void {
   const metrics = font.metrics;
   const holder = stage.value;
   if (!metrics || !holder) return;
-  const points = fit();
-  if (!points) return;
+  const fitted = fit();
+  if (!fitted) return;
+  const { points, cell } = fitted;
 
   // The grid follows the size, so the letters stay on their cells.
-  const advance = metrics.advance;
-  if (advance !== null) {
-    holder.style.setProperty("--cell", `${(advance / 1000) * points}px`);
-  }
+  holder.style.setProperty("--cell", `${cell}px`);
 
   // On a narrow screen the wordmark fills the measure and the labels would sit
   // on the letters, so the rules go away rather than lie across them.

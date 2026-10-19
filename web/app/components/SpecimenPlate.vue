@@ -15,20 +15,30 @@ const props = withDefaults(
 const font = useLemmataFont();
 const index = ref(0);
 const cell = ref("12px");
+const sampleRef = ref<HTMLElement | null>(null);
 
 const sample = computed(() => props.samples[index.value % props.samples.length]);
 const shuffle = (): void => {
   index.value = (index.value + 1) % props.samples.length;
 };
 
-// The cell is one advance at this size, so the grid is the grid the letters are
-// drawn on rather than a decoration behind them.
+// The cell is one advance at this size, taken from the rendered line divided by
+// its characters, so the grid is the grid the letters are drawn on rather than a
+// decoration behind them. Measuring the text rather than the font's tables means
+// the number carries the tracking and the face actually in use.
 watch(
   () => font.ready,
   (ready) => {
-    const advance = font.metrics?.advance;
-    if (!ready || advance === null || advance === undefined) return;
-    cell.value = `${(advance / 1000) * props.size}px`;
+    if (!ready) return;
+    nextTick(() => {
+      const element = sampleRef.value;
+      const text = element?.firstChild;
+      const characters = text?.textContent?.length ?? 0;
+      if (!element || !text || !characters) return;
+      const range = document.createRange();
+      range.selectNode(text);
+      cell.value = `${range.getBoundingClientRect().width / characters}px`;
+    });
   },
   { immediate: true },
 );
@@ -37,7 +47,7 @@ watch(
 <template>
   <div class="panel">
     <div class="plate" :style="{ '--cell': cell, '--plate': `${size}px` }">
-      <p class="plate__sample">{{ sample }}</p>
+      <p class="plate__sample" ref="sampleRef">{{ sample }}</p>
       <div class="plate__foot">
         <span>{{ face }} / {{ size }}px</span>
         <button class="chip" type="button" @click="shuffle">
