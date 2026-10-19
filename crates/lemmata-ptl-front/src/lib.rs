@@ -9,17 +9,20 @@
 //! `patel-c --dump-ast` writes the reader's S-expressions as JSON, and this
 //! crate starts from there.
 //!
-//! What is left is expansion. Almost all of PTL's surface is macros — 23 of them
-//! in `meta/macros.ptl` — over a fixed set of builtin forms, and the expander is
-//! where the language lives. [`inventory`] counts the heads a corpus of reader
-//! output actually uses, which is what sizes that work rather than guessing at
-//! it.
+//! What is left is expansion. Almost all of PTL's surface is macros over a fixed
+//! set of builtin forms, and [`expand`] is where the language lives. It applies
+//! the twenty macros `meta/macros.ptl` defines, resolves the reader's flat infix
+//! runs through the operator table, and leaves the builtins plus the runtime
+//! vocabulary in [`expand::RUNTIME`].
 //!
-//! Across the 337 definition files that corpus names 2,530 distinct heads, but
-//! only twenty of them are macros and thirteen are builtins. The rest are
-//! ordinary calls, which the translator handles without expanding anything. The
-//! hot ones are `include` at 8,232 uses and `glyph-proc` at 3,245, so those two
-//! carry the design; `Just` at 624 is the only procedural macro in wide use.
+//! [`inventory`] counts the heads a corpus of reader output uses, which is what
+//! sized that work rather than guessing at it. Across 337 files the corpus names
+//! 2,530 distinct heads, but only twenty are macros and thirteen are builtins.
+//! The rest are ordinary calls. The hot ones are `include` at 8,232 uses and
+//! `glyph-proc` at 3,245. `Just` at 624 is the only procedural macro in wide
+//! use.
+//!
+//! [`translate`] turns an expanded program into Rust.
 
 // The suggestions here are for `const fn`, and the accessors cannot be const:
 // returning a `&str` from a `String` field is a deref coercion.
@@ -27,6 +30,10 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+
+pub mod expand;
+
+pub use expand::{Error as ExpandError, expand};
 
 /// One node of the reader's output.
 ///
