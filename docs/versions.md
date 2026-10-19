@@ -4,13 +4,11 @@ Pinned 17 October 2026. Update only together with a drift report.
 
 ## Release candidates (exact pins)
 
-| Crate | Version | Used for |
-| --- | --- | --- |
-| facet | 0.50.0-rc.7 | reflection, config, cache keys |
-| facet-toml | 0.50.0-rc.7 | plan file parsing |
-| figue | 5.0.0-rc.6 | CLI arguments and config files |
-| picante | 3.0.0-rc.5 | incremental queries |
-| rediff | 0.50.0-rc.7 | structural test diffs |
+None. The workspace depends on released versions only, so there is nothing to pin
+exactly and nothing to record here. A candidate that nothing depends on is not a
+dependency and belongs in neither place: the last ones, `facet`, `facet-toml`,
+`figue`, `picante` and `rediff`, were carried here for a while with a row saying
+what each was for and no crate using any of them.
 
 ## Font stack
 

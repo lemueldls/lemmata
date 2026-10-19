@@ -10,7 +10,7 @@ Checked 17 October 2026 with rustc 1.99.0 on x86_64-unknown-linux-gnu, target wa
 | ttf2woff2 0.14.0 | pass |
 | picante 3.0.0-rc.5 | fail |
 
-picante pulls tokio 1.53.3 with the `fs` and `rt-multi-thread` features. Tokio refuses to build for wasm32-unknown-unknown with those features enabled. The dependency is not optional in picante, so picante cannot run in the browser as published. Consequence: the browser build uses the in-house memo backend and picante stays native-only.
+picante pulls tokio 1.53.3 with the `fs` and `rt-multi-thread` features. Tokio refuses to build for wasm32-unknown-unknown with those features enabled. The dependency is not optional in picante, so picante cannot run in the browser as published. Consequence: the browser build uses an in-house memo backend, and picante is not a dependency.
 
 The ttf2woff2 result settles the WOFF2 question for the browser build. WOFF2 export does not need a C++ toolchain or a native-only path.
 
@@ -158,4 +158,4 @@ The profile does not move the bytes — checked before the fingerprint was writt
 
 `harness/parity.mjs` has no dependencies on purpose: node's own crypto and a `wasm-pack --target nodejs` build are enough, so the pair can be checked offline and in CI. The browser suite is the one that needs an install: `pnpm --dir harness/browser install` and `pnpm --dir harness/browser exec playwright install chromium` are enough, and `nix develop .#browser` is the hermetic alternative, providing a matched driver and browser without a download. The default shell does not carry them, because it has to build from the store alone.
 
-What the browser suite still owes §7.1 beyond parity: the MathML torture page, offline mode, and the latency bench behind `r[wasm.responsive]`.
+What the browser suite still owes beyond parity: the MathML torture page, offline mode, and the latency bench behind `r[wasm.responsive]`.

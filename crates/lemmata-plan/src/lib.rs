@@ -11,9 +11,9 @@
 //! the invariant `tests/default.rs` pins.
 //!
 //! The boundary format is JSON, because the page sends an object and
-//! `serde_json` is already in the tree. PLAN.md §4.1 asks for TOML through
-//! facet-toml and Iosevka's plan keys verbatim; this struct is the part that
-//! survives that change and the format is an adapter over it.
+//! `serde_json` is already in the tree. The struct is the part a file format
+//! would be an adapter over, and the keys are Iosevka's, so a plan written for
+//! one tool reads in the other for the fields both have.
 
 use lemmata_build::font::Metrics;
 use serde_json::Value;

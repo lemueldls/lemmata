@@ -18,7 +18,7 @@ use lemmata_capture::dump_path;
 use lemmata_geom::{QuadifyKind, QuadifyPoint};
 use serde_json::Value;
 
-/// The drift budget, in font units, from PLAN.md's `r[drift.outline]`. It is
+/// The drift budget, in font units, that `r[drift.outline]` sets. It is
 /// calibrated rather than chosen: the shapes are exact and the residual is the
 /// fairization artifact described in docs/glyphs.md, worth 0.075 px at 16 ppem.
 const TOLERANCE: f64 = 5.0;

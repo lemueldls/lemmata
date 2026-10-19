@@ -10,7 +10,7 @@ It carries the character variants as well, in the shape an Iosevka plan uses: a 
 
 A choice the capture does not hold is ignored rather than fatal, and the group's other drawings are dropped, so the font carries one drawing per group rather than one plus the alternatives it did not choose. `lemmata_web::variants_of` lists what a capture holds for a group, which is what the page's picker offers, so the list follows the glyphs rather than a table written into the page.
 
-The boundary format is JSON, because the page sends an object and `serde_json` is already in the tree. PLAN.md §4.1 asks for TOML through facet-toml and Iosevka's plan keys verbatim; the struct is the part that survives that change and the format is an adapter over it.
+The boundary format is JSON, because the page sends an object and `serde_json` is already in the tree. A plan *file* is meant to be TOML with Iosevka's keys, and the struct is the part that survives that change, but the format is not settled: `facet-toml 0.50.0-rc.7` reads a document into a derived type and reports an error by field path, and it neither publishes a schema nor carries a span, so an error cannot be located by line. The pins that were meant for it are gone from the manifest, since nothing depended on them.
 
 The CLI takes `--plan <file>` and the page has a text area holding the plan. Both hand it to the same `lemmata_plan::from_json`, and any key either omits takes its default, so a control only has to send what it changed.
 

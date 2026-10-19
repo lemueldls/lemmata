@@ -483,8 +483,9 @@ fn woff2_is_emitted_and_accepted() {
     );
 }
 
-/// `r[pin.exact]`: every release-candidate dependency is pinned exactly, and
-/// every pin has a row in `docs/versions.md`.
+/// `r[pin.exact]`: every release-candidate dependency is pinned exactly, every
+/// pin has a row in `docs/versions.md`, and every dependency the manifest names
+/// is one a crate depends on.
 #[test]
 fn release_candidates_are_pinned_exactly() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -493,9 +494,21 @@ fn release_candidates_are_pinned_exactly() {
     let record =
         std::fs::read_to_string(root.join("docs/versions.md")).expect("read the version record");
 
+    // Three directions, because each rots on its own. A candidate pinned with a
+    // caret is a new interface arriving unannounced; a pin with no row is a
+    // version that moved without the record moving with it; and a dependency
+    // nothing depends on is not a dependency, which is how this section came to
+    // carry five entries that no build read.
+    let manifests: Vec<String> = std::fs::read_dir(root.join("crates"))
+        .expect("read the crate directory")
+        .filter_map(Result::ok)
+        .filter_map(|entry| std::fs::read_to_string(entry.path().join("Cargo.toml")).ok())
+        .collect();
+
     let mut checked = 0usize;
     let mut unpinned = Vec::new();
     let mut unrecorded = Vec::new();
+    let mut unused = Vec::new();
     let mut inside = false;
     for line in manifest.lines() {
         let line = line.trim();
@@ -509,20 +522,38 @@ fn release_candidates_are_pinned_exactly() {
         let Some((name, value)) = line.split_once('=') else {
             continue;
         };
-        let (name, value) = (name.trim(), value.trim().trim_matches('"'));
+        let name = name.trim();
+        if !manifests.iter().any(|manifest| manifest.contains(name)) {
+            unused.push(name.to_string());
+        }
+
+        // A value may be a plain string or a table with features, so the version
+        // is read out of whichever it is.
+        let value = value.trim();
+        let version = if let Some(rest) = value.strip_prefix('{') {
+            rest.split(',').next().unwrap_or(rest)
+        } else {
+            value
+        };
+        let version = version
+            .trim()
+            .trim_start_matches("version")
+            .trim_start_matches('=')
+            .trim()
+            .trim_matches('"');
+
         // The rule is about release candidates: a stable release may float
-        // within a caret, and a candidate may not, because the next one is a
-        // new interface rather than a fix.
-        if !value.contains("-rc.") {
+        // within a caret, and a candidate may not, because the next one is a new
+        // interface rather than a fix.
+        if !version.contains("-rc.") {
             continue;
         }
         checked += 1;
-        if !value.starts_with('=') {
-            unpinned.push(format!("{name} = {value}"));
+        if !version.starts_with('=') {
+            unpinned.push(format!("{name} = {version}"));
         }
         // The record is what a bump change edits, so a pin with no row is a
         // version that moved without the record moving with it.
-        let version = value.trim_start_matches('=');
         let recorded = record
             .lines()
             .any(|row| row.contains(&format!("| {name} |")) && row.contains(version));
@@ -531,7 +562,6 @@ fn release_candidates_are_pinned_exactly() {
         }
     }
 
-    assert!(checked > 0, "the manifest carries no release candidates");
     assert!(
         unpinned.is_empty(),
         "these release candidates are not pinned exactly: {unpinned:?}"
@@ -540,7 +570,11 @@ fn release_candidates_are_pinned_exactly() {
         unrecorded.is_empty(),
         "these pins have no row in docs/versions.md: {unrecorded:?}"
     );
-    eprintln!("pins: {checked} release candidates, all exact and recorded");
+    assert!(
+        unused.is_empty(),
+        "these workspace dependencies are not depended on: {unused:?}"
+    );
+    eprintln!("pins: {checked} release candidates, all exact and recorded, and no unused pin");
 }
 
 /// `r[port.upstream-tag]`: the pinned upstream tag is stamped into the font, and
