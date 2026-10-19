@@ -158,6 +158,8 @@ pub fn derived(glyphs: &[GlyphData], metrics: &Metrics) -> Vec<GlyphData> {
     derived.extend(dotless);
     let script = crate::ssty::derive(glyphs, next_code(&derived));
     derived.extend(script);
+    let flattened = crate::flac::derive(glyphs, next_code(&derived));
+    derived.extend(flattened);
     let healed = crate::texture::derive(glyphs, next_code(&derived));
     derived.extend(healed);
 
@@ -324,11 +326,28 @@ fn substitutions(glyphs: &[GlyphData]) -> Gsub {
         }
     }
 
+    // `flac` flattens an accent for a tall base, so every accent the font
+    // carries above the baseline is named.
+    let mut flattened = Vec::new();
+    for glyph in glyphs {
+        let Some(base) = glyph.name.strip_suffix(".mathcap") else {
+            continue;
+        };
+        if let (Some(from), Some(to)) = (id(base), id(&glyph.name)) {
+            flattened.push((from, to));
+        }
+    }
+
     let mut features = vec![
         lemmata_layout::Feature {
             tag: Tag::new(b"dtls"),
             scripts: vec![Tag::new(b"math")],
             effect: lemmata_layout::Effect::Single(pairs),
+        },
+        lemmata_layout::Feature {
+            tag: Tag::new(b"flac"),
+            scripts: vec![Tag::new(b"math")],
+            effect: lemmata_layout::Effect::Single(flattened),
         },
         lemmata_layout::Feature {
             tag: Tag::new(b"ssty"),

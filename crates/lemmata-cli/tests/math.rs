@@ -131,12 +131,19 @@ fn math_letters_have_corrections_and_accents() {
     let mut italic_count = 0i64;
     let mut upright_total = 0i64;
     let mut upright_count = 0i64;
+    // A letter a renderer sets on its own. A combining mark is alphabetic and is
+    // not one: it attaches to a base and carries no advance, so there is no
+    // advance for either measurement to be inside, and both are read for the
+    // bases.
+    let is_letter = |glyph: &lemmata_capture::Glyph| {
+        glyph.advance != 0.0
+            && glyph
+                .unicodes
+                .iter()
+                .any(|code| char::from_u32(*code).is_some_and(char::is_alphabetic))
+    };
     for (index, glyph) in captured.iter().enumerate() {
-        if !glyph
-            .unicodes
-            .iter()
-            .any(|code| char::from_u32(*code).is_some_and(char::is_alphabetic))
-        {
+        if !is_letter(glyph) {
             continue;
         }
         // The font's glyph order is the capture's, with `.notdef` first.
@@ -180,15 +187,7 @@ fn math_letters_have_corrections_and_accents() {
 
     // Every letter the font carries, not the math alphanumerics alone: a
     // renderer sets a plain Latin or Greek letter in math too.
-    let letters = captured
-        .iter()
-        .filter(|glyph| {
-            glyph
-                .unicodes
-                .iter()
-                .any(|code| char::from_u32(*code).is_some_and(char::is_alphabetic))
-        })
-        .count();
+    let letters = captured.iter().filter(|glyph| is_letter(glyph)).count();
     assert_eq!(covered, letters, "every letter is covered");
     let italic_mean = italic_total / italic_count.max(1);
     let upright_mean = upright_total / upright_count.max(1);
@@ -928,4 +927,107 @@ fn dotless_forms_are_carried_by_dtls() {
         assert!(top < base_top, "{} should be shorter", form.name);
     }
     eprintln!("dtls: {} dotless forms", forms.len());
+}
+
+/// `r[math.script-style]`: the flattened accents, and the `flac` feature that
+/// names them.
+#[test]
+fn flattened_accents_are_carried_by_flac() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let gsub = font.gsub().expect("the font carries a GSUB");
+    let feature_list = gsub.feature_list().expect("a feature list");
+    let record = feature_list
+        .feature_records()
+        .iter()
+        .find(|record| record.feature_tag() == Tag::new(b"flac"))
+        .expect("the font carries flac");
+    let index = usize::from(
+        record
+            .feature(feature_list.offset_data())
+            .expect("the feature reads")
+            .lookup_list_indices()
+            .first()
+            .expect("the feature names a lookup")
+            .get(),
+    );
+    let lookup = gsub
+        .lookup_list()
+        .expect("a lookup list")
+        .lookups()
+        .get(index)
+        .expect("the lookup is in the list");
+
+    // A single substitution, unlike `ssty`: the renderer asks for `flac` and
+    // gets the flat form, with no choice to make.
+    assert_eq!(
+        lookup.lookup_type(),
+        1,
+        "flac should be a single substitution"
+    );
+
+    let glyphs: Vec<GlyphData> = captured
+        .iter()
+        .map(|glyph| GlyphData {
+            name: glyph.name.clone(),
+            unicodes: glyph.unicodes.clone(),
+            advance: advance_to_u16(glyph.advance),
+            contours: lemmata_capture::contours(glyph),
+        })
+        .collect();
+    let flattened = lemmata_build::flac::derive(&glyphs, 0);
+    assert!(
+        !flattened.is_empty(),
+        "the capture has accents above the baseline"
+    );
+    for form in &flattened {
+        let base_name = form
+            .name
+            .strip_suffix(".mathcap")
+            .expect("an alternate is named for its base");
+        let base = glyphs
+            .iter()
+            .find(|glyph| glyph.name == base_name)
+            .unwrap_or_else(|| panic!("{} has no base", form.name));
+        assert!(
+            base.name.contains("Above"),
+            "{} flattens an accent that does not sit above the base",
+            form.name
+        );
+        assert_eq!(
+            form.advance, base.advance,
+            "{} should keep its base's advance",
+            form.name
+        );
+
+        // Flattened: the same bottom edge, a shorter height and a wider drawing.
+        // The bottom is the edge the accent attaches by, so keeping it is what
+        // lets the flattened form stand in for the ordinary one.
+        let (x0, low, x1, high) = form.bounding_box().expect("the form has ink");
+        let (base_x0, base_low, base_x1, base_high) =
+            base.bounding_box().expect("the base has ink");
+        assert!(
+            (low - base_low).abs() <= 1,
+            "{} moves its bottom edge from {base_low} to {low}",
+            form.name
+        );
+        assert!(
+            high - low < base_high - base_low,
+            "{} is {} tall against its base's {}",
+            form.name,
+            high - low,
+            base_high - base_low
+        );
+        assert!(
+            x1 - x0 > base_x1 - base_x0,
+            "{} is {} wide against its base's {}",
+            form.name,
+            x1 - x0,
+            base_x1 - base_x0
+        );
+    }
+    eprintln!("flac: {} flattened accents", flattened.len());
 }

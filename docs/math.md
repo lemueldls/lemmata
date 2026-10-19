@@ -50,18 +50,25 @@ Two tests, because the table has two halves and they read different captures.
 
 It is separate from the coverage capture, because it holds a different set. The coverage one is 72 glyphs of Latin letters, digits and punctuation and the outline tests are calibrated against it, so widening it would perturb a calibrated gate. This one holds the math alphanumerics and the operators.
 
-Regenerate it by adding the math codepoints to a build:
+Regenerate it by naming the set it holds and adding the combining marks:
 
 ```
 LEMMATA_GLYPH_DUMP=target/math.bin LEMMATA_GLYPH_WIDTH=500 \
-LEMMATA_GLYPH_CODEPOINTS=$(python3 -c "print(','.join(str(c) for lo, hi in
-  [(0x1D400, 0x1D7FF), (0x2200, 0x22FF), (0x2308, 0x230B), (0x27E8, 0x27EB)]
-  for c in range(lo, hi + 1)))") \
+LEMMATA_GLYPH_SET=$(python3 -c "import json; print(','.join(g['name'] for g in
+  json.load(open('target/math.bin.json'))))") \
+LEMMATA_GLYPH_CODEPOINTS=$(python3 -c "print(','.join(str(c) for c in range(0x300, 0x370)))") \
 npm run build -- ttf-unhinted::RefA
 ```
 
-It lands 1592 glyphs: 904 math alphanumerics, 256 operators, 56 Greek letters,
-58 Latin ones, 10 digits and 308 other symbols.
+It lands 1709 glyphs: 904 math alphanumerics, 256 operators, 56 Greek letters,
+58 Latin ones, 10 digits, 308 other symbols and 112 combining marks.
+
+**The plan must hold one slope, and it has to be the upright one.** With both,
+both are 500 units wide and the dump lands on whichever the build writes last,
+which is the italic, and a slanted delimiter's band cannot repeat: its stem
+wanders sideways over the band, so `assembly` judges every one of them unable to
+stack and the font ships without assemblies. Two of the math tests fail on that,
+and the message names the glyphs rather than the slope.
 
 The alphanumerics are the whole block, and Iosevka draws every style in it except one. `r[math.alphabets]` names eight: bold, italic, bold italic, script, fraktur, double-struck, sans-serif and monospace. The pinned build has seven of them. **Script is absent**, both the plain and the bold pair, 104 codepoints with no glyphs behind them.
 
@@ -127,7 +134,7 @@ The browser shell needed `PLAYWRIGHT_BROWSERS_PATH`. Playwright looks in `~/.cac
 
 ## The layout tags
 
-The specification names three layout tags for math, and two are written.
+The specification names three layout tags for math, and all three are written.
 
 `dtls`, the dotless forms, is a single substitution under the `math` script: `i`
 and `j` draw their dot as a contour of its own, so the form is the same glyph with
@@ -169,12 +176,22 @@ puts glyphs in it that nothing can reach: the coverage capture's font went from
 alphanumeric block as the sign that a set is a math font's, and covers the plain
 Latin, Greek and digits only when it holds one.
 
-`flac`, the flattened accents, is not written. It is a single substitution, which
-the crate can already carry: STIX Two Math maps ten combining accents to a
-`mathcap` form, the grave, acute, circumflex, tilde, macron, breve, dot above,
-diaeresis, ring above and caron. What is missing is the accents themselves. The
-math capture holds no combining marks at all, since its ranges are the
-alphanumeric block and the operators, so there is nothing to flatten yet.
+`flac`, the flattened accents, is the third. It is a single substitution, unlike
+`ssty`: the renderer asks for `flac` and gets the flat form, with no choice to
+make.
+
+The reference is STIX Two Math, which maps ten combining accents to a `mathcap`
+form. Read off its outlines, the flat form is the accent made shorter and wider:
+the grave and the acute lose the most, 0.84 of their height and 1.27 of their
+width, and the macron the least, 0.96 and 1.01. So the derivation takes one
+factor in the middle of that range rather than a table per accent, scaling the
+height about the accent's own bottom edge, which is the edge it attaches by, so a
+flat accent sits where the ordinary one did.
+
+Only the accents above the base are flattened, and there are 55 of them. An
+accent below hangs from the other edge, where a tall base is not the problem. The
+names say which is which: the glyph source calls them `graveAbove` and
+`graveBelow`.
 
 ## Texture healing
 
@@ -194,6 +211,6 @@ The derived glyphs have to be encoded, at U+F000 and up. They are not characters
 
 They also have to join the glyph set before anything counts it. Appending them later leaves them past `maxp.num_glyphs`, where they are ignored until something references one and the reference is out of range. That was the bug: `ots-sanitize` said `bad glyph ID: 1593`, one past the count, and a renderer only said `malformed font`. A renderer shrugs where the sanitizer names the number. The writer and the caller that reports the count now read one function, so a derived glyph cannot be written without being counted.
 
-The script style `r[math.alphabets]` names is still a gap in the glyph source. `r[math.script-style]` is now half closed: `ssty` is written and `flac` waits on the accents.
+The script style `r[math.alphabets]` names is still a gap in the glyph source, and it is the last thing `r[math.script-style]` waits on: its other half is the `ssty` and `flac` features, and both are written.
 
 Math kerning and the horizontal constructions are also unwritten. Neither is needed by a simple equation.
