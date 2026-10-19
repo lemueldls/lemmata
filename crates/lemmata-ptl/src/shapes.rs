@@ -1181,3 +1181,110 @@ fn vbar(kit: &Kit, metrics: &Metrics, x: f64, y_down: f64, y_up: f64, sw: f64) -
 
     kit.dispiro(items)
 }
+
+/// `HBar.m`: a horizontal bar from `x_left` to `x_right` at `y`, centred on it.
+#[must_use]
+pub fn hbar_m(
+    kit: &Kit,
+    metrics: &Metrics,
+    x_left: f64,
+    x_right: f64,
+    y: f64,
+    fine: Option<f64>,
+) -> Dispiro {
+    let width = fine.unwrap_or(metrics.stroke);
+    let items = vec![
+        Item::Af(kit.widths_center(Some(width))),
+        kit.knot(KnotType::Left, x_left, y, kit.heading(rightward())),
+        kit.knot(KnotType::Right, x_right, y, kit.heading(rightward())),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `HBar.t`: the bar's top edge at `y`.
+#[must_use]
+pub fn hbar_t(
+    kit: &Kit,
+    metrics: &Metrics,
+    x_left: f64,
+    x_right: f64,
+    y: f64,
+    fine: Option<f64>,
+) -> Dispiro {
+    let width = fine.unwrap_or(metrics.stroke);
+
+    hbar_m(kit, metrics, x_left, x_right, y - width / 2.0, fine)
+}
+
+/// `HBar.b`: the bar's bottom edge at `y`.
+#[must_use]
+pub fn hbar_b(
+    kit: &Kit,
+    metrics: &Metrics,
+    x_left: f64,
+    x_right: f64,
+    y: f64,
+    fine: Option<f64>,
+) -> Dispiro {
+    let width = fine.unwrap_or(metrics.stroke);
+
+    hbar_m(kit, metrics, x_left, x_right, y + width / 2.0, fine)
+}
+
+/// Which end of a vertical serif the ink sits on.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum VSerifSide {
+    /// `dr`: below `y`, ink on the right.
+    DownRight,
+    /// `dl`: below `y`, ink on the left.
+    DownLeft,
+    /// `ur`: above `y`, ink on the left.
+    UpRight,
+    /// `ul`: above `y`, ink on the right.
+    UpLeft,
+}
+
+/// `VSerif`: a vertical serif at `x`, `length` long, pointing away from the bar.
+#[must_use]
+pub fn vserif(
+    kit: &Kit,
+    metrics: &Metrics,
+    side: VSerifSide,
+    x: f64,
+    y: f64,
+    length: f64,
+    sw: Option<f64>,
+) -> Dispiro {
+    let width = sw.unwrap_or(metrics.v_jut_stroke);
+    let (widths, down, heading) = match side {
+        VSerifSide::DownRight => (
+            kit.widths_rhs(Some(width)),
+            true,
+            downward(metrics.hv_contrast),
+        ),
+        VSerifSide::DownLeft => (
+            kit.widths_lhs(Some(width)),
+            true,
+            downward(metrics.hv_contrast),
+        ),
+        VSerifSide::UpRight => (
+            kit.widths_lhs(Some(width)),
+            false,
+            upward(metrics.hv_contrast),
+        ),
+        VSerifSide::UpLeft => (
+            kit.widths_rhs(Some(width)),
+            false,
+            upward(metrics.hv_contrast),
+        ),
+    };
+    let end = if down { y - length } else { y + length };
+    let items = vec![
+        Item::Af(widths),
+        kit.knot(KnotType::Left, x, y, kit.heading(heading)),
+        kit.knot(KnotType::Right, x, end, kit.heading(heading)),
+    ];
+
+    kit.dispiro(items)
+}
