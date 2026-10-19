@@ -2,10 +2,10 @@
 // rather than calls, and one pending reply is enough because requests are
 // serialised.
 //
-// The build stays on the worker thread, which is the point: a full set is tens
+// The build runs on the worker thread, which is the point: a full set is tens
 // of thousands of glyphs and would freeze the page. The plan and the outlines
 // come in as arguments, since the page keeps one of each and this only has to
-// carry them across.
+// pass them across.
 import init from "lemmata-web";
 import BuildWorker from "~/workers/build.ts?worker";
 

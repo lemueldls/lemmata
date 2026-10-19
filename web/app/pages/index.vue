@@ -1,23 +1,16 @@
 <script setup lang="ts">
-// The landing: the font this site is set in, the plan behind it, the whole
-// character set, a mock interface, examples, the healing, the numbers and an
-// equation. Every number on it comes out of the font itself.
+// The specimen page: the face, the plan behind it, the cell, samples, healing,
+// equations and a way into the configurator.
 //
-// Stub: spec.optical-sizes and spec.script-style below have nothing behind them;
-// the variant picker and the ligatures are stubs in `generate.vue`, where a
-// reader would look for them.
+// Every number in the readouts comes from the font file the page loads, never
+// from a table written here.
 import { useLemmataFont } from "~/composables/font";
 
-useHead({
-  title: "A typeface built from a plan",
-  // The cover is up until the font is read, and the scripts that read it are the
-  // only thing that can take it away. Without them it has to go by the rule.
-  noscript: [{ innerHTML: "<style>.boot{display:none}</style>" }],
-});
+useHead({ title: "Specimen" });
 
 const font = useLemmataFont();
 
-/// The reference plan, which is what `Plan::default()` holds.
+/// The reference plan, which is what the builder uses when a key is absent.
 const PLAN = {
   capHeight: 735,
   xHeight: 520,
@@ -25,142 +18,311 @@ const PLAN = {
   descender: -215,
   italicAngle: 0,
   weight: 400,
-};
+  spacing: "normal",
+} as const;
 
-/// Sentences to set the font in: short enough for the plate, and each one says
-/// something the page then shows.
-const SAMPLES = [
-  "one width for every letter",
-  "the ink moves, the cell does not",
-  "one plan in, one font out",
-  "the same bytes either way",
+const TICKER = [
+  "one plan",
+  "one file",
+  "texture healing",
+  "math table",
+  "eleven variants",
+  "offline after load",
 ];
 
-/// What the typeface holds, in the order a mechanism is explained.
 const FEATURES = [
-  { name: "Metrics", note: "Every key in the plan goes to the font's tables." },
-  { name: "Parameters", note: "The parameter tables, read as Iosevka writes them." },
-  { name: "Variants", note: "Every letter in as many spellings as you care to compare." },
   {
-    name: "Texture healing",
-    note: "A letter that leaves its cell empty gives the room to the neighbour that fills one, and the cell is where it was.",
+    name: "metrics",
+    note: "cap height, x height, ascender, descender, weight and slope.",
+    state: "ready" as const,
   },
   {
-    name: "Math",
-    note: "The constants, the italic corrections, and the delimiters that grow to fit.",
+    name: "parameters",
+    note: "Iosevka's parameter tables, read as they are written.",
+    state: "ready" as const,
   },
-  { name: "Ligatures", note: "The sets a coding face is expected to have." },
-  { name: "Optical sizes", note: "A face for footnotes and a face for display, from one plan." },
-  { name: "Script style", note: "Letters drawn for the size of the body they sit in." },
+  {
+    name: "variants",
+    note: "eleven spellings of a in this outline set, chosen from the file.",
+    state: "ready" as const,
+  },
+  {
+    name: "texture healing",
+    note: "a narrow letter gives room to its neighbour, and the advance holds.",
+    state: "ready" as const,
+  },
+  {
+    name: "math table",
+    note: "constants, italic corrections and delimiters that grow.",
+    state: "ready" as const,
+  },
+  {
+    name: "ligature sets",
+    note: "named in the plan, waiting for the lookups.",
+    state: "next" as const,
+  },
+  {
+    name: "optical sizes",
+    note: "a face for footnotes and a face for display, from one plan.",
+    state: "next" as const,
+  },
+  {
+    name: "script style",
+    note: "letters drawn for the size of the body they sit in.",
+    state: "next" as const,
+  },
 ];
 
 const status = computed(() => {
-  if (font.error) return `The font could not be read: ${font.error}`;
-  const metrics = font.metrics;
-  if (!metrics) return "Reading the font…";
+  if (font.error) return `the font did not load: ${font.error}`;
+  if (!font.metrics) return "reading the font…";
 
-  return (
-    `${metrics.drawn.toLocaleString()} glyphs · ${metrics.mapped} characters · ` +
-    `ready in ${Math.round(font.elapsed)} ms`
-  );
+  return `${font.metrics.drawn} glyphs / ${font.metrics.mapped} characters / ready in ${Math.round(font.elapsed)} ms`;
 });
 
-/// The readings, as one line, in the order a specimen sheet gives them.
 const readings = computed(() => {
   const metrics = font.metrics;
-  if (!metrics) return "";
-  const label = (name: string, value: number | null): string =>
-    value === null ? "" : `${name} ${value}`;
 
   return [
-    label("units per em", metrics.upem),
-    label("x-height", metrics.xHeight),
-    label("ascender", metrics.ascender),
-    label("descender", metrics.descender),
-    label("advance", metrics.advance),
-    `${metrics.mapped} characters`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+    ["glyphs", metrics?.drawn ?? "—"],
+    ["characters", metrics?.mapped ?? "—"],
+    ["x height", metrics?.xHeight ?? "—"],
+    ["ascender", metrics?.ascender ?? "—"],
+    ["descender", metrics?.descender ?? "—"],
+    ["advance", metrics?.advance ?? "—"],
+    ["units / em", metrics?.upem ?? "—"],
+    ["file", font.byteLength ? `${font.byteLength.toLocaleString()} b` : "—"],
+  ];
 });
 </script>
 
 <template>
-  <BootCover />
   <section class="hero" data-key-section>
-    <div class="wrap">
-      <p class="kicker">after Iosevka 34.9.0</p>
-      <HeroWord />
-      <p class="lede">
-        This page is set in the font it describes. The plan is the input, the font
-        is the output, and the numbers beside them come out of the font itself.
-      </p>
-      <div class="actions">
-        <a class="btn" href="#letters">See the font</a>
-        <NuxtLink class="btn btn--primary" to="/generate/">Open the generator</NuxtLink>
+    <div class="hero__grid" aria-hidden="true" />
+
+    <div class="wrap hero__inner">
+      <div class="hero__main">
+        <p class="eyebrow">
+          <b>+</b> specimen 001 <i>/</i> live from the font
+        </p>
+
+        <h1 class="hero__word">lemmata</h1>
+
+        <div class="hero__rule">
+          <span>one plan</span>
+          <i />
+          <span>one file</span>
+        </div>
+
+        <p class="hero__lede">
+          A typeface factory in a browser tab. Set the metrics, choose the
+          drawings, build the file. No account, no queue, no upload.
+        </p>
+
+        <div class="hero__actions">
+          <NuxtLink class="btn btn--accent" to="/generate/">
+            open configurator <span>→</span>
+          </NuxtLink>
+          <a class="btn btn--ghost" href="#samples">browse samples</a>
+        </div>
+
+        <p class="hero__notes">
+          <span>no account</span>
+          <span>no queue</span>
+          <span>offline after load</span>
+        </p>
       </div>
-      <StatusLine :state="font.ready ? 'ok' : 'note'">{{ status }}</StatusLine>
-      <SpecimenPlate :samples="SAMPLES" face="Lemmata Regular" :size="40" />
+
+      <aside class="readout" aria-label="Readings from the font">
+        <div class="readout__bar">
+          <span class="dot" />
+          live readings
+          <span>+</span>
+        </div>
+
+        <dl class="readout__rows">
+          <div v-for="[name, value] in readings" :key="name">
+            <dt>{{ name }}</dt>
+            <dd>{{ value }}</dd>
+          </div>
+        </dl>
+
+        <div class="readout__cmd">
+          <span><span class="prompt">$</span> lemmata build --plan plan.json</span>
+          <span class="out">→ {{ font.byteLength.toLocaleString() }} bytes / {{ Math.round(font.elapsed) }} ms</span>
+        </div>
+      </aside>
     </div>
   </section>
 
-  <SectionBlock number="01" label="Plan">
-    <h2>Everything comes from the plan</h2>
-    <p>
-      Every key defaults, so this is the reference plan, and every key it holds
-      goes to the font.
-    </p>
-    <div class="cols">
-      <PlanCard :plan="PLAN" />
-      <div class="panel">
-        <div class="panel__head"><span>What the typeface holds</span></div>
-        <div class="panel__body"><FeatureList :rows="FEATURES" /></div>
+  <div class="ticker" aria-hidden="true">
+    <div class="wrap ticker__track">
+      <span v-for="item in TICKER" :key="item">{{ item }} <i>+</i></span>
+    </div>
+  </div>
+
+  <PlusPlate index="01" label="the machine" meta="plan / parameters / outlines / file">
+    <div class="section-intro">
+      <div>
+        <p class="eyebrow"><b>+</b> what it is</p>
+        <h2 class="display">The machine is <em>a plan.</em></h2>
+      </div>
+      <div>
+        <p class="prose">
+          A font is a set of decisions before it is a set of drawings. Cap height,
+          x height, ascender, descender, weight, slope and spacing are the
+          decisions this build starts from.
+        </p>
+        <p class="prose">
+          The plan is one small object. Change a key, build again, and the tables
+          move with it. The panel on the right is the reference plan, the one the
+          builder uses when a key is absent.
+        </p>
       </div>
     </div>
-  </SectionBlock>
 
-  <SectionBlock id="letters" number="02" label="Letters">
-    <h2>The whole character set</h2>
-    <p>
-      A monospace face is a grid, and the grid is the design: one advance for
-      every letter, with the drawing moving inside it.
-    </p>
-    <div class="rule-art"><i /></div>
-    <LetterGrid />
-    <div class="rule-art"><i /></div>
-    <StatusLine state="ok">{{ readings }}</StatusLine>
-    <div class="rule-art"><i /></div>
-    <p>And the same font doing a job, with the sizes a page would give it.</p>
-    <MockUi />
-  </SectionBlock>
+    <div class="split split--wide">
+      <div class="stack">
+        <FeatureMatrix :rows="FEATURES" />
+        <PipelineMap />
+      </div>
+      <div class="stack stack--sm">
+        <PlanCard :plan="PLAN" />
+        <p class="mono-note">
+          Seven keys. Omitted keys take the values above.
+        </p>
+      </div>
+    </div>
+  </PlusPlate>
 
-  <SectionBlock number="03" label="Examples">
-    <h2>One card per kind of text</h2>
-    <p>
-      Every sample is written in the characters the font holds, which is the
-      letters, the digits and some punctuation, so nothing here borrows another
-      face without saying so.
-    </p>
-    <ExamplesGrid />
-  </SectionBlock>
+  <PlusPlate id="letters" index="02" label="the cell" meta="glyph map / live">
+    <div class="section-intro">
+      <div>
+        <p class="eyebrow"><b>+</b> the grid</p>
+        <h2 class="display">One advance. <em>Every letter.</em></h2>
+      </div>
+      <div>
+        <p class="prose">
+          A monospaced face is a grid, and the grid is the design. Every letter
+          gets the same cell. The drawing moves inside it, and the narrow letters
+          leave room that the wide ones can use.
+        </p>
+      </div>
+    </div>
 
-  <SectionBlock number="04" label="Healing">
-    <h2>Texture healing</h2>
-    <p>
-      A cell is one width for every letter, so the letters that leave it empty sit
-      beside the ones that fill it. Healing moves the drawing within the cell and
-      gives the room to the neighbour that wants it.
-    </p>
-    <HealingPlate />
-  </SectionBlock>
+    <MockWorkbench />
 
-  <SectionBlock id="math" number="05" label="Equations">
-    <h2>Equations, set in the font</h2>
-    <p>
-      The same build writes a MATH table: the constants, the italic corrections,
-      and the delimiters that grow to fit. These are set in a second face, made
-      from the math glyph set when the section comes into view.
-    </p>
-    <EquationPlate />
-  </SectionBlock>
+    <div class="form-row">
+      <span class="mono-note">{{ status }}</span>
+      <NuxtLink class="link-arrow" to="/generate/">
+        open the configurator <span>→</span>
+      </NuxtLink>
+    </div>
+
+    <hr class="hr" style="margin: 28px 0 22px" />
+
+    <div class="row row--between" style="margin-bottom: 14px">
+      <h3 class="display" style="font-size: var(--step-3)">The whole set</h3>
+      <span class="mono-note">click a cell to copy its character</span>
+    </div>
+    <CharacterGrid />
+  </PlusPlate>
+
+  <PlusPlate id="samples" index="03" label="samples" meta="code / text / data">
+    <div class="section-intro">
+      <div>
+        <p class="eyebrow"><b>+</b> in use</p>
+        <h2 class="display">The same face, <em>doing work.</em></h2>
+      </div>
+      <div>
+        <p class="prose">
+          A wall of samples is the quickest test of a code face. The sources stay
+          inside the outline set: lowercase, digits and the punctuation around
+          them. Nothing here borrows another face without saying so.
+        </p>
+      </div>
+    </div>
+
+    <SampleMosaic />
+  </PlusPlate>
+
+  <PlusPlate id="healing" index="04" label="texture healing" meta="calt / before and after">
+    <div class="section-intro">
+      <div>
+        <p class="eyebrow"><b>+</b> the bend</p>
+        <h2 class="display">The grid bends. <em>The cell does not.</em></h2>
+      </div>
+      <div>
+        <p class="prose">
+          A monospaced cell is one width for every letter, so a narrow letter has
+          more room than its ink needs and a wide one has less than it wants.
+          Texture healing moves the ink within the cell and leaves the advance
+          alone.
+        </p>
+      </div>
+    </div>
+
+    <HealingLab />
+  </PlusPlate>
+
+  <PlusPlate id="math" index="05" label="equations" meta="math table / mathml">
+    <div class="section-intro">
+      <div>
+        <p class="eyebrow"><b>+</b> the table</p>
+        <h2 class="display">Math with <em>a table behind it.</em></h2>
+      </div>
+      <div>
+        <p class="prose">
+          The same build writes a MATH table: the constants, the italic
+          corrections and the delimiters that grow to fit their content. A browser
+          can set the equation in the same face as the prose around it.
+        </p>
+        <p class="prose">
+          The corpus is MathML, and the equations page lets you edit it. Change a
+          symbol and it is set again without a reload.
+        </p>
+      </div>
+    </div>
+
+    <EquationGallery />
+
+    <div class="form-row">
+      <span class="mono-note">twelve equations in the corpus</span>
+      <NuxtLink class="link-arrow" to="/math/">
+        open the equation bench <span>→</span>
+      </NuxtLink>
+    </div>
+  </PlusPlate>
+
+  <PlusPlate index="06" label="configurator" meta="one plan / one file">
+    <div class="cta">
+      <div class="cta__grid" aria-hidden="true" />
+      <div class="cta__inner">
+        <div>
+          <p class="eyebrow" style="color: color-mix(in oklab, var(--bg) 55%, var(--ink))">
+            <b>+</b> the workshop
+          </p>
+          <h2 class="cta__title">your face,<br />not ours.</h2>
+          <p class="cta__copy">
+            Set the metrics, pick a drawing from the outline set, choose a
+            spacing, and take the file. The browser does the build.
+          </p>
+          <div class="cta__actions">
+            <NuxtLink class="btn btn--accent" to="/generate/">
+              build a face <span>→</span>
+            </NuxtLink>
+            <NuxtLink class="btn btn--ghost" to="/math/">try an equation</NuxtLink>
+          </div>
+        </div>
+
+        <div class="cta__cmd" aria-label="What the configurator edits">
+          <div><span>plan</span><span>7 keys</span></div>
+          <div><span>outline set</span><span>72 glyphs</span></div>
+          <div><span>variants</span><span>11 spellings</span></div>
+          <div><span>build</span><span>in the tab</span></div>
+          <div><span>output</span><span>ttf / woff2</span></div>
+        </div>
+      </div>
+    </div>
+  </PlusPlate>
 </template>

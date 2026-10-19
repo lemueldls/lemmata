@@ -19,6 +19,6 @@ export default defineNuxtConfig({
     ],
   },
   // `golden/parity.json` and `corpus/equations.mathml` sit outside `web/`, and
-  // the dev server only serves from inside the project root without this.
+  // the dev tool only reads from inside the project root without this.
   vite: { server: { fs: { allow: [".."] } } },
 });

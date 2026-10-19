@@ -1,54 +1,47 @@
-// The font the site is set in, read once and shared.
+// The face the site is set in, read once and shared.
 //
-// The face is declared in `nuxt.config.ts` and built by the `lemmata-fonts`
-// module at the start of the build, so nothing here compiles anything: it
-// fetches the file the module serves, hashes it, and reads the readings out of
-// the font's own tables rather than taking them on trust. The generator is the
-// only page that compiles, and it does that with the wasm.
+// The file is declared in `nuxt.config.ts` and built by the fonts module at the
+// start of the site build. This fetches that file and reads its tables: `maxp`
+// for the glyph count, `head` for the em, `cmap` for the characters, `glyf` for
+// ink and `hmtx` for the advance.
 import {
   advance,
   cmap,
   glyphCount,
   ink,
-  sha256Hex,
+  isPublic,
   unitsPerEm,
+  verticalMetrics,
   type Reading,
 } from "~/utils/font";
 
 interface FontState {
   started: boolean;
-  digest: string;
   map: Map<number, number> | null;
   metrics: Reading | null;
   ready: boolean;
   error: string;
-  /// How long the font took to arrive and be read, in milliseconds. The site
-  /// prints it, the way it prints everything else it measures.
+  /// The size of the file the page loaded, in bytes.
+  byteLength: number;
+  /// How long the file took to arrive and be read, in milliseconds.
   elapsed: number;
-  /// How far along the font is, from 0 to 1. The download is the part that
-  /// varies and the only part with a denominator, so it carries most of the
-  /// range and the steps after it are increments.
+  /// Download progress, from 0 to 1.
   progress: number;
 }
 
 const state = reactive<FontState>({
   started: false,
-  digest: "",
   map: null,
   metrics: null,
   ready: false,
   error: "",
+  byteLength: 0,
   elapsed: 0,
   progress: 0.03,
 });
 
-/// Reads a response in chunks, counting them against the length the server
-/// declared. A server that streams without a length leaves the meter on its
-/// phase steps, which is the honest answer when the size is not known.
-async function download(
-  response: Response,
-  upTo: number,
-): Promise<Uint8Array> {
+/// Reads a response in chunks, counting them from the declared length.
+async function download(response: Response, upTo: number): Promise<Uint8Array> {
   const declared = Number(response.headers.get("content-length") ?? 0);
   const reader = response.body?.getReader();
 
@@ -74,16 +67,12 @@ async function download(
   return bytes;
 }
 
-/// Where the family was declared, and what the page falls back to when it
-/// cannot read the stylesheet.
 const DECLARED = "/fonts/lemmata.ttf";
 
-/// Where the stylesheet says a family is served from.
+/// The location the stylesheet gives a family.
 ///
-/// The fonts module treats the location of a font file as an implementation
-/// detail rather than a URL contract, so the page asks the CSS instead of
-/// assuming a path. The bytes hashed then are the bytes the browser is about to
-/// render with, wherever the build decided to put them.
+/// The fonts module treats the file location as an implementation detail, so the
+/// page asks the CSS rather than guessing a path.
 function servedUrl(family: string): string | null {
   if (!import.meta.client) return null;
   for (const sheet of document.styleSheets) {
@@ -91,7 +80,6 @@ function servedUrl(family: string): string | null {
     try {
       rules = sheet.cssRules;
     } catch {
-      // A cross-origin sheet cannot be read. Ours is inlined in the head.
       continue;
     }
     for (const rule of rules ?? []) {
@@ -111,32 +99,26 @@ function servedUrl(family: string): string | null {
 async function load(): Promise<void> {
   const started = performance.now();
   try {
-    // The file the module serves, which is the one the browser was given for the
-    // preload, so the bytes hashed here are the bytes being rendered with.
     const url = servedUrl("Lemmata") ?? DECLARED;
     const response = await fetch(url);
-    const bytes = await download(response, 0.78);
-    state.progress = 0.82;
-
-    state.digest = await sha256Hex(bytes);
-    state.progress = 0.86;
+    const bytes = await download(response, 0.8);
+    state.byteLength = bytes.length;
+    state.progress = 0.84;
 
     const map = cmap(bytes);
+    const vertical = verticalMetrics(bytes);
     state.map = map;
     state.metrics = {
       upem: unitsPerEm(bytes),
       drawn: glyphCount(bytes) ?? 0,
-      mapped: map.size,
+      mapped: [...map.keys()].filter(isPublic).length,
       xHeight: ink(map, bytes, "x")?.yMax ?? null,
-      ascender: ink(map, bytes, "l")?.yMax ?? null,
-      descender: ink(map, bytes, "p")?.yMin ?? null,
+      ascender: vertical.ascender,
+      descender: vertical.descender,
       advance: advance(map, bytes, "x"),
     };
-    state.progress = 0.92;
+    state.progress = 0.93;
 
-    // The primary family, not the list: the module writes an optimized fallback
-    // beside it whose source is a local family, and one face that cannot resolve
-    // rejects the whole request even though this one loaded.
     await document.fonts.load('100px "Lemmata"', "lemmata");
     state.progress = 1;
     state.elapsed = performance.now() - started;

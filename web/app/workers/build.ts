@@ -10,12 +10,12 @@
 //   worker -> page  { bytes } | { error }    the font, or why not
 //
 // One message is missing in practice. `build_font` is a synchronous call, so a
-// cancel cannot interrupt it; it sets a flag that the next request checks, and
+// cancel cannot interrupt it. It sets a flag that the next request reads, and
 // progress is a phase rather than a count. Real cancellation and real progress
-// need a build that yields between glyphs, which is work in the wasm rather
+// need a build that yields between glyphs, which is work in the module rather
 // than in this protocol.
 //
-// The build stays on the worker thread, which is the point: a full set is tens
+// The build runs on the worker thread, which is the point: a full set is tens
 // of thousands of glyphs and would freeze the page.
 
 import init, { build_font, default_plan } from "lemmata-web";
@@ -35,7 +35,7 @@ interface WorkerScope {
 
 const scope = self as unknown as WorkerScope;
 
-// The worker has its own wasm instance, so it initialises its own glue.
+// The worker has its own module instance, so it initialises its own glue.
 // Importing `build_font` without awaiting this is how the first browser run
 // failed: `__wbindgen_malloc` is not there until the module is instantiated.
 const ready = init();
@@ -66,7 +66,7 @@ self.onmessage = async (event: MessageEvent<Request>): Promise<void> => {
     await ready;
     scope.postMessage({ phase: "building", done: 0, total: 1 });
     const started = performance.now();
-    // A `Uint8Array`, not an `ArrayBuffer`: wasm-bindgen's `&[u8]` reads
+    // A `Uint8Array`, not an `ArrayBuffer`: the binding's `&[u8]` reads
     // `length`, and an `ArrayBuffer` only has `byteLength`, which is how this
     // reported a truncated capture.
     const capture =

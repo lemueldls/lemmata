@@ -1,13 +1,10 @@
-// Reads the font the site ships.
+// Readers for the font the site loads.
 //
-// Nothing here measures with a canvas. A character the font lacks is measured
-// through a fallback, and the fallback reports its own number, which is how a
-// page ends up printing Arial's cap height for a font it has. So every value
-// comes from the font's own tables: `maxp` for the glyph count, `head` for the
-// units per em, `cmap` for the characters, `glyf` for the ink, `hmtx` for the
-// advance.
+// Nothing here measures with a canvas. A character the font lacks would be
+// handed to a fallback face, and the fallback would answer with its own numbers.
+// Every value below comes from the font's own tables.
 
-/// The ink box of one glyph, as `glyf` stores it in the glyph's header.
+/// The ink box of one glyph, as `glyf` stores it in the glyph header.
 export interface Ink {
   xMin: number;
   yMin: number;
@@ -48,8 +45,7 @@ function table(view: DataView, name: string): number | null {
   return null;
 }
 
-/// The number of glyphs the font carries, which is the count after every
-/// derived glyph has been added.
+/// The number of glyphs the font holds, including every derived glyph.
 export function glyphCount(bytes: Uint8Array): number | null {
   const view = viewOf(bytes);
   const offset = table(view, "maxp");
@@ -66,8 +62,8 @@ export function unitsPerEm(bytes: Uint8Array): number | null {
 }
 
 /// Which character maps to which glyph, out of the format 4 subtable. Every font
-/// this project writes carries one, and it is the only place that says what the
-/// font can set, as opposed to what a browser will substitute.
+/// this project writes has one, and it is the only place that says what the font
+/// can set.
 export function cmap(bytes: Uint8Array): Map<number, number> {
   const view = viewOf(bytes);
   const map = new Map<number, number>();
@@ -118,6 +114,33 @@ export function cmap(bytes: Uint8Array): Map<number, number> {
   }
 
   return map;
+}
+
+/// Which characters a page should show. The private-use block holds the derived
+/// size variants, which are not characters a reader types.
+export function isPublic(code: number): boolean {
+  return (
+    code >= 0x20 &&
+    code !== 0x7f &&
+    !(code >= 0xe000 && code <= 0xf8ff)
+  );
+}
+
+/// The ascender and descender from `hhea`. These are the line metrics, not the
+/// ink of one letter.
+export function verticalMetrics(bytes: Uint8Array): {
+  ascender: number | null;
+  descender: number | null;
+} {
+  const view = viewOf(bytes);
+  const hhea = table(view, "hhea");
+
+  if (hhea === null) return { ascender: null, descender: null };
+
+  return {
+    ascender: view.getInt16(hhea + 4),
+    descender: view.getInt16(hhea + 6),
+  };
 }
 
 /// The offset of one glyph's outline in `glyf`, out of `loca`.
@@ -176,7 +199,7 @@ export function advance(
   return view.getUint16(hmtx + Math.min(id, metered - 1) * 4);
 }
 
-/// Which characters of a string the font does not carry. The count is of the
+/// Which characters of a string the font does not have. The count is of the
 /// distinct characters, since a font either has a character or does not.
 export function coverage(
   map: Map<number, number>,
@@ -193,14 +216,3 @@ export function coverage(
 
   return { total: unique.length, missing };
 }
-
-export async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes as BufferSource);
-
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export const short = (hash: string, length = 16): string =>
-  `${hash.slice(0, length)}…`;

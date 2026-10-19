@@ -1,24 +1,31 @@
 <script setup lang="ts">
-// The ligature sets a coding face is expected to have, shown as the character
-// sequences they stand for.
+// The ligature sets a coding face is expected to name, written as the sequences
+// they stand for.
 //
-// Stub: ligatures. The font writes no `liga`, so these are the sequences and not
-// the joined forms: the page can show which sets it means, and a reader sees the
-// characters with the spacing the face gives them. Wire this to the plan when
-// the feature lands, and the two columns become one.
+// This build writes no `liga` lookups, so the rows are labelled as the next
+// piece rather than shown as joined forms. The sequence column still shows what
+// the face does with each character today.
 const SETS = [
-  { name: "arrows", text: "-> --> <- <-> =>" },
-  { name: "comparison", text: "!= == <= >= =/" },
-  { name: "logic", text: "&& || ^^ ~~ !!" },
-  { name: "marks", text: "// /* */ ###" },
-];
+  { name: "arrows", seq: "-> --> <- <-> =>", state: "next" },
+  { name: "comparison", seq: "!= == <= >= =/", state: "next" },
+  { name: "logic", seq: "&& || ^^ ~~ !!", state: "next" },
+  { name: "marks", seq: "// /* */ ###", state: "next" },
+  { name: "powerline", seq: ">_ |_ _|", state: "next" },
+] as const;
 </script>
 
 <template>
   <div class="ligatures">
     <div v-for="set in SETS" :key="set.name" class="ligature">
-      <span>{{ set.text }}</span>
-      <small>{{ set.name }}</small>
+      <span class="ligature__name">{{ set.name }}</span>
+      <span class="ligature__seq">{{ set.seq }}</span>
+      <span class="ligature__state" :data-state="set.state">
+        {{ set.state }}
+      </span>
     </div>
   </div>
+  <p class="mono-note" style="margin-top: 12px">
+    The plan names these sets. The current build writes no <code>liga</code> table, so the
+    rows show the characters the face sets today.
+  </p>
 </template>

@@ -1,111 +1,258 @@
 <script setup lang="ts">
-// The equations page. The face it is set in is one of the two the site serves, so
-// the page has nothing to compile: it waits for the font and then sets MathML in
-// it. The MathML is editable, which is the part worth playing with.
+// The equation bench: one editable MathML field, the whole corpus beside it,
+// and the constructs the table is there to serve.
 //
-// What it can show is what the MATH table carries: the constants, the glyph info
-// and the variants, so a delimiter grows to fit its content. Script style needs
-// an `ssty` feature the font does not write, and math kerning and the horizontal
-// constructions are unwritten, so a fraction's bar does not grow the way a
-// parenthesis does. `docs/math.md` has the list.
+// The MathML is edited as text and set by the browser. There is no upload and no
+// render step on another machine, so the equation on screen is the equation in
+// the field.
 import corpus from "../../../corpus/equations.mathml?raw";
+import { specimenSize } from "~/composables/hotkeys";
 
 useHead({ title: "Equations" });
 
-const FAMILY = '"Lemmata Math"';
+const LABELS = [
+  "addition",
+  "mixed operators",
+  "square of a sum",
+  "fraction equality",
+  "radical",
+  "summation",
+  "integral",
+  "inequality",
+  "nested radical",
+  "fenced fraction",
+  "greek letters",
+  "matrix",
+];
 
-const status = ref("Setting the equations…");
-/// The corpus with its own notes taken out: the field is for equations, and the
-/// file's comments are for whoever reads the file.
-const source = ref(corpus.replace(/<!--[\s\S]*?-->/g, "").trim());
-const equations = ref<HTMLElement | null>(null);
+const blocks = (corpus.replace(/<!--[\s\S]*?-->/g, "").match(/<math[\s\S]*?<\/math>/g) ??
+  []).map((math, index) => ({
+  id: index,
+  label: LABELS[index] ?? `equation ${index + 1}`,
+  math,
+}));
 
-/// Measures a string in a family, to tell whether a font rendered it.
-function widthOf(name: string, text: string): number {
-  const context = document.createElement("canvas").getContext("2d");
-  if (!context) return 0;
-  context.font = `32px ${name}`;
+const selected = ref(5);
+const source = ref(blocks[selected.value]?.math ?? "");
+const copied = ref(false);
+const status = ref("waiting for the math face…");
+const state = ref("note");
 
-  return context.measureText(text).width;
+const valid = computed(() => /<math[\s\S]*<\/math>/.test(source.value.trim()));
+
+const current = computed(
+  () => blocks[selected.value] ?? { label: "custom", math: "" },
+);
+
+function pick(id: number): void {
+  selected.value = id;
+  source.value = blocks[id]?.math ?? "";
+  copied.value = false;
 }
 
-// A renderer that cannot serve the corpus falls back, so the check is that the
-// family changes the measurement. The sample is the constructs a math font has
-// to carry: a radical, a large operator, an integral, Greek.
-function measure(host: HTMLElement): void {
-  const ours = widthOf(FAMILY, "\u2211 \u222B \u221A x \u03B1");
-  const fallback = widthOf('"Lemmata Absent"', "\u2211 \u222B \u221A x \u03B1");
-  const rendered = host.querySelectorAll("math").length;
-
-  // A delimiter grown to fit its content is built by stacking pieces, so it
-  // stays as wide as the glyph it was cut from, while a renderer with no
-  // assembly scales the glyph and widens it. Both are recorded rather than
-  // asserted: whether a browser stretches at all is the browser's business.
-  const delimiters = [...host.querySelectorAll("mo")]
-    .filter((mo) => mo.textContent === "(" || mo.textContent === ")")
-    .map((mo) => {
-      const box = mo.getBoundingClientRect();
-
-      return { width: Math.round(box.width), height: Math.round(box.height) };
-    });
-  document.body.dataset.measure = JSON.stringify(delimiters);
-
-  status.value =
-    ours !== fallback && rendered > 0
-      ? `Ready. ${rendered} equations.`
-      : `Fallback. ${rendered} equations.`;
+function reset(): void {
+  source.value = current.value.math;
 }
 
-function render(): void {
-  const host = equations.value;
-  if (!host) return;
-  host.innerHTML = source.value;
-  measure(host);
+async function copy(): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(source.value);
+    copied.value = true;
+    setTimeout(() => {
+      copied.value = false;
+    }, 1400);
+  } catch {
+    copied.value = false;
+  }
 }
+
+const CONSTRUCTS = [
+  { label: "delimiters", id: 9, note: "A fence grows to fit what it holds." },
+  { label: "radicals", id: 4, note: "The radical takes the height of its body." },
+  { label: "operators", id: 5, note: "Limits sit above and below the sign." },
+  { label: "matrices", id: 11, note: "Rows and columns keep one baseline grid." },
+];
 
 onMounted(async () => {
-  // The face is in the head with the rest of the page, so there is nothing to
-  // build and nothing to decompress: the page waits for the font it is about to
-  // use and then sets the corpus.
-  await document.fonts.load(`24px ${FAMILY}`, "\u222B");
-  render();
+  try {
+    await document.fonts.load('24px "Lemmata Math"', "\u222B");
+    if (!document.fonts.check('24px "Lemmata Math"', "\u222B")) {
+      throw new Error("the math face is not in the font set");
+    }
+    state.value = "ok";
+    status.value = `Ready. ${blocks.length} equations / the math face is loaded`;
+
+    // Write the rendered boxes of the fences to the body dataset so the browser
+    // suite can report them. Whether a renderer stretches a fence is its own
+    // business, so this is a note rather than a pass condition.
+    const boxes = [...document.querySelectorAll<HTMLElement>("#equations mo")]
+      .filter((mo) => ["(", ")"].includes(mo.textContent ?? ""))
+      .map((mo) => {
+        const box = mo.getBoundingClientRect();
+
+        return { width: Math.round(box.width), height: Math.round(box.height) };
+      });
+    document.body.dataset.measure = JSON.stringify(boxes.slice(0, 8));
+  } catch {
+    state.value = "bad";
+    status.value = "the math face did not load; the browser fallback is showing";
+  }
 });
 </script>
 
 <template>
   <div class="wrap page">
-    <h1>Equations</h1>
-    <p class="lede">
-      These are set in the font this project built from the math glyph set. The
-      MathML is editable: change an equation and it is set again in the same
-      font, with no upload.
-    </p>
-    <div class="rule-art"><i /></div>
-    <p class="plate-label">The corpus</p>
-    <p id="status">{{ status }}</p>
-    <textarea id="source" v-model="source" rows="12" spellcheck="false" @input="render" />
-    <div id="equations" ref="equations" />
-    <noscript><p>The equations need JavaScript: they are set from the field above.</p></noscript>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow"><b>+</b> equations <i>/</i> 03</p>
+        <h1 class="page-head__title">Set the <em>symbols.</em></h1>
+        <p class="lede" style="margin-top: 18px">
+          The same build that writes the text face writes a MATH table. This page
+          edits MathML and sets it in that face: constants, italic corrections and
+          delimiters that grow to fit.
+        </p>
+      </div>
+
+      <div class="page-head__side">
+        <p class="mono-note">
+          the field is live. change a tag or a number and the equation is set
+          again in the same face.
+        </p>
+        <dl class="page-head__facts">
+          <div><dt>corpus</dt><dd>{{ blocks.length }} equations</dd></div>
+          <div><dt>source</dt><dd>mathml</dd></div>
+          <div><dt>face</dt><dd>lemmata math</dd></div>
+          <div><dt>part</dt><dd>MATH table</dd></div>
+        </dl>
+      </div>
+    </header>
+
+    <div class="math-layout">
+      <aside class="math-index">
+        <h2>corpus</h2>
+        <button
+          v-for="block in blocks"
+          :key="block.id"
+          type="button"
+          :aria-pressed="selected === block.id"
+          @click="pick(block.id)"
+        >
+          <span>{{ String(block.id + 1).padStart(2, "0") }}</span>
+          <span>{{ block.label }}</span>
+        </button>
+      </aside>
+
+      <div class="math-main">
+        <PlusPlate index="01" label="render" meta="live mathml">
+          <div class="section-intro section-intro--single">
+            <div>
+              <p class="eyebrow"><b>+</b> the field</p>
+              <h2 class="display" style="font-size: var(--step-3)">
+                {{ current.label }}
+              </h2>
+            </div>
+            <p class="prose">
+              The left side is the source, the right side is the browser setting
+              it. Both use the same MathML, so there is nothing to compile and
+              nothing to upload.
+            </p>
+          </div>
+
+          <div class="math-editor">
+            <div class="math-editor__source">
+              <textarea
+                v-model="source"
+                rows="10"
+                aria-label="MathML source"
+              />
+            </div>
+
+            <div
+              v-if="valid"
+              class="math-editor__render"
+              :style="{ fontSize: `${Math.min(44, Math.max(16, specimenSize))}px` }"
+              v-html="source"
+            />
+            <div v-else class="math-editor__render">
+              <p class="note">The field needs a math element with a closing tag.</p>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <span id="status" class="status-line" :data-state="state">
+              <i /> {{ status }}
+            </span>
+            <div class="row">
+              <button class="btn btn--sm" type="button" :disabled="!valid" @click="copy">
+                {{ copied ? "copied" : "copy mathml" }}
+              </button>
+              <button class="btn btn--sm" type="button" @click="reset">reset</button>
+            </div>
+          </div>
+        </PlusPlate>
+
+        <PlusPlate index="02" label="corpus" meta="click one to edit">
+          <div class="section-intro section-intro--single">
+            <div>
+              <p class="eyebrow"><b>+</b> the set</p>
+              <h2 class="display" style="font-size: var(--step-3)">
+                Twelve equations.
+              </h2>
+            </div>
+            <p class="prose">
+              The same list the corpus holds: addition, exponents, fractions,
+              radicals, a sum, an integral, an inequality, Greek letters and a
+              matrix. Pick one and it moves into the field above.
+            </p>
+          </div>
+
+          <div id="equations" class="math-gallery">
+            <button
+              v-for="block in blocks"
+              :key="block.id"
+              class="eq-card eq-card--button"
+              type="button"
+              :aria-pressed="selected === block.id"
+              @click="pick(block.id)"
+            >
+              <span class="eq-card__bar">
+                <span>{{ block.label }}</span>
+                <span>{{ String(block.id + 1).padStart(2, "0") }}</span>
+              </span>
+              <span class="eq-card__body" v-html="block.math" />
+            </button>
+          </div>
+        </PlusPlate>
+
+        <PlusPlate index="03" label="constructs" meta="what the table holds">
+          <div class="section-intro section-intro--single">
+            <div>
+              <p class="eyebrow"><b>+</b> the parts</p>
+              <h2 class="display" style="font-size: var(--step-3)">
+                What the table covers.
+              </h2>
+            </div>
+            <p class="prose">
+              The constants place the parts. The variants give a delimiter a size
+              for each step. The assemblies stack the pieces when a size alone is
+              not enough.
+            </p>
+          </div>
+
+          <div class="constructs">
+            <article v-for="item in CONSTRUCTS" :key="item.label" class="construct">
+              <div class="construct__math" v-html="blocks[item.id]?.math ?? ''" />
+              <h3>{{ item.label }}</h3>
+              <p>{{ item.note }}</p>
+            </article>
+          </div>
+
+          <p class="mono-note" style="margin-top: 14px">
+            script style (<code>ssty</code>) and the flat accent (<code>flac</code>) are the two pieces
+            still waiting on the glyph set.
+          </p>
+        </PlusPlate>
+      </div>
+    </div>
   </div>
 </template>
-
-<style>
-/* The equations are the point: they are set in the font this project built. Not
-   `display: block` on the math elements, which would replace the `block math`
-   the user agent stylesheet gives a `math[display="block"]` and lay every token
-   out on a line of its own; the attribute on each `math` element is what puts it
-   on its own line. */
-#equations {
-  font-family: "Lemmata Math", serif;
-  font-size: 24px;
-}
-
-#equations math {
-  margin: 0.5rem 0;
-}
-
-#status {
-  color: var(--accent);
-  font-size: var(--step--1);
-}
-</style>

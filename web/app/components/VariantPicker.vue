@@ -1,18 +1,15 @@
 <script setup lang="ts">
-// The spellings of `a` the glyph source names, as a row of choices.
+// The spellings of `a` that the outline set holds, as a grid of choices.
 //
-// The list is read out of the capture, so it follows the glyphs rather than a
-// table written here, and the choice goes into the shared plan: the generator
-// builds the one that was picked.
+// The list comes from the file rather than from a table in this component, so
+// it grows when the file does. The choice goes into the shared plan, which the
+// build reads.
 import { usePlan } from "~/composables/plan";
 
 const plan = usePlan();
-
-const group = "a";
-// The list comes from the glyphs, which arrive after the page does, so it is
-// rendered once the page is running: a first paint would print an empty row and
-// the next one would disagree with it.
 const mounted = ref(false);
+const group = "a";
+
 onMounted(async () => {
   await plan.ensure();
   mounted.value = true;
@@ -21,36 +18,55 @@ onMounted(async () => {
 const options = computed(() => plan.variants(group));
 const picked = computed(() => plan.chosen(group));
 
-// The group's own drawing is what a plan gets by saying nothing, so it is a
-// choice of its own rather than a missing one.
-const clear = (): void => plan.choose(group, "");
+function choose(name: string): void {
+  plan.choose(group, name);
+}
 </script>
 
 <template>
-  <div v-if="mounted" class="variants">
-    <button
-      class="variant"
-      type="button"
-      :aria-pressed="picked === ''"
-      @click="clear"
-    >
-      <b>a</b>
-      <span>the capture's own drawing</span>
-    </button>
-    <button
-      v-for="name in options"
-      :key="name"
-      class="variant"
-      type="button"
-      :aria-pressed="picked === name"
-      @click="plan.choose(group, name)"
-    >
-      <b>a</b>
-      <span>{{ name }}</span>
-    </button>
+  <div v-if="mounted">
+    <div class="variant-head">
+      <span class="variant-head__group"><b>a</b> group</span>
+      <span class="status-line">
+        <i />
+        {{ picked === "" ? "outline drawing" : picked }}
+      </span>
+      <span class="mono-note">{{ options.length }} alternates</span>
+    </div>
+
+    <div class="variants">
+      <button
+        class="variant variant--default"
+        type="button"
+        :aria-pressed="picked === ''"
+        @click="choose('')"
+      >
+        <span class="variant__glyph">a</span>
+        <span class="variant__name">the outline's own drawing</span>
+        <span class="variant__mark">{{ picked === "" ? "●" : "" }}</span>
+      </button>
+
+      <button
+        v-for="name in options"
+        :key="name"
+        class="variant"
+        type="button"
+        :aria-pressed="picked === name"
+        @click="choose(name)"
+      >
+        <span class="variant__glyph">a</span>
+        <span class="variant__name">{{ name }}</span>
+        <span class="variant__mark">{{ picked === name ? "●" : "" }}</span>
+      </button>
+    </div>
+
+    <div class="form-row">
+      <span>one group in this outline set</span>
+      <button class="btn btn--sm" type="button" @click="choose('')">clear choice</button>
+    </div>
   </div>
-  <StatusLine v-if="mounted" state="ok">
-    {{ picked === "" ? "the capture's own drawing" : picked }} ·
-    {{ options.length }} spellings the glyph source names
-  </StatusLine>
+
+  <p v-else class="status-line" data-state="note">
+    <i /> reading the outline set…
+  </p>
 </template>

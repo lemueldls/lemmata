@@ -1,15 +1,13 @@
-// The index page sets one equation in the math face it builds for that section
-// and registers under its own name, which is a different path from the math
-// page's. Both went unnoticed for the same reason: the family was set on a
-// container, and MathML's user agent stylesheet sets `font-family: math` on the
-// `math` element itself, which beats inheritance. So the container looked right
-// and every equation was set in the browser's math font.
+// The index page sets the equation gallery in the math face, which is a
+// different path from the math page's editor. Both were once left in the
+// browser's math font because the family was set on a container and MathML's
+// user agent rule sets `font-family` on the `math` element itself.
 //
 // Needs `pnpm install` and a browser: `nix develop .#browser` provides both.
 
 import { expect, test } from "@playwright/test";
 
-test("the index equation is set in the face the page built", async ({ page }) => {
+test("the index equation is set in the face the page loaded", async ({ page }) => {
   const failures = [];
   page.on("console", (message) => {
     if (message.type() === "error") failures.push(message.text());
@@ -18,22 +16,20 @@ test("the index equation is set in the face the page built", async ({ page }) =>
   await page.goto("/");
   await page.locator("#math").scrollIntoViewIfNeeded();
   await page.waitForFunction(
-    () => document.querySelector("#equation")?.dataset.face === "ready",
+    () => document.fonts.check('1em "Lemmata Math"'),
     null,
     { timeout: 60_000 },
   );
   expect(failures).toEqual([]);
 
   // The `math` element, not the holder around it.
-  await expect(page.locator("#equation math").first()).toHaveCSS(
-    "font-family",
-    /Lemmata/,
-  );
+  const equation = page.locator("#math .eq-card__body math").first();
+  await expect(equation).toHaveCSS("font-family", /Lemmata/);
 
   // And the rendered box: the same equation in an absent family has to measure
   // differently, or the family reached the rule and not the glyphs.
   const applied = await page.evaluate(() => {
-    const set = document.querySelector("#equation math");
+    const set = document.querySelector("#math .eq-card__body math");
     const host = document.createElement("div");
     host.style.fontFamily = '"Lemmata Absent", serif';
     host.append(set.cloneNode(true));

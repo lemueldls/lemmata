@@ -1,19 +1,19 @@
-// Builds the fonts the site ships.
+// Builds the fonts the site loads.
 //
 // Two faces come out of here. The reference font is what the landing is set in
-// and what it checks against `golden/parity.json`. The math font is what the
+// and what it compares with `golden/parity.json`. The math font is what the
 // equations page is set in.
 //
 // Building them here rather than in a visitor's tab is the point. A page that
-// needs a compiler to show a specimen makes every reader pay for the generator,
+// needs a compiler to show a specimen makes every reader pay for the builder,
 // and a font built at the site's build is a font the build can be held to.
 //
-// The fonts are committed, so `pnpm build` needs no Rust toolchain and no
-// waiting. `pnpm font:write` is what regenerates them from the captures, and
-// the plain `pnpm font` checks that the reference is still the font the pair
-// records. The check warns rather than fails: the recorded pair is the parity
-// tool's snapshot, and the builder can be ahead of it for as long as it takes
-// to run `cargo xtask regen`.
+// The fonts are committed, so `pnpm build` needs no toolchain and no waiting.
+// `pnpm font:write` regenerates them from the captures, and the plain
+// `pnpm font` compares the reference with the pair in the golden file. The
+// comparison warns rather than fails: the golden pair is the parity tool's
+// snapshot, and the builder can be ahead of it for as long as it takes to run
+// `cargo xtask regen`.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -44,11 +44,11 @@ const golden = JSON.parse(
 /// The command line, from the repository's manifest, for one output. A `.woff2`
 /// extension is what compresses it.
 ///
-/// `--release`, because the native leg of the recorded pair is built that way
-/// and the profile changes the bytes: an optimised build folds a different set
-/// of floating point operations, and this font is floating point all the way
-/// down. A debug build here produces a font that is the same typeface and not
-/// the same file, which is a difference the landing would print.
+/// `--release`, because the native leg of the golden pair is built that way and
+/// the profile changes the bytes: an optimised build folds a different set of
+/// floating point operations, and this font is floating point all the way down.
+/// A debug build here produces a font that is the same typeface and not the same
+/// file, which is a difference the landing would print.
 const build = (capture, out, family) =>
   execFileSync(
     "cargo",
@@ -75,12 +75,12 @@ if (process.argv.includes("--write")) {
   mkdirSync(fonts, { recursive: true });
 
   // The reference face is the TTF rather than a compressed copy of it, because
-  // the landing hashes the file it is served and compares it with the recorded
-  // build. A container would change the bytes without changing the font.
+  // the landing reads the file it is given and compares it with the golden pair.
+  // A container would change the bytes without changing the font.
   build(join(web, "public/glyphs.bin"), reference);
 
   // The math face needs a family of its own. It is the same typeface, and two
-  // faces carrying one name would fight over it.
+  // faces with one name would fight over it.
   const scratch = mkdtempSync(join(tmpdir(), "lemmata-font-"));
   const capture = join(scratch, "math.bin");
   writeFileSync(
@@ -99,13 +99,13 @@ if (process.argv.includes("--write")) {
 
 const digest = createHash("sha256").update(readFileSync(reference)).digest("hex");
 if (digest === golden.font) {
-  console.log(`the reference font is the recorded build, ${digest.slice(0, 16)}…`);
+  console.log(`the reference font is the golden build, ${digest.slice(0, 16)}…`);
 } else {
   console.warn(
     "the reference font is not the build in golden/parity.json:\n" +
       `  shipped  ${digest}\n` +
-      `  recorded ${golden.font}\n` +
-      "The builder has moved since the pair was recorded. Regenerate it with\n" +
+      `  golden   ${golden.font}\n` +
+      "The builder has moved since the golden pair was written. Regenerate it with\n" +
       "`cargo xtask regen`, then `pnpm font:write`.",
   );
 }

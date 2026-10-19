@@ -61,7 +61,7 @@ test("the corpus renders from our font, not a fallback", async ({ page }) => {
       context.font = `32px ${family}`;
       return context.measureText("\u2211 \u222B \u221A x \u03B1").width;
     };
-    return { ours: measure(`"${ours}"`), fallback: measure('"Lemmata Absent"') };
+    return { ours: measure(ours), fallback: measure('"Lemmata Absent"') };
   });
   expect(widths.ours).not.toBe(widths.fallback);
 });

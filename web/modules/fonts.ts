@@ -1,10 +1,10 @@
 // Builds the fonts the site is set in, and reports where they end up.
 //
 // Two jobs. The first is to run `scripts/font.mjs` before anything reads the
-// font files: it builds them if they are missing and checks the reference
-// against `golden/parity.json`. The second is to listen to the fonts module's
-// own hooks, because where it serves a face from is an implementation detail
-// rather than a URL contract, and a page that hashes a font would rather know
+// font files: it builds them when missing and compares the reference with
+// `golden/parity.json`. The second is to listen to the fonts module's own
+// hooks, because where a face is loaded from is an implementation detail rather
+// than a URL contract, and a page that reads a font's bytes would rather know
 // where it is than guess.
 import { execFileSync } from "node:child_process";
 import { defineNuxtModule } from "@nuxt/kit";
@@ -26,10 +26,10 @@ const DECLARED: Record<string, string> = {
 export default defineNuxtModule({
   meta: { name: "lemmata-fonts" },
   setup(_options, nuxt) {
-    let checked = false;
+    let prepared = false;
     const ensure = (): void => {
-      if (checked) return;
-      checked = true;
+      if (prepared) return;
+      prepared = true;
       execFileSync("node", ["scripts/font.mjs"], {
         cwd: nuxt.options.rootDir,
         stdio: ["ignore", "inherit", "inherit"],
@@ -37,7 +37,7 @@ export default defineNuxtModule({
     };
 
     // The earliest point that is still before anything reads the files: a family
-    // is resolved while its stylesheet is transformed, and a dev server resolves
+    // is resolved while its stylesheet is transformed, and the dev tool resolves
     // on the first request for one, both of which come later than this.
     nuxt.hook("modules:done", ensure);
 
@@ -48,15 +48,15 @@ export default defineNuxtModule({
     hook("fonts:resolved", (font) => {
       const declared = DECLARED[font.fontFamily];
       if (declared === undefined) return;
-      const served = font.files.map((file) => file.url);
-      if (!served.includes(declared)) {
+      const loaded = font.files.map((file) => file.url);
+      if (!loaded.includes(declared)) {
         console.warn(
-          `lemmata-fonts: ${font.fontFamily} is declared at ${declared} and served at ${served.join(", ")}`,
+          `lemmata-fonts: ${font.fontFamily} is declared at ${declared} and loaded from ${loaded.join(", ")}`,
         );
 
         return;
       }
-      console.log(`lemmata-fonts: ${font.fontFamily} served from ${declared}`);
+      console.log(`lemmata-fonts: ${font.fontFamily} loaded from ${declared}`);
     });
   },
 });

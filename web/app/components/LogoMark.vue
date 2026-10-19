@@ -1,28 +1,26 @@
 <script setup lang="ts">
-// The mark: three squares in a triangle.
+// The mark: a glyph cell with three guides and one filled square.
 //
-// Drawn rather than typeset, because the font does not have `∴`, `⁂` or any
-// other mark that would do: the capture is letters, digits and ASCII
-// punctuation, so a glyph outside that set would fall back to whatever the
-// reader has installed and the mark would change shape per machine.
-//
-// Squares because that is the shape the font gives a full stop, and three of
-// them in a triangle because that reads two ways at once: as `∴`, the mark that
-// finishes a derivation, and as the grid this typeface is drawn on with three of
-// its cells marked.
+// The font has no logo glyph, and a mark that falls back to the reader's system
+// face would change shape per machine. This one is drawn.
 defineProps<{ size?: number }>();
 </script>
 
 <template>
   <svg
-    :width="size ?? 15"
-    :height="size ?? 15"
-    viewBox="0 0 16 16"
-    fill="currentColor"
+    :width="size ?? 20"
+    :height="size ?? 20"
+    viewBox="0 0 20 20"
+    fill="none"
     aria-hidden="true"
   >
-    <rect x="5.75" y="1.5" width="4.5" height="4.5" />
-    <rect x="1.5" y="10" width="4.5" height="4.5" />
-    <rect x="10" y="10" width="4.5" height="4.5" />
+    <path d="M1 1h18v18H1z" stroke="currentColor" stroke-width="1.2" />
+    <path
+      d="M7 1v18M13 1v18M1 7h18M1 13h18"
+      stroke="currentColor"
+      stroke-width="0.7"
+      opacity="0.42"
+    />
+    <rect x="7" y="7" width="6" height="6" fill="currentColor" />
   </svg>
 </template>

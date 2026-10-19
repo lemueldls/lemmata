@@ -39,9 +39,20 @@ function parsed(): Record<string, unknown> {
   return state.plan.trim() ? JSON.parse(state.plan) : {};
 }
 
+/// A read of the plan that survives a half-typed editor. The fields keep their
+/// last good value until the text parses again.
+function read(): Record<string, unknown> {
+  try {
+    const value = JSON.parse(state.plan);
+    return value && typeof value === "object" ? value : {};
+  } catch {
+    return {};
+  }
+}
+
 /// The spacing the plan asks for, defaulting the way the builder does.
 function spacing(): string {
-  return (parsed().spacing as string) ?? "normal";
+  return (read().spacing as string) ?? "normal";
 }
 
 /// The outlines the current spacing needs, fetched once per spacing.
@@ -53,14 +64,14 @@ async function load(which: string): Promise<void> {
 
 const capture = computed(() => state.captures.get(spacing()) ?? null);
 
-/// Reads the wasm, the default plan and the capture the plan asks for.
+/// Reads the browser module, the default plan and the capture the plan asks for.
 ///
-/// Safe to call from more than one place and after the plan changes: the wasm
+/// Safe to call from more than one place and after the plan changes: the module
 /// loads once and the capture loads once per spacing.
 async function ensure(): Promise<void> {
   started ??= (async () => {
     await init();
-    state.plan = default_plan();
+    if (!state.plan.trim()) state.plan = default_plan();
     state.ready = true;
   })();
   await started;
@@ -69,10 +80,22 @@ async function ensure(): Promise<void> {
 
 /// Sets the spacing, which is also what decides the capture.
 async function setSpacing(which: string): Promise<void> {
-  const document = parsed();
+  let document: Record<string, unknown>;
+  try {
+    document = parsed();
+  } catch {
+    return;
+  }
   document.spacing = which;
   state.plan = JSON.stringify(document, null, 2);
   await load(which);
+}
+
+/// Puts the plan back to the reference object.
+async function reset(): Promise<void> {
+  await init();
+  state.plan = default_plan();
+  await load(spacing());
 }
 
 /// The variants the capture holds for a group, as the names a plan takes.
@@ -87,14 +110,19 @@ function variants(group: string): string[] {
 
 /// The variant a group is set to, or the empty string for the capture's drawing.
 function chosen(group: string): string {
-  const choices = parsed().variants as Record<string, string> | undefined;
+  const choices = read().variants as Record<string, string> | undefined;
 
   return choices?.[group] ?? "";
 }
 
 /// Names a variant for a group. An empty name clears the choice.
 function choose(group: string, variant: string): void {
-  const document = parsed();
+  let document: Record<string, unknown>;
+  try {
+    document = parsed();
+  } catch {
+    return;
+  }
   const choices = { ...((document.variants as Record<string, string>) ?? {}) };
   if (variant) choices[group] = variant;
   else delete choices[group];
@@ -110,6 +138,7 @@ export function usePlan() {
     spacing: computed(spacing),
     setSpacing,
     ensure,
+    reset,
     variants,
     chosen,
     choose,
