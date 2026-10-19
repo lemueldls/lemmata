@@ -171,3 +171,38 @@ pub fn js_sign(x: f64) -> f64 {
         x
     }
 }
+
+/// `joinCamel`: join two name suffixes, capitalising the second.
+///
+/// An empty part contributes nothing, which is what lets a variant table use
+/// `""` for its default entry.
+#[must_use]
+pub fn join_camel(first: &str, second: &str) -> String {
+    if first.is_empty() {
+        return second.to_string();
+    }
+    if second.is_empty() {
+        return first.to_string();
+    }
+    let mut out = String::with_capacity(first.len() + second.len());
+    out.push_str(first);
+    let mut chars = second.chars();
+    if let Some(head) = chars.next() {
+        out.extend(head.to_uppercase());
+    }
+    out.extend(chars);
+
+    out
+}
+
+#[cfg(test)]
+mod name_tests {
+    use super::join_camel;
+
+    #[test]
+    fn an_empty_part_contributes_nothing() {
+        assert_eq!(join_camel("", "serifless"), "serifless");
+        assert_eq!(join_camel("bottomCut", ""), "bottomCut");
+        assert_eq!(join_camel("bottomCut", "serifed"), "bottomCutSerifed");
+    }
+}
