@@ -33,13 +33,24 @@ The call volume is not small. Routing 1.5 million calls one by one across a Java
 
 ## Decision
 
-Host upstream's compiled glyph code, with the geometry graph evaluated in Rust behind a per-glyph boundary.
+Port the definitions by hand, file by file, and keep the host as the oracle that
+gates them.
 
-The glyph definitions stay where upstream maintains them, so an update is a tag bump rather than a re-port of 62,560 lines (the alternative). The Rust half is a small, testable API, and the oracle stays the drift gate. The bundled glyph code is upstream's source in another form, so the glyph pipeline stays under the OFL.
+The definitions live in `lemmata-glyphs`, written against the Rust runtime
+rather than translated from JavaScript. A file is read through the reader's
+dump, which the pinned compiler emits as S-expressions, and `cargo xtask
+expand` prints it with the macros applied. That makes a definition's semantics
+explicit without compiling it: `include`, `glyph-proc` and the saving forms are
+four lines of meaning behind one word, and the expansion is what a port follows.
 
-If coarse batching turns out to be impossible, the fallback is hand-porting the glyphs, measured against the same oracle.
+The capture is the gate. A ported file is compared knot by knot against the
+geometry the pinned build produced, so a mistake in a shape is a wrong number
+rather than a wrong-looking letter. The hand port of `lower-a.ptl` was accepted
+that way, and the capture has since held every variant it builds.
 
-The ported runtime and the definition file in the tree are that fallback being costed, not the plan: they measure what a port needs and they are the layer a port would build on. Nothing on the path that writes a font reads them. `cargo xtask port-status` counts them against the mirrored tree, which is how far the fallback would have to go before it could be chosen instead.
+The host stays, as the second reader. It builds a reference plan on demand and
+produces the capture the gate reads, and it is how a shape with no recorded
+capture is checked.
 
 ## Port surface
 
@@ -151,22 +162,8 @@ The gate is a shape nothing in the repository holds a capture for. RefB is slab 
 
 `lemmata-cli build` takes `--weight`, `--width`, `--slope`, `--serifs` and `--spacing`, and names a shape that way. The first build of a shape takes tens of seconds and lands under `target/host`; the next one reads the cache. A build is tens of seconds and the shape is the whole of the cache key, so a cached build does not re-run the dump and the host clears its output directory before each run rather than trusting it.
 
-What is left of the seam is two things. The shape is a set of flags rather than a field a plan file carries. And the browser has no host at all: in a page the JavaScript engine comes free, but the glyph code has to be bundled for it, and the store builder that upstream keeps inside its build has to come with it.
-
-## The frontend is free
-
-The port's cost was never the semantics. `lemmata-ptl` carries those, around 3,350 lines across the layers, verified against upstream layer by layer. What was unmeasured was the frontend: PTL is a Lisp with infix and indentation on Patrisika, and nearly all of its surface is 28 macros, so recounting it looked like the project.
-
-It is not. The pinned compiler emits three trees, and one of them is exactly what a transpiler wants:
-
-| dump | size for `lower-a.ptl` | what it is |
-| --- | --- | --- |
-| `--dump-ast` | 38 KiB | the reader: S-expressions, macros unexpanded |
-| `--dump-expanded` | fails to serialise | the macro-free core; the tree is circular |
-| `--dump-transformed` | 72 MiB | ESTree, after lowering |
-
-Twelve node kinds carry that file. `Identifier` 2335, `Literal` 678, `MemberExpression` 493, `CallExpression` 438, `VariableDeclarator` 363, `ExpressionStatement` 191, `BinaryExpression` 130, `NewExpression` 96, `AssignmentExpression` 76, `ArrayExpression` 70.
-
-The 72 MiB is not the program. Every node carries `within`, the whole source pasted into it, which is also why the expanded dump cannot be stringified: the metadata is circular. Strip it, and the tree underneath is small and regular, in a documented shape rather than a bespoke one.
-
-So the frontend is a reference script and a JSON reader, not a language implementation. What is left is the mapping: ESTree onto `lemmata-ptl`, with the Rust compiler as the type gate and the capture as the value gate. `reference/glyph-ast/oracle.mjs` reports the sizes and kinds above for any file, so the subset can be measured before it is built.
+The host is the reference path, not the product. The browser has none, and it
+needs none: the ported definitions are Rust, so a page builds from them the same
+way the native binary does. What is left for the host is the shape as a plan
+field rather than a set of flags, and the capture it regenerates when the pinned
+tag moves.
