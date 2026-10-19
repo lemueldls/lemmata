@@ -577,6 +577,84 @@ fn release_candidates_are_pinned_exactly() {
     eprintln!("pins: {checked} release candidates, all exact and recorded, and no unused pin");
 }
 
+/// `r[build.texture]`: a widened form leaves the dot alone, so a round dot does
+/// not come out an oval on the `i` and the `j`.
+#[test]
+fn widened_forms_keep_the_dot_round() {
+    let Some((_, captured)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let glyphs = glyph_data(&captured);
+    let roles = lemmata_build::texture::classify(&glyphs);
+
+    let mut checked = 0usize;
+    for letter in ['i', 'j'] {
+        let Some((index, role)) = roles
+            .iter()
+            .find(|(index, _)| {
+                glyphs[*index]
+                    .unicodes
+                    .first()
+                    .is_some_and(|code| char::from_u32(*code) == Some(letter))
+            })
+            .copied()
+        else {
+            continue;
+        };
+        let glyph = &glyphs[index];
+        let forms = lemmata_build::texture::forms(glyph, role, glyph.advance);
+        let Some((_, widened)) = forms
+            .iter()
+            .find(|(side, _)| *side == lemmata_build::texture::Side::Both)
+        else {
+            continue;
+        };
+
+        let widened = lemmata_build::font::GlyphData {
+            name: String::new(),
+            unicodes: Vec::new(),
+            advance: glyph.advance,
+            contours: widened.clone(),
+        };
+
+        // The dot is the smallest contour, so the aspect ratio of the smallest
+        // one is what says whether it stayed round.
+        let dot = |glyph: &lemmata_build::font::GlyphData| -> f64 {
+            glyph
+                .contours
+                .iter()
+                .map(|contour| {
+                    let x_min = contour.iter().fold(f64::INFINITY, |low, p| low.min(p.x));
+                    let x_max = contour.iter().fold(f64::NEG_INFINITY, |h, p| h.max(p.x));
+                    let y_min = contour.iter().fold(f64::INFINITY, |low, p| low.min(p.y));
+                    let y_max = contour.iter().fold(f64::NEG_INFINITY, |h, p| h.max(p.y));
+
+                    (
+                        (x_max - x_min) * (y_max - y_min),
+                        (x_max - x_min) / (y_max - y_min),
+                    )
+                })
+                .min_by(|a, b| a.0.total_cmp(&b.0))
+                .expect("a contour")
+                .1
+        };
+
+        let (before, after) = (dot(glyph), dot(&widened));
+        assert!(
+            (before - after).abs() < 0.01,
+            "{letter}: the dot was {before:.3} round and came out {after:.3}"
+        );
+        checked += 1;
+    }
+
+    assert!(
+        checked > 0,
+        "neither the i nor the j carries a widened form"
+    );
+    eprintln!("dots: {checked} checked, round before and after");
+}
+
 /// `r[port.upstream-tag]`: the pinned upstream tag is stamped into the font, and
 /// the stamp names the same commit the parity fingerprint was generated from.
 #[test]

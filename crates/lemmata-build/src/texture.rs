@@ -233,9 +233,15 @@ fn moved(glyph: &GlyphData, dx: f64) -> Vec<Vec<lemmata_geom::QuadifyPoint>> {
 
 /// The glyph's contours widened about their centre until each side reaches
 /// `shift` further out.
+///
+/// A small contour riding above the rest is a dot, and a dot scaled about the
+/// drawing's centre comes out an ellipse: the `i` and the `j` would grow ovals.
+/// It is left exactly where it is instead. The stem under it widens about the
+/// same centre, so a dot that sat over the stem still does, and it is still
+/// round.
 #[allow(clippy::suboptimal_flops)]
 fn widened(glyph: &GlyphData, shift: f64) -> Vec<Vec<lemmata_geom::QuadifyPoint>> {
-    let Some((x_min, _, x_max, _)) = glyph.bounding_box() else {
+    let Some((x_min, y_min, x_max, y_max)) = glyph.bounding_box() else {
         return glyph.contours.clone();
     };
     let width = f64::from(x_max - x_min);
@@ -244,20 +250,49 @@ fn widened(glyph: &GlyphData, shift: f64) -> Vec<Vec<lemmata_geom::QuadifyPoint>
     }
     let centre = f64::midpoint(f64::from(x_min), f64::from(x_max));
     let scale = (width + 2.0 * shift) / width;
+    let middle = f64::midpoint(f64::from(y_min), f64::from(y_max));
+    let largest = glyph
+        .contours
+        .iter()
+        .map(|contour| extent(contour))
+        .fold(0.0_f64, f64::max);
 
     glyph
         .contours
         .iter()
         .map(|contour| {
+            // A dot is small beside the drawing and sits above its middle. Both
+            // halves matter: a small contour low down is a serif or a tail, and
+            // those are part of what widens.
+            let dot =
+                extent(contour) * 4.0 < largest && contour.iter().all(|point| point.y > middle);
             contour
                 .iter()
                 .map(|point| lemmata_geom::QuadifyPoint {
-                    x: centre + (point.x - centre) * scale,
+                    x: if dot {
+                        point.x
+                    } else {
+                        centre + (point.x - centre) * scale
+                    },
                     ..*point
                 })
                 .collect()
         })
         .collect()
+}
+
+/// How much of the drawing a contour takes up, as its bounding box.
+fn extent(contour: &[lemmata_geom::QuadifyPoint]) -> f64 {
+    let x_min = contour.iter().fold(f64::INFINITY, |low, p| low.min(p.x));
+    let x_max = contour
+        .iter()
+        .fold(f64::NEG_INFINITY, |high, p| high.max(p.x));
+    let y_min = contour.iter().fold(f64::INFINITY, |low, p| low.min(p.y));
+    let y_max = contour
+        .iter()
+        .fold(f64::NEG_INFINITY, |high, p| high.max(p.y));
+
+    ((x_max - x_min) * (y_max - y_min)).max(0.0)
 }
 
 /// The forms for every glyph that has a role, encoded from `first_code` upward.
