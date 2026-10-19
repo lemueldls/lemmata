@@ -23,6 +23,9 @@
 //! use.
 //!
 //! [`translate`] turns an expanded program into Rust.
+//!
+//! `cargo xtask expand <reader dump>` prints a file's expansion one form per
+//! line, which is the form a port follows.
 
 // The suggestions here are for `const fn`, and the accessors cannot be const:
 // returning a `&str` from a `String` field is a deref coercion.

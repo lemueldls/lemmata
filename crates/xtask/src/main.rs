@@ -2,6 +2,7 @@
 //!
 //! Run through `cargo xtask <command>`.
 
+mod expand;
 mod parity;
 mod port_status;
 mod requirements;
@@ -30,6 +31,19 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
+        Some("expand") => {
+            let Some(path) = std::env::args().nth(2) else {
+                eprintln!("usage: cargo xtask expand <reader dump>");
+                return ExitCode::FAILURE;
+            };
+            match expand::run(&path) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(message) => {
+                    eprintln!("lemmata: {message}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         Some("port-status") => {
             // An incomplete port is the normal state, not a failure.
             port_status::run();
@@ -37,7 +51,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         _ => {
-            eprintln!("usage: cargo xtask <requirements|port-status>");
+            eprintln!("usage: cargo xtask <expand|requirements|port-status>");
             ExitCode::FAILURE
         }
     }
