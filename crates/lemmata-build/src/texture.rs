@@ -9,6 +9,14 @@
 //! drawing moves inside the cell, so the grid is untouched and the text still
 //! lines up.
 //!
+//! Every form here is a transform of one drawing, and a transform cannot draw.
+//! A stem widened is a stem thickened, and a dot caught in the scale is an
+//! ellipse, which is why one is left out. Drawn forms are the glyph source's to
+//! give: the parameters that place ink in a cell are already the build's, and
+//! what is missing is the half that turns them back into outlines. Until that
+//! exists this is the compromise, and it is a good one only where a letter is
+//! close to filling its cell to begin with.
+//!
 //! The resource is the empty space, not the ink, so the narrow letters are the
 //! givers and the wide ones are the takers. That is the reverse of what the two
 //! names suggest while the ink is what you have in mind.
