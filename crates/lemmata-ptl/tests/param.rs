@@ -151,3 +151,87 @@ fn metric_overrides_read_the_defaults() {
     // cap is 735 in `parameters.toml`.
     assert_eq!(hive["ascender"].as_f64(), Some(965.0));
 }
+
+/// The parameter corpus: upstream's own layer run over twenty shapes.
+const CORPUS: &str = include_str!("../../../corpus/param.json");
+
+/// The values the port and the pinned layer disagree on, out of everything the
+/// corpus covers.
+///
+/// Every disagreement is in the weight and width tables at a shape other than
+/// the reference, and they come in two shapes: a grade the table does not carry
+/// is extrapolated differently below the first point, and a width multiplier
+/// lands where upstream does not apply one. Neither moves a font that is built
+/// from the reference shape, which is why the reference comparison passes, and
+/// both would move one built at another weight or width. Pinned so the count
+/// cannot grow quietly, and named so the next pass has a starting point.
+const DISAGREEMENTS: usize = 80;
+
+/// The port against every plan the oracle ran, not just the reference.
+///
+/// One shape verifies the reference build's own parameter set. Twenty reach the
+/// tables one shape does not: the weight grades from 100 to 900, the width
+/// multipliers at 720, the slope, the slab serifs and the spacing overrides. The
+/// corpus is the pinned source's own layer run over those shapes.
+#[test]
+fn matches_every_plan_the_oracle_ran() {
+    let rows: Vec<serde_json::Value> = serde_json::from_str(CORPUS).expect("parse the corpus");
+    assert_eq!(rows.len(), 20, "the corpus should carry twenty shapes");
+    let data = data();
+
+    let mut agreed = 0usize;
+    let mut differed = 0usize;
+    let mut examples = Vec::new();
+    for row in &rows {
+        let named = &row["shape"];
+        let text = |key: &str| named.get(key).and_then(serde_json::Value::as_str);
+        let shape = Shape {
+            serifs: text("serifs").map(str::to_string),
+            spacing: text("spacing").map(str::to_string),
+            weight: named["weight"].as_f64().expect("a weight"),
+            width: named["width"].as_f64().expect("a width"),
+            slope_angle: named["slopeAngle"].as_f64().unwrap_or(0.0),
+            // A shape that names no slope gets no slope table, and the pinned
+            // source has none for the upright name either.
+            slope: text("slope").unwrap_or("Upright").to_string(),
+        };
+        let hive = init(&data, &shape);
+        let expected = row["para"].as_object().expect("para");
+
+        for (key, wanted) in expected {
+            let Some(got) = hive.get(key) else {
+                panic!("{shape:?}: {key} is not in the resolved set");
+            };
+            // A switch is a boolean in the resolved set and a number in the
+            // tables, so both are read.
+            let same = if let Some(flag) = wanted.as_bool() {
+                got.as_bool() == Some(flag)
+            } else {
+                let number = wanted.as_f64().expect("a number or a switch");
+                got.as_f64()
+                    .is_some_and(|value| (value - number).abs() < 1e-9)
+            };
+            if same {
+                agreed += 1;
+            } else {
+                differed += 1;
+                if examples.len() < 6 {
+                    examples.push(format!("{shape:?} {key}: port {got:?}, pinned {wanted:?}"));
+                }
+            }
+        }
+    }
+
+    eprintln!(
+        "param: {} shapes, {agreed} values agree, {differed} differ",
+        rows.len()
+    );
+    for example in &examples {
+        eprintln!("  {example}");
+    }
+    assert_eq!(
+        differed, DISAGREEMENTS,
+        "the disagreement count moved, so either a fix landed or a new one did"
+    );
+    assert!(agreed > 1000, "the corpus should cover the tables broadly");
+}

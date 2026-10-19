@@ -7,6 +7,8 @@ Versioned inputs for the test suites.
 - `ligatures.txt`: every ligature trigger the layout tables define.
 - `equations.typ`: Typst source for the math corpus.
 - `equations.mathml`: MathML torture page for the browser suite.
+- `param.json`: the parameter sets the pinned source's own layer derives for
+  twenty shapes, from `reference/param-oracle`.
 
 The JSON files are the geometry corpora: minimal reproductions of the shapes and
 arcs each stage of `lemmata-geom` has to handle, pinned against upstream's own
