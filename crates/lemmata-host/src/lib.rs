@@ -17,6 +17,11 @@
 //! and that is the toolchain which compiles it. In a browser the engine comes
 //! free and the same boundary is a bundle rather than a process.
 
+// A shape's numbers are design values a plan writes whole: a weight in hundreds
+// and a width in tens of units. Rounding one into an integer is what the plan
+// wants, so the cast is the conversion rather than a truncation to beware of.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::path::Path;
 use std::process::Command;
 
