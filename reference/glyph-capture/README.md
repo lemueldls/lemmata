@@ -69,6 +69,20 @@ zero.lnum'
 npm run build -- ttf-unhinted::RefA
 ```
 
+A third capture carries the letters and every spelling of each, which is what
+`crates/lemmata-cli/tests/combinations.rs` walks:
+
+```
+LEMMATA_GLYPH_DUMP=target/variants.bin LEMMATA_GLYPH_WIDTH=500 \
+LEMMATA_GLYPH_SET=$(python3 -c "print(','.join(n for n in open('target/glyphs.bin.names') if n.split('.')[0] in set('abcdefghijklmnopqrstuvwxyz') and ('.' not in n or n.split('.')[1].isalnum())))") \
+npm run build -- ttf-unhinted::RefA
+```
+
+It lands 567 glyphs, and only the binary is kept: the combinations test reads the
+trees and the contours, not the stage side files. It is separate from the coverage
+capture for the reason `docs/math.md` gives, that the outline tests are
+calibrated against that one.
+
 A second capture of the same set at `spacing = "quasi-proportional"` is what
 gives the site a proportional face. The spacing is a property of the drawings,
 so it is a second build rather than a second set of advances:
