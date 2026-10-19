@@ -325,6 +325,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "lemmata-ptl-front"
+version = "0.1.0"
+
+[[package]]
 name = "lemmata-web"
 version = "0.1.0"
 dependencies = [
