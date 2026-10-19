@@ -119,6 +119,25 @@ stage and the outline all follow from a match here. The outline's bounding box
 is checked as well, because `OBarRight.shape` is `OBarLeft.shape` rotated half a
 turn and a missing or wrong flip leaves every knot in the right place.
 
+## The second file
+
+`letter/latin/lower-b.ptl` (126 lines) followed. It builds five bowls over one
+stem with four serif settings woven across them, plus `bStroke`, `bSlash`,
+`latn/be`, `bHookTop` and `mathbb/b`. The capture holds 56 of them: the default
+plan selects fewer combinations than the table names, and the store drops a
+glyph the build filter does not want.
+
+`lemmata-glyphs::letter::latin::lower_b` is 400 lines. `tests/lower_b.rs`
+compares all 56 against the capture: 1869 knots, worst deviation 0. The first
+result was exact, which is the point the hand port reached in one file and the
+second reached in a few hours.
+
+The shared layer grew to meet it. `OBarLeft` and `OBarRight` moved out of
+`lower_a` into `lemmata_ptl::shapes`, followed by `VBar.l`/`.r`, `HSerif` in all
+four orientations, `VerticalHook`, the letter-bar overlay, `OShapeOutline` and
+`FlatHookDepth`. That is the cost the port surface measured, paid once: the
+third letter should need less.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

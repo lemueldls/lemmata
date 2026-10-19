@@ -308,6 +308,13 @@ function lemmataDumpGlyphs(glyphStore, para) {
     ? Number(process.env.LEMMATA_GLYPH_WIDTH)
     : null;
   if (wantedWidth !== null && Math.round(para?.width ?? NaN) !== wantedWidth) return;
+  // A plan builds four faces, and each runs this dump. Without a slope guard the
+  // italic lands on top of the upright and the failure is silent, because every
+  // check downstream is a shape check that the italic also passes.
+  const wantedSlope = process.env.LEMMATA_GLYPH_SLOPE
+    ? Number(process.env.LEMMATA_GLYPH_SLOPE)
+    : null;
+  if (wantedSlope !== null && Math.round(para?.slopeAngle ?? 0) !== wantedSlope) return;
   const output = process.env.LEMMATA_GLYPH_DUMP;
   const names = (process.env.LEMMATA_GLYPH_SET ?? "").split(",").filter(Boolean);
   const hasCodepoints = (process.env.LEMMATA_GLYPH_CODEPOINTS ?? "").length > 0;

@@ -274,3 +274,30 @@ impl Component for ForkGlyphProc {
         }
     }
 }
+
+/// `union`: a boolean union of the operands.
+#[must_use]
+pub const fn union(operands: Vec<Geometry>) -> Geometry {
+    Geometry::Boolean {
+        op: BinaryOp::Union,
+        operands,
+    }
+}
+
+/// `intersection`: a boolean intersection of the operands.
+#[must_use]
+pub const fn intersection(operands: Vec<Geometry>) -> Geometry {
+    Geometry::Boolean {
+        op: BinaryOp::Intersection,
+        operands,
+    }
+}
+
+/// `difference`: the first operand less the rest.
+#[must_use]
+pub const fn difference(operands: Vec<Geometry>) -> Geometry {
+    Geometry::Boolean {
+        op: BinaryOp::Difference,
+        operands,
+    }
+}

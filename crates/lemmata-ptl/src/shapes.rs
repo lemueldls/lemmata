@@ -1,7 +1,9 @@
 //! The shape helpers glyph definitions call: the hook and the arch.
 //!
 //! Ported from `common/shapes.ptl` (`HookShape`, `determineMixR`, the `Arch`
-//! namespace) and the clamped arch depths in `meta/aesthetics.ptl`.
+//! namespace) and the clamped arch depths in `meta/aesthetics.ptl`. The `OBar`,
+//! `VBar`, `HSerif`, `VerticalHook` and overlay helpers come from
+//! `letter/shared.ptl`, where the letter blocks keep them.
 //!
 //! Both `HookStart` and `Arch.lhs`/`Arch.rhs` are `FunctionInterpolator`s
 //! upstream: they read the knots either side of them when the flattener runs.
@@ -1287,4 +1289,328 @@ pub fn vserif(
     ];
 
     kit.dispiro(items)
+}
+
+/// `FlatHookDepth`: how far a flat hook reaches along each axis.
+#[derive(Clone, Copy, Debug)]
+pub struct FlatHookDepth {
+    pub x: f64,
+    pub y: f64,
+}
+
+/// `FlatHookDepthImpl`: one axis of the flat hook's depth.
+fn flat_hook_depth_impl(metrics: &Metrics, hook_scalar: f64, stroke_scalar: f64) -> f64 {
+    const K: f64 = 15.0 / 16.0;
+    let hook = K * hook_scalar * metrics.hook;
+    let stroke = stroke_scalar * metrics.stroke;
+
+    hook.max(stroke * 1.375).max(hook.min(stroke * 1.625))
+}
+
+/// `FlatHookDepth`, read from the frame's width.
+// `sqrt` is not const.
+#[allow(clippy::missing_const_for_fn)]
+#[must_use]
+pub fn flat_hook_depth(metrics: &Metrics, adws: f64) -> FlatHookDepth {
+    let hook_scalar = adws.sqrt().min(1.0);
+
+    FlatHookDepth {
+        x: flat_hook_depth_impl(metrics, hook_scalar, metrics.hv_contrast),
+        y: flat_hook_depth_impl(metrics, hook_scalar, 1.0),
+    }
+}
+
+/// `VerticalHook.m`: a hook leaving a vertical stem.
+// The signature is upstream's: the stem, the two depths, the stroke and the extension.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn vertical_hook_m(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    x_depth: f64,
+    y_depth: f64,
+    sw: f64,
+    y_extension: f64,
+) -> Dispiro {
+    let hd = flat_hook_depth(metrics, 1.0);
+    let y2 = if y_depth > 0.0 {
+        (y - y_depth + hd.y - 0.25 * sw).min(y - metrics.tiny)
+    } else {
+        (y - y_depth - hd.y + 0.25 * sw).max(y + metrics.tiny)
+    };
+    let x3 = if x_depth > 0.0 {
+        (x + x_depth - metrics.tiny).min(x + hd.x - 0.25 * sw * metrics.hv_contrast)
+    } else {
+        (x + x_depth + metrics.tiny).max(x - hd.x + 0.25 * sw * metrics.hv_contrast)
+    };
+    let heading = if y_depth > 0.0 {
+        downward(metrics.hv_contrast)
+    } else {
+        upward(metrics.hv_contrast)
+    };
+    let items = vec![
+        Item::Af(kit.widths_center(Some(sw))),
+        kit.knot(KnotType::Left, x, y + y_extension, kit.heading(heading)),
+        kit.knot(KnotType::Right, x, y2, kit.heading(heading)),
+        kit.arcvh(None, None),
+        kit.knot(KnotType::Left, x3, y - y_depth, Vec::new()),
+        kit.knot(KnotType::Right, x + x_depth, y - y_depth, Vec::new()),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `VerticalHook.l`: the same hook with its ink on the left of `x`.
+// The signature is upstream's: the stem, the two depths, the stroke and the extension.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn vertical_hook_l(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    x_depth: f64,
+    y_depth: f64,
+    sw: f64,
+    y_extension: f64,
+) -> Dispiro {
+    vertical_hook_m(
+        kit,
+        metrics,
+        x + 0.5 * sw * metrics.hv_contrast,
+        y,
+        x_depth,
+        y_depth,
+        sw,
+        y_extension,
+    )
+}
+
+/// `TopHook.toRight.lBarInner`: a stem whose top turns right and down into a
+/// hook. `sign` is `+1` for a rightward hook and `-1` for a leftward one.
+#[must_use]
+pub fn top_hook_l_bar_inner(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y_bot: f64,
+    y_top: f64,
+    sw: f64,
+    sign: f64,
+) -> Vec<Geometry> {
+    let y_hook_start = y_top - metrics.o - metrics.tail_y - 0.5 * sw;
+    let stem = vbar_l(kit, metrics, x, y_bot, y_hook_start, sw).geometry(kurbo::Affine::IDENTITY);
+    let hook = vertical_hook_l(
+        kit,
+        metrics,
+        x,
+        y_hook_start,
+        sign * metrics.tail_x,
+        -metrics.tail_y,
+        sw,
+        0.0,
+    )
+    .geometry(kurbo::Affine::IDENTITY);
+
+    vec![stem, hook]
+}
+
+/// `HOverlayBar`: a horizontal overlay bar.
+#[must_use]
+pub fn h_overlay_bar(
+    kit: &Kit,
+    metrics: &Metrics,
+    x_left: f64,
+    x_right: f64,
+    y: f64,
+    sw: Option<f64>,
+) -> Dispiro {
+    let width = sw.unwrap_or(metrics.overlay_stroke);
+    let items = vec![
+        Item::Af(kit.widths_center(Some(width))),
+        kit.knot(KnotType::Left, x_left, y, Vec::new()),
+        kit.knot(KnotType::Right, x_right, y, Vec::new()),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `LetterBarOverlay.l.in`: a bar across the letter, from its left side, at a
+/// fraction `py` of the way from `bot` to `top`.
+// The signature is upstream's: the position, the box, the reference stroke and the stroke.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn letter_bar_overlay_l_in(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    bot: f64,
+    top: f64,
+    py: f64,
+    space: (f64, f64),
+    ref_sw: f64,
+    sw: f64,
+) -> Dispiro {
+    let (x_left_space, x_right_space) = space;
+    let hsw = |value: f64| value * metrics.hv_contrast;
+    let x_left_edge = x;
+    let x_right_edge = x + hsw(ref_sw);
+    let p = (x_left_edge - x_left_space)
+        / ((x_right_space - x_right_edge) + (x_left_edge - x_left_space));
+    let x_c = mix(x_left_edge, x_right_edge, mix(0.5, 1.0 - p, 0.5));
+    let jut = 0.75 * metrics.long_jut;
+    let left =
+        (x_left_edge - metrics.side_jut).min((x_c - jut).max(mix(x_left_space, x_left_edge, 0.3)));
+    let right = (x_right_edge + metrics.side_jut).max((x_c + jut).min(mix(
+        x_right_space,
+        x_right_edge,
+        0.3,
+    )));
+    let y = mix(bot, top, py);
+    let sw = sw
+        .min(1.25 * (top - bot) * py)
+        .min(1.25 * (top - bot) * (1.0 - py));
+
+    h_overlay_bar(kit, metrics, left, right, y, Some(sw))
+}
+
+/// The arch parameters a definition reads from the design and the metrics.
+const fn design_arch_params(metrics: &Metrics, design: &Design) -> ArchParams {
+    ArchParams {
+        superness: design.superness,
+        tan_slope: metrics.tan_slope,
+        hv_contrast: metrics.hv_contrast,
+        o: metrics.o,
+        correction_o_mid_x: metrics.correction_o_mid_x,
+    }
+}
+
+/// `OShapeOutline`: a whole ring as a closed spiro outline.
+///
+/// The two `centerAt` knots close the top and bottom midsections, and the flat
+/// sides carry the two arch depths. `OShapeOutline.NoOvershoot` is this with
+/// the box pushed out by `O` and `OX`.
+// The signature is upstream's: the box, the width and the two arch depths.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn oshape_outline(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    u: f64,
+    d: f64,
+    l: f64,
+    r: f64,
+    width: Option<f64>,
+    ada: Option<f64>,
+    adb: Option<f64>,
+) -> crate::spiro_kit::SpiroOutline {
+    let width = width.unwrap_or(metrics.stroke);
+    let ada = ada.unwrap_or(metrics.small_arch_depth_a);
+    let adb = adb.unwrap_or(metrics.small_arch_depth_b);
+    let middle = mix(l, r, 0.5);
+    let params = design_arch_params(metrics, design);
+    let end = |x: f64, y: f64, rtl: bool, at_bot: bool| {
+        center_at(
+            kit,
+            &CenterAtArgs {
+                x,
+                y,
+                sw: width,
+                compact: false,
+                o: metrics.o,
+                sw_before: width,
+                sw_after: width,
+                lhs: true,
+                rtl,
+                at_bot,
+            },
+            &params,
+        )
+    };
+    let side = |x: f64| FlatSide {
+        x,
+        d,
+        u,
+        ada,
+        adb,
+        ox: metrics.ox,
+        af: Vec::new(),
+    };
+    let mut items = vec![
+        Item::Af(kit.widths(width, 0.0)),
+        end(middle, u, true, false),
+        kit.archv(None, None),
+    ];
+    items.extend(flatside_ld(kit, &side(l)));
+    items.push(kit.arcvh(None, None));
+    items.push(end(middle, d, false, true));
+    items.push(kit.archv(None, None));
+    items.extend(flatside_ru(kit, &side(r)));
+    items.push(kit.arcvh(None, None));
+    items.push(kit.close());
+
+    kit.spiro_outline(items)
+}
+
+/// `OShapeOutline.NoOvershoot`: the ring's box pushed out by the overshoot.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn oshape_outline_no_overshoot(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    u: f64,
+    d: f64,
+    l: f64,
+    r: f64,
+    width: Option<f64>,
+    ada: Option<f64>,
+    adb: Option<f64>,
+) -> crate::spiro_kit::SpiroOutline {
+    oshape_outline(
+        kit,
+        metrics,
+        design,
+        u + metrics.o,
+        d - metrics.o,
+        l - metrics.ox,
+        r + metrics.ox,
+        width,
+        ada,
+        adb,
+    )
+}
+
+/// `BBS`: the stroke a blackboard bar is drawn with.
+#[must_use]
+pub fn bb_stroke(df: &crate::letter_model::DivFrame) -> f64 {
+    df.advice_stroke(6.0, 1.0)
+}
+
+/// `BBD`: the distance between a blackboard bar's two strokes.
+#[must_use]
+pub fn bb_distance(metrics: &Metrics, bbs: f64) -> f64 {
+    crate::util::clamp(metrics.width / 5.5, metrics.width / 4.0, bbs * 2.0)
+}
+
+/// `BBBarLeft`: a blackboard bar on the left of `x`.
+#[must_use]
+pub fn bb_bar_left(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y_bot: f64,
+    y_top: f64,
+    bbs: f64,
+    bbd: f64,
+) -> Vec<Geometry> {
+    vec![
+        vbar_l(kit, metrics, x, y_bot, y_top, bbs).geometry(kurbo::Affine::IDENTITY),
+        vbar_l(kit, metrics, x + bbd, y_bot, y_top, bbs).geometry(kurbo::Affine::IDENTITY),
+        hbar_t(kit, metrics, x, x + bbd, y_top, Some(bbs)).geometry(kurbo::Affine::IDENTITY),
+        hbar_b(kit, metrics, x, x + bbd, y_bot, Some(bbs)).geometry(kurbo::Affine::IDENTITY),
+    ]
 }

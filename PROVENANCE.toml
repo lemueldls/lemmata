@@ -15,6 +15,10 @@ commit = "2487637bb71f41b2a66134afd9faa6c316e5a438"
 ours = "crates/lemmata-glyphs/src/letter/latin/lower_a.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-a.ptl"
 
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_b.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-b.ptl"
+
 # The runtime the definitions are written against. Not glyphs, but they came
 # from upstream the same way, and a port would build on them.
 [[layer]]

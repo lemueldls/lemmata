@@ -23,6 +23,7 @@ punctuation the other suites walk. A capture missing one of them fails
 IOSEVKA_BUILD_DIR=/tmp/opencode/iosevka-build
 LEMMATA_GLYPH_DUMP=/tmp/opencode/glyphs.bin
 LEMMATA_GLYPH_WIDTH=500
+LEMMATA_GLYPH_SLOPE=0
 LEMMATA_GLYPH_SET='a,a.crossing,a.doubleStoreyFlatBottomSerifed,\
 a.doubleStoreyFlatBottomSerifless,\
 a.doubleStoreyHookInwardSerifedFlatBottomSerifed,\
@@ -35,8 +36,8 @@ a.doubleStoreyHookInwardSerifedToothlessRounded,a.doubleStoreySerifed,\
 a.doubleStoreySerifless,a.doubleStoreyTailed,\
 a.doubleStoreyToothlessCorner,a.doubleStoreyToothlessRounded,\
 a.singleStoreyDoubleSerifed,a.singleStoreyEarlessCornerSerifed,\
-a.singleStoreyEarlessCornerSerifless,\
-a.singleStoreyEarlessCornerTailed,a.singleStoreyEarlessRoundedSerifed,\
+a.singleStoreyEarlessCornerSerifless,a.singleStoreyEarlessCornerTailed,\
+a.singleStoreyEarlessRoundedSerifed,\
 a.singleStoreyEarlessRoundedSerifless,\
 a.singleStoreyEarlessRoundedTailed,a.singleStoreyFlatTopDoubleSerifed,\
 a.singleStoreyFlatTopSerifed,a.singleStoreyFlatTopSerifless,\
@@ -60,13 +61,65 @@ aHalf.doubleStoreyFlatBottomSerifed,\
 aHalf.doubleStoreyFlatBottomSerifless,aHalf.doubleStoreySerifed,\
 aHalf.doubleStoreySerifless,aHalf.doubleStoreyTailed,\
 aHalf.doubleStoreyToothlessCorner,aHalf.doubleStoreyToothlessRounded,\
-ampersand,asciiDoubleQuote,asciiSingleQuote,asterisk,at,b,c,colon,\
-comma,d,dollar,e,eight.lnum,equal,exclam,f,five.lnum,four.lnum,g,\
-greater,h,hyphen,i,j,k,l,less,m,n,nine.lnum,numberSign,o,one.lnum,p,\
-parenLeft,parenRight,percent,period,plus,q,question,r,s,semicolon,\
-seven.lnum,six.lnum,slash,space,t,three.lnum,two.lnum,u,v,w,x,y,z,\
-zero.lnum'
+ampersand,asciiDoubleQuote,asciiSingleQuote,asterisk,at,b,c,colon,comma,\
+d,dollar,e,eight.lnum,equal,exclam,f,five.lnum,four.lnum,g,greater,h,\
+hyphen,i,j,k,l,less,m,n,nine.lnum,numberSign,o,one.lnum,p,parenLeft,\
+parenRight,percent,period,plus,q,question,r,s,semicolon,seven.lnum,\
+six.lnum,slash,space,t,three.lnum,two.lnum,u,v,w,x,y,z,zero.lnum,\
+b.serifless,bStroke.serifless,bSlash.serifless,latn/be.serifless,\
+bHookTop.serifless,b.motionSerifed,bStroke.motionSerifed,\
+bSlash.motionSerifed,latn/be.motionSerifed,b.bottomSerifed,\
+bStroke.bottomSerifed,bSlash.bottomSerifed,latn/be.bottomSerifed,\
+bHookTop.bottomSerifed,b.serifed,bStroke.serifed,bSlash.serifed,\
+latn/be.serifed,b.bottomCutSerifless,bStroke.bottomCutSerifless,\
+bSlash.bottomCutSerifless,latn/be.bottomCutSerifless,\
+bHookTop.bottomCutSerifless,b.bottomCutMotionSerifed,\
+bStroke.bottomCutMotionSerifed,bSlash.bottomCutMotionSerifed,\
+latn/be.bottomCutMotionSerifed,b.bottomCutBottomSerifed,\
+bStroke.bottomCutBottomSerifed,bSlash.bottomCutBottomSerifed,\
+latn/be.bottomCutBottomSerifed,bHookTop.bottomCutBottomSerifed,\
+b.bottomCutSerifed,bStroke.bottomCutSerifed,bSlash.bottomCutSerifed,\
+latn/be.bottomCutSerifed,b.flatBottomSerifless,\
+bStroke.flatBottomSerifless,bSlash.flatBottomSerifless,\
+latn/be.flatBottomSerifless,bHookTop.flatBottomSerifless,\
+b.flatBottomMotionSerifed,bStroke.flatBottomMotionSerifed,\
+bSlash.flatBottomMotionSerifed,latn/be.flatBottomMotionSerifed,\
+b.flatBottomBottomSerifed,bStroke.flatBottomBottomSerifed,\
+bSlash.flatBottomBottomSerifed,latn/be.flatBottomBottomSerifed,\
+bHookTop.flatBottomBottomSerifed,b.flatBottomSerifed,\
+bStroke.flatBottomSerifed,bSlash.flatBottomSerifed,\
+latn/be.flatBottomSerifed,b.toothlessCornerSerifless,\
+bStroke.toothlessCornerSerifless,bSlash.toothlessCornerSerifless,\
+latn/be.toothlessCornerSerifless,bHookTop.toothlessCornerSerifless,\
+b.toothlessCornerMotionSerifed,bStroke.toothlessCornerMotionSerifed,\
+bSlash.toothlessCornerMotionSerifed,\
+latn/be.toothlessCornerMotionSerifed,b.toothlessCornerBottomSerifed,\
+bStroke.toothlessCornerBottomSerifed,\
+bSlash.toothlessCornerBottomSerifed,\
+latn/be.toothlessCornerBottomSerifed,\
+bHookTop.toothlessCornerBottomSerifed,b.toothlessCornerSerifed,\
+bStroke.toothlessCornerSerifed,bSlash.toothlessCornerSerifed,\
+latn/be.toothlessCornerSerifed,b.toothlessRoundedSerifless,\
+bStroke.toothlessRoundedSerifless,bSlash.toothlessRoundedSerifless,\
+latn/be.toothlessRoundedSerifless,bHookTop.toothlessRoundedSerifless,\
+b.toothlessRoundedMotionSerifed,bStroke.toothlessRoundedMotionSerifed,\
+bSlash.toothlessRoundedMotionSerifed,\
+latn/be.toothlessRoundedMotionSerifed,b.toothlessRoundedBottomSerifed,\
+bStroke.toothlessRoundedBottomSerifed,\
+bSlash.toothlessRoundedBottomSerifed,\
+latn/be.toothlessRoundedBottomSerifed,\
+bHookTop.toothlessRoundedBottomSerifed,b.toothlessRoundedSerifed,\
+bStroke.toothlessRoundedSerifed,bSlash.toothlessRoundedSerifed,\
+latn/be.toothlessRoundedSerifed,mathbb/b'
 npm run build -- ttf-unhinted::RefA
+```
+
+`LEMMATA_GLYPH_SLOPE=0` is not optional. A plan builds four faces and each one
+runs the dump, so without it the italic lands on top of the upright and every
+shape check downstream still passes. `LEMMATA_GLYPH_WIDTH` narrows the face, but
+the italic has the same width and gets through.
+
+```sh
 ```
 
 A third capture carries the letters and every spelling of each, which is what
