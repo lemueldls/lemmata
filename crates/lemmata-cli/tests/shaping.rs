@@ -227,43 +227,130 @@ fn the_corpora_are_within_the_coverage() {
     }
 }
 
-/// `r[test.corpus]`: the ligature corpus is the half of the shaping requirement
-/// the font cannot meet yet.
+/// Where the reference font lives.
+fn reference_path() -> PathBuf {
+    std::env::var_os("LEMMATA_REFERENCE_DIR")
+        .map_or_else(
+            || {
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../..")
+                    .join("target/reference")
+            },
+            PathBuf::from,
+        )
+        .join("RefA-Regular.ttf")
+}
+
+/// `r[drift.shaping]`: the prose corpus advances the way the oracle font does.
 ///
-/// The layout tables carry texture healing and the math features, and no
-/// ligature, so every trigger shapes as its own characters. The test pins that,
-/// so the day a ligature lands the assertion flips and the gap closes visibly.
+/// The oracle is the pinned Iosevka build, shaped by the same shaper. Glyph names
+/// are not compared: our font exports none, because `post` is written without a
+/// name table, so the comparison is what a shaper can be held to here, the
+/// advances and the glyph count. Texture healing does not move an advance, which
+/// is what makes the two comparable at all.
 #[test]
-fn the_ligature_corpus_does_not_combine() {
+fn the_prose_corpus_advances_like_the_reference() {
     let Some((bytes, _)) = build_font() else {
         eprintln!("skipping: no capture");
         return;
     };
-    let blob: harfrust::font::Blob = bytes.into();
-    let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
-    let shaper = harfrust::ShaperFont::new(&font);
-    let count = |text: &str| -> usize {
+    let Ok(reference) = std::fs::read(reference_path()) else {
+        eprintln!("skipping: no reference font");
+        return;
+    };
+    let text = std::fs::read_to_string(corpus_path("prose.txt")).expect("read the prose corpus");
+
+    // The advance total and the glyph count, which is what a shaper decides.
+    let shape = |font: &[u8]| -> (i64, usize) {
+        let blob: harfrust::font::Blob = font.to_vec().into();
+        let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
+        let shaper = harfrust::ShaperFont::new(&font);
+        let mut buffer = harfrust::Buffer::new();
+        buffer.push_str(&text);
+        buffer.guess_segment_properties();
+        harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::default())
+            .expect("shape the run");
+
+        let advance: i64 = buffer
+            .glyph_positions()
+            .iter()
+            .map(|position| i64::from(position.x_advance))
+            .sum();
+
+        (advance, buffer.glyph_infos().len())
+    };
+
+    let (ours, our_glyphs) = shape(&bytes);
+    let (theirs, their_glyphs) = shape(&reference);
+    assert_eq!(
+        our_glyphs, their_glyphs,
+        "the same text should shape to the same number of glyphs"
+    );
+    assert_eq!(
+        ours, theirs,
+        "the prose corpus advances {ours} against the reference's {theirs}"
+    );
+    eprintln!("shaping: {our_glyphs} glyphs, {ours} units, matching the reference");
+}
+
+/// `r[test.corpus]`, `r[drift.shaping]`: the ligature corpus, and why neither
+/// font ligates it.
+///
+/// Ours carries `calt` for texture healing and no ligature. The reference does
+/// not either, and that is worth recording rather than working around: the
+/// pinned plan selects no ligation set, so the build ships every trigger as its
+/// own glyphs and the reference font has six ligature lookups in total, none of
+/// them for an arrow. Comparing ligatures needs an oracle that has them, which
+/// means a reference plan with a ligation set and a new fingerprint, and the
+/// parity pair records the current one.
+///
+/// So the test pins both halves. The day a ligature lands here, or a reference
+/// plan starts selecting a set, one of the two assertions moves.
+#[test]
+fn neither_font_ligates_the_triggers_yet() {
+    let Some((bytes, _)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let Ok(reference) = std::fs::read(reference_path()) else {
+        eprintln!("skipping: no reference font");
+        return;
+    };
+    let text =
+        std::fs::read_to_string(corpus_path("ligatures.txt")).expect("read the ligature corpus");
+
+    let count = |font: &[u8], text: &str| -> usize {
+        let blob: harfrust::font::Blob = font.to_vec().into();
+        let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
+        let shaper = harfrust::ShaperFont::new(&font);
         let mut buffer = harfrust::Buffer::new();
         buffer.push_str(text);
         buffer.guess_segment_properties();
-        // `calt` is on by default, which is where a ligature would live.
+        // A trigger is all punctuation, so the guessed script is Common, and a
+        // ligation set is registered under a script. An editor setting code is in
+        // a Latin run, which is what this is.
+        buffer.set_script(Some(harfrust::Script::LATIN));
         harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::default())
             .expect("shape the run");
 
         buffer.glyph_infos().len()
     };
 
-    let text =
-        std::fs::read_to_string(corpus_path("ligatures.txt")).expect("read the ligature corpus");
     let mut triggers = 0usize;
     for trigger in text.lines().filter(|line| !line.is_empty()) {
+        let characters = trigger.chars().count();
         assert_eq!(
-            count(trigger),
-            trigger.chars().count(),
-            "{trigger} combined, so a ligature has landed and this pin can go"
+            count(&bytes, trigger),
+            characters,
+            "{trigger} combined here, so a ligature has landed and this pin can go"
+        );
+        assert_eq!(
+            count(&reference, trigger),
+            characters,
+            "{trigger} combined in the reference, so the oracle can measure ligatures now"
         );
         triggers += 1;
     }
     assert!(triggers > 0, "the corpus has no triggers");
-    eprintln!("ligatures: {triggers} triggers, none of them combine yet");
+    eprintln!("ligatures: {triggers} triggers, neither font combines one yet");
 }
