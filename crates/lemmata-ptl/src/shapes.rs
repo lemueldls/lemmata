@@ -1069,3 +1069,112 @@ pub fn obar_right_earless_rounded(
         ring,
     )
 }
+
+/// Which side of a serif the ink is on.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum HSerifSide {
+    /// `lt`: the left shoulder, ink on the left.
+    LeftTop,
+    /// `lb`: the left foot, ink on the right.
+    LeftBottom,
+    /// `rt`: the right shoulder, ink on the right.
+    RightTop,
+    /// `rb`: the right foot, ink on the left.
+    RightBottom,
+}
+
+/// `HSerif`: a horizontal serif at `x`, `length` long, pointing away from the
+/// bar.
+///
+/// `sw` is the stroke the serif is drawn with and `sw_ref` the stroke the flat
+/// is placed against. A definition that omits either falls back to the stroke
+/// width and to `sw`, which is what `None` means.
+#[must_use]
+pub fn hserif(
+    kit: &Kit,
+    metrics: &Metrics,
+    side: HSerifSide,
+    x: f64,
+    y: f64,
+    length: f64,
+    sw: f64,
+    sw_ref: Option<f64>,
+) -> Dispiro {
+    let sw_ref = sw_ref.unwrap_or(sw);
+    let half = 0.5 * sw_ref * metrics.hv_contrast;
+    let shift = sw * metrics.serif_shift_x;
+    let (widths, flat_x, heading, end_x) = match side {
+        HSerifSide::LeftTop => (
+            kit.widths_lhs(Some(sw)),
+            x + half,
+            leftward(),
+            x - length - shift,
+        ),
+        HSerifSide::LeftBottom => (
+            kit.widths_rhs(Some(sw)),
+            x + half,
+            leftward(),
+            x - length + shift,
+        ),
+        HSerifSide::RightTop => (
+            kit.widths_rhs(Some(sw)),
+            x - half,
+            rightward(),
+            x + length - shift,
+        ),
+        HSerifSide::RightBottom => (
+            kit.widths_lhs(Some(sw)),
+            x - half,
+            rightward(),
+            x + length + shift,
+        ),
+    };
+    let items = vec![
+        Item::Af(widths),
+        kit.knot(KnotType::Left, flat_x, y, kit.heading(heading)),
+        kit.knot(KnotType::Right, end_x, y, Vec::new()),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `VBar.l` and `VBar.r`: a vertical bar, its ink on one side of `x`.
+#[must_use]
+pub fn vbar_l(kit: &Kit, metrics: &Metrics, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
+    vbar(
+        kit,
+        metrics,
+        x + 0.5 * sw * metrics.hv_contrast,
+        y_down,
+        y_up,
+        sw,
+    )
+}
+
+/// `VBar.r`, the right-hand twin of [`vbar_l`].
+#[must_use]
+pub fn vbar_r(kit: &Kit, metrics: &Metrics, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
+    vbar(
+        kit,
+        metrics,
+        x - 0.5 * sw * metrics.hv_contrast,
+        y_down,
+        y_up,
+        sw,
+    )
+}
+
+fn vbar(kit: &Kit, metrics: &Metrics, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
+    let heading = if y_down < y_up {
+        upward(metrics.hv_contrast)
+    } else {
+        downward(metrics.hv_contrast)
+    };
+    let items = vec![
+        Item::Af(kit.widths_center(Some(sw))),
+        kit.knot(KnotType::Left, x, y_down, kit.heading(heading)),
+        kit.knot(KnotType::Right, x, y_up, kit.heading(heading)),
+    ];
+
+    kit.dispiro(items)
+}

@@ -28,9 +28,9 @@ use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::metrics::Metrics;
 use lemmata_ptl::shapes;
 use lemmata_ptl::shapes::{
-    ArchArgs, ArchParams, CenterAtArgs, Design, FlatSide, HookArgs, HookParams, OBarContext, arch,
-    arch_depth_b_clamped, center_at, downward, flatside_lu, leftward, rightward, upward,
-    ysmooth_mid_l, ysmooth_mid_r,
+    ArchArgs, ArchParams, CenterAtArgs, Design, FlatSide, HSerifSide, HookArgs, HookParams,
+    OBarContext, arch, arch_depth_b_clamped, center_at, downward, flatside_lu, leftward, rightward,
+    upward, ysmooth_mid_l, ysmooth_mid_r,
 };
 
 pub use lemmata_ptl::shapes::OBarRing;
@@ -655,72 +655,41 @@ impl LowerA<'_> {
     /// `VBar.r`.
     #[must_use]
     pub fn vbar_r(&self, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
-        self.vbar(x - self.hsw_to_v(0.5 * sw), y_down, y_up, sw)
+        shapes::vbar_r(self.kit, self.metrics, x, y_down, y_up, sw)
     }
 
-    /// `VBar.l`.
+    /// `VBar.l`: the bar's ink to the right of `x`.
     #[must_use]
     pub fn vbar_l(&self, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
-        self.vbar(x + self.hsw_to_v(0.5 * sw), y_down, y_up, sw)
-    }
-
-    fn vbar(&self, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
-        let heading = if y_down < y_up {
-            upward(self.metrics.hv_contrast)
-        } else {
-            downward(self.metrics.hv_contrast)
-        };
-        let items = vec![
-            Item::Af(self.kit.widths_center(Some(sw))),
-            self.kit
-                .knot(KnotType::Left, x, y_down, self.kit.heading(heading)),
-            self.kit
-                .knot(KnotType::Right, x, y_up, self.kit.heading(heading)),
-        ];
-
-        self.kit.dispiro(items)
+        shapes::vbar_l(self.kit, self.metrics, x, y_down, y_up, sw)
     }
 
     /// `HSerif.rb`: the outer serif on the bar's right foot.
     fn hserif_rb(&self, x: f64, y: f64, length: f64, sw: f64) -> Dispiro {
-        let items = vec![
-            Item::Af(self.kit.widths_lhs(Some(sw))),
-            self.kit.knot(
-                KnotType::Left,
-                x - self.hsw_to_v(0.5 * sw),
-                y,
-                self.kit.heading(rightward()),
-            ),
-            self.kit.knot(
-                KnotType::Right,
-                x + length + sw * self.metrics.serif_shift_x,
-                y,
-                Vec::new(),
-            ),
-        ];
-
-        self.kit.dispiro(items)
+        shapes::hserif(
+            self.kit,
+            self.metrics,
+            HSerifSide::RightBottom,
+            x,
+            y,
+            length,
+            sw,
+            None,
+        )
     }
 
     /// `HSerif.rt`: the outer serif on the bar's right shoulder.
     fn hserif_rt(&self, x: f64, y: f64, length: f64, sw: f64) -> Dispiro {
-        let items = vec![
-            Item::Af(self.kit.widths_rhs(Some(sw))),
-            self.kit.knot(
-                KnotType::Left,
-                x - self.hsw_to_v(0.5 * sw),
-                y,
-                self.kit.heading(rightward()),
-            ),
-            self.kit.knot(
-                KnotType::Right,
-                x + length - sw * self.metrics.serif_shift_x,
-                y,
-                Vec::new(),
-            ),
-        ];
-
-        self.kit.dispiro(items)
+        shapes::hserif(
+            self.kit,
+            self.metrics,
+            HSerifSide::RightTop,
+            x,
+            y,
+            length,
+            sw,
+            None,
+        )
     }
 
     /// `CSerifFrame`'s `sideJut`, which is `jut` less half the ink.
