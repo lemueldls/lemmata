@@ -8,6 +8,10 @@
 //! Skipped unless `LEMMATA_HOST_BUILD` is set and the scratch build and the
 //! reference font are both there, because it starts an external build.
 
+// A captured advance is a whole number of font units, so rounding it into the
+// field the font stores is the conversion rather than a truncation.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::path::{Path, PathBuf};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
