@@ -1089,6 +1089,9 @@ pub enum HSerifSide {
 /// `sw` is the stroke the serif is drawn with and `sw_ref` the stroke the flat
 /// is placed against. A definition that omits either falls back to the stroke
 /// width and to `sw`, which is what `None` means.
+// The signature is upstream's, and the side is a parameter rather than four
+// near-identical functions.
+#[allow(clippy::too_many_arguments)]
 #[must_use]
 pub fn hserif(
     kit: &Kit,
