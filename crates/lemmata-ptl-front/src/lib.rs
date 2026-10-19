@@ -353,7 +353,29 @@ pub fn translate(node: &Sexpr) -> Result<String, String> {
                     let args = args()?;
                     Ok(format!("|{}| {{ {} }}", args[0], args[1]))
                 }
-                "match" => Err("match".to_string()),
+                "match" => {
+                    // Arms are `[pattern, body]` pairs. The expander has already
+                    // removed `Just`, which is identity, so a pattern is a
+                    // literal, a name or the wildcard.
+                    let subject = translate(items.get(1).ok_or("match without a subject")?)?;
+                    let mut arms = Vec::new();
+                    for arm in &items[2..] {
+                        let Sexpr::List(pair) = arm else {
+                            return Err("match".to_string());
+                        };
+                        let [pattern, body] = pair.as_slice() else {
+                            return Err("match".to_string());
+                        };
+                        let pattern = match pattern {
+                            Sexpr::Atom(name) if name == "__" => "_".to_string(),
+                            Sexpr::Atom(name) => name.clone(),
+                            Sexpr::Number(value) => format!("{value}"),
+                            _ => return Err("match".to_string()),
+                        };
+                        arms.push(format!("{pattern} => {}", translate(body)?));
+                    }
+                    Ok(format!("match {subject} {{ {} }}", arms.join(", ")))
+                }
                 "object" => Err("object".to_string()),
                 _ if named(node, MACROS).is_some() => Err(head.to_string()),
                 _ => Ok(format!("{head}({})", args()?.join(", "))),
@@ -390,6 +412,14 @@ mod tests {
     fn a_macro_head_is_refused_rather_than_called() {
         let node = parse(r#"["glyph-proc",["include","x"]]"#).expect("parse");
         assert_eq!(translate(&node).expect_err("refused"), "glyph-proc");
+    }
+
+    #[test]
+    fn a_match_becomes_a_rust_match() {
+        assert_eq!(
+            rust(r#"["match","kind",["0",["list","a"]],["__",["list","b"]]]"#),
+            "match kind { 0 => list(a), _ => list(b) }"
+        );
     }
 
     #[test]
