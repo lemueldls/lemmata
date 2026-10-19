@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The wordmark, set to the width of the measure, in the font the site ships, on
+// The wordmark, set to the width of the column, in the font the site is set in, on
 // a grid of one cell per advance.
 //
 // The rules are the font's own ascender, x-height and baseline, drawn where the
@@ -22,8 +22,8 @@ interface Fitted {
   cell: number;
 }
 
-/// Sets the wordmark to what is left of the measure once the labels have their
-/// column, and answers the size it landed on and the width of one letter.
+/// Sets the wordmark to what is left of the column once the labels have theirs,
+/// and answers the size it landed on and the width of one letter.
 ///
 /// The cell is the rendered width divided by the number of characters rather
 /// than the font's advance on its own. The wordmark is set with negative
@@ -58,10 +58,10 @@ function draw(): void {
   if (!fitted) return;
   const { points, cell } = fitted;
 
-  // The grid follows the size, so the letters stay on their cells.
+  // The grid follows the size, so the letters keep to their cells.
   holder.style.setProperty("--cell", `${cell}px`);
 
-  // On a narrow screen the wordmark fills the measure and the labels would sit
+  // On a narrow screen the wordmark fills the column and the labels would sit
   // on the letters, so the rules go away rather than lie across them.
   if (holder.clientWidth < 520) {
     shown.value = false;
@@ -102,7 +102,7 @@ onBeforeUnmount(() => removeEventListener("resize", draw));
 
 <template>
   <div class="hero__stage" ref="stage">
-    <div class="hero__grid" aria-hidden="true" />
+    <div class="hero__grid grid-field" aria-hidden="true" />
     <h1 class="wordmark" ref="word">lemmata<i class="probe" ref="probe" aria-hidden="true" /></h1>
     <div v-show="shown" class="rules">
       <i class="rule rule--asc"><span>ascender <b>{{ ascender }}</b></span></i>

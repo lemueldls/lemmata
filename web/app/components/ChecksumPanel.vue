@@ -1,16 +1,13 @@
 <script setup lang="ts">
-// The checksums: the font the page is set in, hashed here, against the number
-// the recorded pair carries, with the readings beside it from the font's own
-// tables.
+// The numbers: the font the page is set in, fingerprinted here, beside the
+// number the reference build gives, with the readings from the font's own tables.
 import golden from "../../../golden/parity.json";
 import { short } from "~/utils/font";
 import { useLemmataFont } from "~/composables/font";
 
 const font = useLemmataFont();
 
-const matches = computed(
-  () => font.ready && font.digest === golden.font,
-);
+const matches = computed(() => font.ready && font.digest === golden.font);
 
 const readings = computed(() => {
   const metrics = font.metrics;
@@ -19,7 +16,7 @@ const readings = computed(() => {
   return [
     ["units per em", metrics.upem],
     ["glyphs drawn", metrics.drawn],
-    ["characters mapped", metrics.mapped],
+    ["characters", metrics.mapped],
     ["x-height, x", metrics.xHeight],
     ["ascender, l", metrics.ascender],
     ["descender, p", metrics.descender],
@@ -32,23 +29,23 @@ const readings = computed(() => {
   <div class="cols">
     <div class="panel">
       <div class="panel__head">
-        <span>Checksums</span>
+        <span>Fingerprints</span>
         <span class="chip" :data-state="font.ready ? (matches ? 'ok' : 'bad') : 'pending'">
-          {{ font.ready ? (matches ? "byte-identical" : "differs") : "hashing" }}
+          {{ font.ready ? (matches ? "the same" : "not the same") : "reading" }}
         </span>
       </div>
       <div class="panel__body">
         <dl class="rows">
           <div class="rows__row">
-            <dt>capture</dt>
+            <dt>the outlines</dt>
             <dd :title="golden.capture">{{ short(golden.capture) }}</dd>
           </div>
           <div class="rows__row">
-            <dt>shipped here</dt>
+            <dt>this page's font</dt>
             <dd :title="font.digest">{{ font.ready ? short(font.digest) : "…" }}</dd>
           </div>
           <div class="rows__row">
-            <dt>reference build</dt>
+            <dt>the reference build</dt>
             <dd :title="golden.font">{{ short(golden.font) }}</dd>
           </div>
         </dl>
@@ -58,14 +55,13 @@ const readings = computed(() => {
               ? `The font could not be read: ${font.error}`
               : font.ready
                 ? matches
-                  ? "the font this page is set in matches the reference build"
-                  : "the font this page is set in differs from the reference build"
+                  ? "the font this page is set in is the font the reference build gives"
+                  : "the font this page is set in is not the font the reference build gives"
                 : "Waiting for the font."
           }}
         </p>
         <p class="note">
-          rustc {{ golden.toolchain.rustc }} · wasm-bindgen {{ golden.toolchain["wasm-bindgen"] }} ·
-          upstream {{ golden.upstream.slice(0, 7) }}
+          toolchain {{ golden.toolchain.rustc }} · bindgen {{ golden.toolchain["wasm-bindgen"] }}
         </p>
       </div>
     </div>
@@ -80,8 +76,8 @@ const readings = computed(() => {
           </div>
         </dl>
         <p class="note">
-          In font units, out of the tables of the font the site ships. The ink is
-          the bounding box the outline carries.
+          In font units, out of the tables of the font the site is set in. The ink
+          is the bounding box the outline holds.
         </p>
       </div>
     </div>

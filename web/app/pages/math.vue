@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The equations page. The face it is set in is one of the two the site ships, so
+// The equations page. The face it is set in is one of the two the site serves, so
 // the page has nothing to compile: it waits for the font and then sets MathML in
 // it. The MathML is editable, which is the part worth playing with.
 //
@@ -15,7 +15,9 @@ useHead({ title: "Equations" });
 const FAMILY = '"Lemmata Math"';
 
 const status = ref("Setting the equations…");
-const source = ref(corpus);
+/// The corpus with its own notes taken out: the field is for equations, and the
+/// file's comments are for whoever reads the file.
+const source = ref(corpus.replace(/<!--[\s\S]*?-->/g, "").trim());
 const equations = ref<HTMLElement | null>(null);
 
 /// Measures a string in a family, to tell whether a font rendered it.
@@ -73,11 +75,13 @@ onMounted(async () => {
 <template>
   <div class="wrap page">
     <h1>Equations</h1>
-    <p>
+    <p class="lede">
       These are set in the font this project built from the math glyph set. The
       MathML is editable: change an equation and it is set again in the same
       font, with no upload.
     </p>
+    <div class="rule-art"><i /></div>
+    <p class="plate-label">The corpus</p>
     <p id="status">{{ status }}</p>
     <textarea id="source" v-model="source" rows="12" spellcheck="false" @input="render" />
     <div id="equations" ref="equations" />

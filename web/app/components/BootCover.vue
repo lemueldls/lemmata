@@ -2,8 +2,8 @@
 // The cover the landing wears while the font arrives.
 //
 // The font is a webfont, so it comes after the first paint. Until it is here the
-// page would be set in the fallback and the wordmark could not be measured, so
-// the cover stays up, with no words on it, and leaves once the readings are
+// page would be set in the fallback and the wordmark could not be read yet, so
+// the cover is up, with no words on it, and leaves once the readings are
 // ready. It is in the prerendered HTML, so it is painted first rather than
 // appearing after hydration.
 //

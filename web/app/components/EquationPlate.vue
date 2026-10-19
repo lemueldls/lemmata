@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // One equation from the corpus, set in the math face. The face is a second font
-// the site ships, so this page waits for it rather than building it, and the
-// stylesheet only reaches for the family once the holder says so, which is what
+// the site serves, so this page waits for it rather than building it, and the
+// stylesheet only asks for the family once the holder says so, which is what
 // keeps the download out of the way until the section is in sight.
 //
 // The corpus sits in a hidden div, and the browsers that parse it have already
@@ -25,7 +25,7 @@ async function show(): Promise<void> {
     await document.fonts.load(`24px ${primary}`, "\u222B");
     const source = document.querySelector("#corpus");
     const found = source ? [...source.querySelectorAll("math")] : [];
-    if (!found.length) throw new Error("the corpus in the page carries no equations");
+    if (!found.length) throw new Error("the corpus in the page holds no equations");
     const pick =
       found.find((node) => node.textContent?.includes("\u222B")) ?? found[0];
     if (pick) target.append(pick);

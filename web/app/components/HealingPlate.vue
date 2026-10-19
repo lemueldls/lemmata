@@ -2,7 +2,7 @@
 // Texture healing, from the font rather than from the page: the same text
 // twice, with `calt` off in one of them.
 //
-// The readout is the claim, measured. Both lines are the same text, so the only
+// The readout is the claim, as a number. Both lines are the same text, so the only
 // change the setting can make to the layout is none, and the number says so.
 // `calt` is on by default, which is why the line that shows the healing is the
 // one with nothing set on it.
@@ -15,7 +15,7 @@ const lines = ref<HTMLElement | null>(null);
 const plain = ref<HTMLElement | null>(null);
 const healed = ref<HTMLElement | null>(null);
 const cell = ref("12px");
-const measure = ref("Reading the font…");
+const reading = ref("Reading the font…");
 
 function draw(): void {
   const metrics = font.metrics;
@@ -31,7 +31,7 @@ function draw(): void {
   const advance = metrics.advance ?? 0;
   const size = (advance / 1000) * points;
   cell.value = `${size}px`;
-  measure.value =
+  reading.value =
     `${SAMPLE.length} cells of ${Math.round(size)} px · ` +
     `the advance moves ${moved.toFixed(2)} px`;
 }
@@ -51,11 +51,11 @@ onBeforeUnmount(() => removeEventListener("resize", draw));
     <div class="heal-lines" ref="lines" :style="{ '--cell': cell }">
       <div class="heal-line">
         <span class="heal-label">calt off</span>
-        <p class="heal-text heal-text--plain" ref="plain">{{ SAMPLE }}</p>
+        <p class="heal-text heal-text--plain grid-field" ref="plain">{{ SAMPLE }}</p>
       </div>
       <div class="heal-line">
         <span class="heal-label">calt on</span>
-        <p class="heal-text" ref="healed">{{ SAMPLE }}</p>
+        <p class="heal-text grid-field" ref="healed">{{ SAMPLE }}</p>
       </div>
     </div>
     <div class="panel__body">
@@ -68,7 +68,7 @@ onBeforeUnmount(() => removeEventListener("resize", draw));
       </p>
     </div>
     <div class="panel__foot">
-      <StatusLine state="ok">{{ measure }}</StatusLine>
+      <StatusLine state="ok">{{ reading }}</StatusLine>
     </div>
   </div>
 </template>

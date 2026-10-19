@@ -9,9 +9,9 @@ import { usePlan } from "~/composables/plan";
 const plan = usePlan();
 
 const group = "a";
-// The list comes from the capture, which is fetched after the page is served, so
-// it is rendered only once the page is running: a server render would print an
-// empty row and the first client render would disagree with it.
+// The list comes from the glyphs, which arrive after the page does, so it is
+// rendered once the page is running: a first paint would print an empty row and
+// the next one would disagree with it.
 const mounted = ref(false);
 onMounted(async () => {
   await plan.ensure();
@@ -51,6 +51,6 @@ const clear = (): void => plan.choose(group, "");
   </div>
   <StatusLine v-if="mounted" state="ok">
     {{ picked === "" ? "the capture's own drawing" : picked }} ·
-    {{ options.length }} spellings the capture carries
+    {{ options.length }} spellings the glyph source names
   </StatusLine>
 </template>

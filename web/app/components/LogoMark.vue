@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The mark: three squares in a triangle.
 //
-// Drawn rather than typeset, because the font does not carry `∴`, `⁂` or any
+// Drawn rather than typeset, because the font does not have `∴`, `⁂` or any
 // other mark that would do: the capture is letters, digits and ASCII
 // punctuation, so a glyph outside that set would fall back to whatever the
 // reader has installed and the mark would change shape per machine.

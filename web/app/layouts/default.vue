@@ -1,10 +1,10 @@
 <script setup lang="ts">
-// The shell: the head, the masthead, the footer and the shortcuts.
+// The shell: the head, the masthead, the footer and the keys.
 //
 // The two faces are declared in `nuxt.config.ts`, so what is left here is the
-// theme and the keyboard. The theme is set by an inline script before the
-// stylesheet applies, because a swap after paint shows the wrong one for a
-// frame, which is the one thing a toggle cannot fix afterwards.
+// theme and the keys. The theme is set by an inline script before the stylesheet
+// applies, because a swap after paint shows the wrong one for a frame, which is
+// the one thing a toggle cannot fix afterwards.
 import { useTheme } from "~/composables/theme";
 
 const { theme, toggle } = useTheme();
@@ -16,7 +16,7 @@ useHead({
   meta: [
     {
       name: "description",
-      content: "A typeface built from a plan, and the build to check it against.",
+      content: "A typeface built from a plan, with the numbers the build gives.",
     },
   ],
   script: [
@@ -51,7 +51,7 @@ useHead({
           class="icon-button"
           id="theme"
           type="button"
-          title="Switch the theme (t)"
+          title="Theme (m)"
           :aria-label="`Switch to the ${theme === 'light' ? 'dark' : 'light'} theme`"
           @click="toggle"
         >
@@ -79,35 +79,29 @@ useHead({
   </main>
 
   <footer class="footer">
-    <div class="wrap footer__grid">
-      <div>
-        <h3>Lemmata</h3>
-        <p>A typeface built from a plan, and the build to check it against.</p>
-      </div>
-      <div>
-        <h3>Routes</h3>
-        <ul>
-          <li><NuxtLink to="/">Overview</NuxtLink></li>
-          <li><NuxtLink to="/generate/">Generator</NuxtLink></li>
-          <li><NuxtLink to="/math/">Equations</NuxtLink></li>
-        </ul>
-      </div>
-      <div>
-        <h3>Keys</h3>
-        <ul>
-          <li><kbd>g</kbd> generator</li>
-          <li><kbd>e</kbd> equations</li>
-          <li><kbd>p</kbd> present</li>
-          <li><kbd>t</kbd> theme</li>
-        </ul>
-      </div>
-      <div>
-        <h3>Provenance</h3>
-        <ul>
-          <li>Glyph definitions: Iosevka 34.9.0, OFL</li>
-          <li>Everything else: MIT OR Apache-2.0</li>
-          <li>Nothing is uploaded. There is no server to upload to.</li>
-        </ul>
+    <div class="wrap">
+      <KeyLegend />
+      <div class="footer__grid">
+        <div>
+          <h3>Lemmata</h3>
+          <p>A typeface built from a plan, with the numbers the build gives.</p>
+        </div>
+        <div>
+          <h3>Pages</h3>
+          <ul>
+            <li><NuxtLink to="/">The font</NuxtLink></li>
+            <li><NuxtLink to="/generate/">Generator</NuxtLink></li>
+            <li><NuxtLink to="/math/">Equations</NuxtLink></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Licence</h3>
+          <ul>
+            <li>Glyph definitions: Iosevka 34.9.0, OFL</li>
+            <li>Everything else: MIT OR Apache-2.0</li>
+            <li>Nothing is uploaded. There is nowhere to upload it to.</li>
+          </ul>
+        </div>
       </div>
     </div>
   </footer>

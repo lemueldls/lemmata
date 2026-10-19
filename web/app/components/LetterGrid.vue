@@ -1,7 +1,9 @@
 <script setup lang="ts">
-// Every character the font carries, out of its own character map, drawn in the
-// font it came from. The sheet is a reading rather than a decoration: it can
-// only show what the font has.
+// The character grid: every character the font has, out of its own map, drawn at
+// a size worth looking at.
+//
+// A grid is the most honest picture of a monospace face, because the grid is the
+// design: the same advance, over and over, with the drawing moving inside it.
 import { useLemmataFont } from "~/composables/font";
 
 const font = useLemmataFont();
@@ -15,12 +17,12 @@ const label = (code: number): string =>
 </script>
 
 <template>
-  <div class="glyphs">
+  <div class="letters">
     <figure
       v-for="code in characters"
       :key="code"
-      class="glyph"
-      :class="{ 'glyph--blank': code === 0x20 }"
+      class="letter"
+      :class="{ 'letter--blank': code === 0x20 }"
     >
       <i v-if="code === 0x20" aria-label="space" />
       <i v-else>{{ String.fromCodePoint(code) }}</i>

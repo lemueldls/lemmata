@@ -24,8 +24,8 @@ const shuffle = (): void => {
 
 // The cell is one advance at this size, taken from the rendered line divided by
 // its characters, so the grid is the grid the letters are drawn on rather than a
-// decoration behind them. Measuring the text rather than the font's tables means
-// the number carries the tracking and the face actually in use.
+// decoration behind them. Reading the text rather than the font's tables means
+// the number holds the tracking and the face actually in use.
 watch(
   () => font.ready,
   (ready) => {
@@ -47,7 +47,7 @@ watch(
 <template>
   <div class="panel">
     <div class="plate" :style="{ '--cell': cell, '--plate': `${size}px` }">
-      <p class="plate__sample" ref="sampleRef">{{ sample }}</p>
+      <p class="plate__sample grid-field" ref="sampleRef">{{ sample }}</p>
       <div class="plate__foot">
         <span>{{ face }} / {{ size }}px</span>
         <button class="chip" type="button" @click="shuffle">

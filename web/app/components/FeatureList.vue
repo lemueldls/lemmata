@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// What the typeface carries, numbered, the way a mechanism is explained: one
+// What the typeface holds, numbered, the way a mechanism is explained: one
 // line for the name and one for what it does.
 defineProps<{ rows: { name: string; note: string }[] }>();
 </script>

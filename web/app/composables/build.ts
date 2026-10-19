@@ -3,22 +3,20 @@
 // serialised.
 //
 // The build stays on the worker thread, which is the point: a full set is tens
-// of thousands of glyphs and would freeze the page.
-import type { WritableComputedRef } from "vue";
+// of thousands of glyphs and would freeze the page. The plan and the outlines
+// come in as arguments, since the page keeps one of each and this only has to
+// carry them across.
+import init from "lemmata-web";
 import BuildWorker from "~/workers/build.ts?worker";
-import { usePlan } from "~/composables/plan";
 
 interface BuildReply {
   bytes?: Uint8Array;
   error?: string;
   elapsed?: number;
   phase?: string;
-  done?: number;
-  total?: number;
 }
 
 interface Build {
-  plan: WritableComputedRef<string>;
   status: Ref<string>;
   state: Ref<string>;
   download: Ref<string>;
@@ -26,14 +24,11 @@ interface Build {
   bytes: ShallowRef<Uint8Array | null>;
   elapsed: Ref<number>;
   busy: Ref<boolean>;
-  run: () => Promise<void>;
+  run: (plan: string, capture: Uint8Array) => Promise<void>;
 }
 
 export function useBuild(): Build {
-  // The plan and the capture are shared with the controls, so a choice made
-  // beside the specimen is the one the build reads.
-  const { plan, capture, ensure } = usePlan();
-  const status = ref("Starting the worker…");
+  const status = ref("Opening the builder…");
   const state = ref("note");
   const download = ref("");
   const downloadName = ref("Lemmata-Regular.ttf");
@@ -44,15 +39,18 @@ export function useBuild(): Build {
   let worker: Worker | null = null;
   let pending: ((reply: BuildReply) => void) | null = null;
 
-  const build = (planText: string): Promise<BuildReply> =>
+  const build = (
+    plan: string,
+    capture: Uint8Array,
+  ): Promise<BuildReply> =>
     new Promise((resolve, reject) => {
       pending = (reply) =>
         reply.error ? reject(new Error(reply.error)) : resolve(reply);
-      worker?.postMessage({ capture: capture.value, plan: planText });
+      worker?.postMessage({ capture, plan });
     });
 
   onMounted(async () => {
-    await ensure();
+    await init();
     worker = new BuildWorker();
     worker.addEventListener("message", (event: MessageEvent<BuildReply>) => {
       const reply = pending;
@@ -63,17 +61,13 @@ export function useBuild(): Build {
     status.value = "Ready.";
   });
 
-  const run = async (): Promise<void> => {
+  const run = async (plan: string, capture: Uint8Array): Promise<void> => {
     busy.value = true;
     download.value = "";
     status.value = "Building…";
     state.value = "note";
     try {
-      // The capture follows the plan's spacing, so it is read here rather than
-      // when the page mounted: a plan edited to another spacing needs the other
-      // build's outlines.
-      await ensure();
-      const built = await build(plan.value);
+      const built = await build(plan, capture);
       const font = built.bytes ?? new Uint8Array();
       bytes.value = font;
       elapsed.value = built.elapsed ?? 0;
@@ -90,5 +84,5 @@ export function useBuild(): Build {
     }
   };
 
-  return { plan, status, state, download, downloadName, bytes, elapsed, busy, run };
+  return { status, state, download, downloadName, bytes, elapsed, busy, run };
 }

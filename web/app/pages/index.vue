@@ -1,24 +1,23 @@
 <script setup lang="ts">
-// The landing: the plan it starts from, the font it ships, the numbers that tie
-// the two together, and one equation set in it.
+// The landing: the font this site is set in, the plan behind it, the whole
+// character set, a mock interface, examples, the healing, the numbers and an
+// equation. Every number on it comes out of the font itself.
 //
-// Stubs, and what they want. Grep for "Stub:" when one is finished.
-//
-//   Stub: spec.optical-sizes  the plan has no optical size key behind this row
-//   Stub: spec.script-style   needs the script letters, which the glyph source lacks
+// Stub: spec.optical-sizes and spec.script-style below have nothing behind them;
+// the variant picker and the ligatures are stubs in `generate.vue`, where a
+// reader would look for them.
 import { useLemmataFont } from "~/composables/font";
 
 useHead({
   title: "A typeface built from a plan",
-  // The cover stays until the font is read, and the scripts that read it are the
+  // The cover is up until the font is read, and the scripts that read it are the
   // only thing that can take it away. Without them it has to go by the rule.
   noscript: [{ innerHTML: "<style>.boot{display:none}</style>" }],
 });
 
 const font = useLemmataFont();
 
-/// The reference plan, which is what `Plan::default()` carries. It is content on
-/// this page the way the samples are: the object the rest is built from.
+/// The reference plan, which is what `Plan::default()` holds.
 const PLAN = {
   capHeight: 735,
   xHeight: 520,
@@ -28,9 +27,8 @@ const PLAN = {
   weight: 400,
 };
 
-/// Sentences to set the font in. Every one of them is written in the characters
-/// the capture carries, each says something the page then demonstrates, and each
-/// is short enough to fit the plate at the size it is set.
+/// Sentences to set the font in: short enough for the plate, and each one says
+/// something the page then shows.
 const SAMPLES = [
   "one width for every letter",
   "the ink moves, the cell does not",
@@ -38,20 +36,21 @@ const SAMPLES = [
   "the same bytes either way",
 ];
 
-/// What the typeface carries, in the order a mechanism is explained.
+/// What the typeface holds, in the order a mechanism is explained.
 const FEATURES = [
-  { name: "Metrics", note: "Every key in the plan reaches the font's tables." },
-  { name: "Parameters", note: "The parameter tables, read as upstream writes them." },
+  { name: "Metrics", note: "Every key in the plan goes to the font's tables." },
+  { name: "Parameters", note: "The parameter tables, read as Iosevka writes them." },
   { name: "Variants", note: "Every letter in as many spellings as you care to compare." },
   {
     name: "Texture healing",
-    note: "A narrow letter gives its sidebearings to a wide neighbour, and the cell stays where it was.",
+    note: "A letter that leaves its cell empty gives the room to the neighbour that fills one, and the cell is where it was.",
   },
   {
     name: "Math",
     note: "The constants, the italic corrections, and the delimiters that grow to fit.",
   },
-  { name: "Optical sizes", note: "A cut for footnotes and a cut for display, from one plan." },
+  { name: "Ligatures", note: "The sets a coding face is expected to have." },
+  { name: "Optical sizes", note: "A face for footnotes and a face for display, from one plan." },
   { name: "Script style", note: "Letters drawn for the size of the body they sit in." },
 ];
 
@@ -61,25 +60,24 @@ const status = computed(() => {
   if (!metrics) return "Reading the font…";
 
   return (
-    `${metrics.drawn.toLocaleString()} glyphs · ${metrics.mapped} mapped · ` +
-    `sha256 ${font.digest.slice(0, 12)} · ready in ${Math.round(font.elapsed)} ms`
+    `${metrics.drawn.toLocaleString()} glyphs · ${metrics.mapped} characters · ` +
+    `fingerprint ${font.digest.slice(0, 12)} · ready in ${Math.round(font.elapsed)} ms`
   );
 });
 </script>
 
 <template>
   <BootCover />
-  <section class="hero">
+  <section class="hero" data-key-section>
     <div class="wrap">
-      <p class="kicker">A plan, a font, and the numbers to check it</p>
+      <p class="kicker">A plan, a font, a whole character set</p>
       <HeroWord />
       <p class="lede">
-        This page is set in the font it describes. The plan is the input, the
-        font is the output, and both are here so that the result can be checked:
-        the file is hashed in the browser and read back out of its own tables.
+        This page is set in the font it describes. The plan is the input, the font
+        is the output, and the numbers beside them come out of the font itself.
       </p>
       <div class="actions">
-        <a class="btn" href="#construction">See the font</a>
+        <a class="btn" href="#letters">See the font</a>
         <NuxtLink class="btn btn--primary" to="/generate/">Open the generator</NuxtLink>
       </div>
       <StatusLine :state="font.ready ? 'ok' : 'note'">{{ status }}</StatusLine>
@@ -88,61 +86,69 @@ const status = computed(() => {
   </section>
 
   <SectionBlock number="01" label="Plan">
-    <h2>Everything is built from the plan</h2>
+    <h2>Everything comes from the plan</h2>
     <p>
-      Every key defaults, so this is the reference plan, and every key it carries
-      reaches the font.
+      Every key defaults, so this is the reference plan, and every key it holds
+      goes to the font.
     </p>
     <div class="cols">
       <PlanCard :plan="PLAN" />
       <div class="panel">
-        <div class="panel__head"><span>What the plan carries</span></div>
+        <div class="panel__head"><span>What the typeface holds</span></div>
         <div class="panel__body"><FeatureList :rows="FEATURES" /></div>
       </div>
     </div>
   </SectionBlock>
 
-  <SectionBlock id="construction" number="02" label="Font">
-    <h2>The font, set in itself</h2>
+  <SectionBlock id="letters" number="02" label="Letters">
+    <h2>The whole character set</h2>
     <p>
-      This is the font this site ships, and every reading further down comes out
-      of its own tables. Edit the sample and it stays the font.
+      A monospace face is a grid, and the grid is the design: one advance for
+      every letter, with the drawing moving inside it.
     </p>
-    <SpecimenEditor />
-
-    <SubHead title="Texture healing" />
-    <HealingPlate />
-
-    <SubHead title="Spellings of a">
-      <p class="note">Pick one and the generator draws it.</p>
-    </SubHead>
-    <VariantPicker />
-
-    <SubHead title="Every character it carries">
-      <p class="note">
-        {{ font.map?.size ?? "…" }} characters ·
-        {{ font.metrics?.drawn ?? "…" }} glyphs drawn
-      </p>
-    </SubHead>
-    <GlyphSheet />
+    <div class="rule-art"><i /></div>
+    <LetterGrid />
+    <div class="rule-art"><i /></div>
+    <p>And the same font doing a job, with the sizes a page would give it.</p>
+    <MockUi />
   </SectionBlock>
 
-  <SectionBlock id="checksums" number="03" label="Checksums">
-    <h2>The build checks itself</h2>
+  <SectionBlock number="03" label="Examples">
+    <h2>One card per kind of text</h2>
     <p>
-      The font is hashed in the browser, and the number it produces is the number
-      the reference build recorded. The readings beside it come from the font's
-      own tables, measured rather than assumed.
+      Every sample is written in the characters the font holds, which is the
+      letters, the digits and some punctuation, so nothing here borrows another
+      face without saying so.
+    </p>
+    <ExamplesGrid />
+  </SectionBlock>
+
+  <SectionBlock number="04" label="Healing">
+    <h2>Texture healing</h2>
+    <p>
+      A cell is one width for every letter, so the letters that leave it empty sit
+      beside the ones that fill it. Healing moves the drawing within the cell and
+      gives the room to the neighbour that wants it.
+    </p>
+    <HealingPlate />
+  </SectionBlock>
+
+  <SectionBlock id="numbers" number="05" label="Numbers">
+    <h2>The numbers</h2>
+    <p>
+      The font is fingerprinted in the browser, and the number it gives is the one
+      the reference build gives. The readings beside it come out of the font's own
+      tables.
     </p>
     <ChecksumPanel />
   </SectionBlock>
 
-  <SectionBlock id="math" number="04" label="Equations">
-    <h2>Equations, set in the font it built</h2>
+  <SectionBlock id="math" number="06" label="Equations">
+    <h2>Equations, set in the font</h2>
     <p>
       The same build writes a MATH table: the constants, the italic corrections,
-      and the delimiters that grow to fit. This one is set in a second face,
-      built from the math glyph set when the section comes into view.
+      and the delimiters that grow to fit. These are set in a second face, made
+      from the math glyph set when the section comes into view.
     </p>
     <EquationPlate />
   </SectionBlock>
