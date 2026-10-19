@@ -251,7 +251,9 @@ dependencies = [
  "lemmata-build",
  "lemmata-capture",
  "lemmata-geom",
+ "lemmata-host",
  "lemmata-plan",
+ "lemmata-ptl",
  "read-fonts",
 ]
 
@@ -275,6 +277,16 @@ dependencies = [
  "lemmata-geom",
  "lemmata-ptl",
  "serde_json",
+]
+
+[[package]]
+name = "lemmata-host"
+version = "0.1.0"
+dependencies = [
+ "lemmata-build",
+ "lemmata-capture",
+ "lemmata-ptl",
+ "read-fonts",
 ]
 
 [[package]]
