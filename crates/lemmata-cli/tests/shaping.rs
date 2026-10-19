@@ -125,6 +125,14 @@ fn texture_healing_fires_in_context() {
         ],
         "imi should heal"
     );
+    // A giver with a taker on each side has room on both, so it widens and both
+    // gaps close by the same amount. Ceding one side instead would close one gap
+    // by exactly what it opened on the other, which is worse than leaving it.
+    assert_eq!(
+        run("mim"),
+        vec![base('m'), form('i', Side::Both), base('m')],
+        "a giver between two takers widens, and the takers stay put"
+    );
     // The giver moves away, which opens a gap on that side, and the taker
     // reaches into it. Both ends of the pair end up moved.
     assert_eq!(

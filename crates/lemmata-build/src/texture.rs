@@ -9,11 +9,22 @@
 //! drawing moves inside the cell, so the grid is untouched and the text still
 //! lines up.
 //!
+//! The resource is the empty space, not the ink, so the narrow letters are the
+//! givers and the wide ones are the takers. That is the reverse of what the two
+//! names suggest while the ink is what you have in mind.
+//!
 //! Two roles, both measured rather than listed. A glyph gives space when its
 //! ink leaves much of the cell empty, and takes space when its ink nearly fills
 //! it. The forms are the same drawing shifted, and the pair is what makes room:
 //! the giver moves toward the taker and the taker moves toward the giver, which
 //! closes the gap between them without moving anything else.
+//!
+//! A glyph with room on both sides is the case that needs a second look. A
+//! giver between two takers moved toward one of them closes one gap by what it
+//! opens on the other, which leaves the pair no more even than it found it, so
+//! it takes both sides and widens instead. The wider form is the only one that
+//! grows: every other form keeps the drawing's size and changes only where in
+//! the cell it sits.
 
 use crate::font::GlyphData;
 
@@ -68,10 +79,14 @@ impl Role {
     pub const fn forms(self) -> &'static [Side] {
         match self {
             // A taker can reach out both ways at once, which is what a glyph
-            // between two givers needs. A giver cedes one side at a time,
-            // because the other side has nothing to give.
+            // between two givers needs.
             Self::Takes => &[Side::Left, Side::Right, Side::Both],
-            Self::Gives => &[Side::Left, Side::Right],
+            // A giver with a taker on one side cedes that side. With a taker on
+            // both it has room on both, and ceding one would close one gap by
+            // exactly what it opened on the other, which is worse than leaving
+            // it alone. So it takes both sides at once and both gaps close by
+            // the same amount.
+            Self::Gives => &[Side::Left, Side::Right, Side::Both],
             // A stationary glyph has no forms at all: it is a context, not a
             // participant.
             Self::Stationary => &[],

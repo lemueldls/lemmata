@@ -220,6 +220,17 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
         .collect();
     let wide = ids(&takers);
     let mut passes = vec![
+        // A giver with a taker on each side has room on both, so it takes both
+        // at once and widens. Moving it one way would close one gap by exactly
+        // what it opened on the other, which is no better than leaving it. This
+        // runs first because the passes below look for the base form, and a
+        // giver this one widened is no longer it.
+        lemmata_layout::Rule {
+            backtrack: wide.clone(),
+            input: ids(&givers),
+            lookahead: wide.clone(),
+            apply: shifted(&givers, Side::Both),
+        },
         // A giver before a taker cedes toward it.
         lemmata_layout::Rule {
             backtrack: Vec::new(),
