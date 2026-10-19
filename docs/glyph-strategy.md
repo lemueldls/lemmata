@@ -142,3 +142,13 @@ across glyphs.
 ## How the measurement was taken
 
 The scratch build's `packages/geometry/src/index.mjs` was wrapped with counters and JSON capture, the build cache was removed, and `npm run build -- ttf-unhinted::RefA` was run with `LEMMATA_DUMP` set. The same run produced the captured skeletons that `crates/lemmata-geom/tests/glyph_spiro.rs` replays. The instrumented tree is disposable and lives outside the repository.
+
+## The host runs
+
+The half that turns parameters into outlines now exists for the native path. `lemmata-host` writes upstream's build plan for one shape, runs that build through `npm`, and reads back the capture it leaves. Everything downstream is unchanged, because what crosses the boundary is the same capture the frozen ones were; the plan is what makes it a seam rather than an artifact.
+
+The gate is a shape nothing in the repository holds a capture for. RefB is slab serifs at bold, and 24 letters of the capture agree with upstream's own `RefB-Bold.ttf` within two units of ink. The tolerance is sharp rather than generous: the bold `m` is 482 units wide against the regular one's 398, so a capture of the wrong shape fails on the first glyph. The test skips unless `LEMMATA_HOST_BUILD` is set, because it starts an external build.
+
+`lemmata-cli build` takes `--weight`, `--width`, `--slope`, `--serifs` and `--spacing`, and names a shape that way. The first build of a shape takes tens of seconds and lands under `target/host`; the next one reads the cache. A build is tens of seconds and the shape is the whole of the cache key, so a cached build does not re-run the dump and the host clears its output directory before each run rather than trusting it.
+
+What is left of the seam is two things. The shape is a set of flags rather than a field a plan file carries. And the browser has no host at all: in a page the JavaScript engine comes free, but the glyph code has to be bundled for it, and the store builder that upstream keeps inside its build has to come with it.

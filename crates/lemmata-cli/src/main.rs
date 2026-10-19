@@ -3,10 +3,11 @@
 //! For now it builds a font from a glyph capture. The plan's argument parser
 //! and the rest of the commands come later.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use lemmata_build::font::{GlyphData, Names};
+use lemmata_ptl::param::Shape;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -45,7 +46,25 @@ Usage: lemmata build [--glyphs <capture>] [--out <font.ttf>] [--family <name>]
   --subset  Unicode ranges to keep, as U+XXXX or U+XXXX-U+YYYY, comma
             separated (default: everything the capture holds)
   --family  family name for the output font (default Lemmata)
-  --plan    JSON plan for the font's metrics (default: the reference plan)";
+  --plan    JSON plan for the font's metrics (default: the reference plan)
+
+  --weight  weight to draw, in hundreds (default: the captured one)
+  --width   width to draw, in font units (default: the captured one)
+  --slope   slope to draw, in degrees (default: the captured one)
+  --serifs  serif style to draw (default: the captured one)
+  --spacing spacing to draw (default: the captured one)
+
+Naming any of the shape options asks for outlines nothing in the repository
+holds, so upstream's glyph code runs for that shape and the capture is cached
+under target/host. It needs the scratch build and IOSEVKA_BUILD_DIR.";
+
+/// A number from a command line argument.
+fn parse_number(value: &str, flag: &str) -> Result<f64, String> {
+    value
+        .trim()
+        .parse::<f64>()
+        .map_err(|_| format!("{flag} wants a number, not {value:?}"))
+}
 
 /// The Unicode ranges a `--subset` argument names.
 fn parse_ranges(text: &str) -> Result<Vec<(u32, u32)>, String> {
@@ -76,6 +95,8 @@ fn build(args: &[String]) -> Result<(), String> {
     let mut names = Names::default();
     let mut plan_path = String::new();
     let mut subset: Option<String> = None;
+    let mut shape = Shape::default();
+    let mut shaped = false;
 
     let mut index = 0;
     while index < args.len() {
@@ -89,9 +110,52 @@ fn build(args: &[String]) -> Result<(), String> {
             "--family" => names.family.clone_from(value),
             "--plan" => plan_path.clone_from(value),
             "--subset" => subset = Some(value.clone()),
+            "--weight" => {
+                shape.weight = parse_number(value, flag)?;
+                shaped = true;
+            }
+            "--width" => {
+                shape.width = parse_number(value, flag)?;
+                shaped = true;
+            }
+            "--slope" => {
+                shape.slope_angle = parse_number(value, flag)?;
+                shaped = true;
+            }
+            "--serifs" => {
+                shape.serifs = Some(value.clone());
+                shaped = true;
+            }
+            "--spacing" => {
+                shape.spacing = Some(value.clone());
+                shaped = true;
+            }
             other => return Err(format!("unknown option {other:?}\n{USAGE}")),
         }
         index += 2;
+    }
+
+    // A shape names outlines the repository does not hold, so upstream's glyph
+    // code runs for it. The capture is cached by shape, because a build is tens
+    // of seconds and the shape is the whole of its identity.
+    if shaped {
+        let name = lemmata_host::plan_name(&shape);
+        let cached = PathBuf::from("target/host").join(format!("{name}.bin"));
+        if !cached.exists() {
+            let build_dir = std::env::var("IOSEVKA_BUILD_DIR")
+                .unwrap_or_else(|_| "/tmp/opencode/iosevka-build".to_string());
+            // The capture carries ASCII, which is what a naming plan asks for and
+            // what a build of the whole set would spend minutes on.
+            let codepoints: Vec<u32> = (0x20..=0x7E).collect();
+            let capture = lemmata_host::capture(&shape, &codepoints, Path::new(&build_dir))?;
+            if let Some(parent) = cached.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|error| format!("creating {}: {error}", parent.display()))?;
+            }
+            std::fs::write(&cached, capture)
+                .map_err(|error| format!("writing {}: {error}", cached.display()))?;
+        }
+        glyphs_path = cached;
     }
 
     let data = std::fs::read(&glyphs_path)

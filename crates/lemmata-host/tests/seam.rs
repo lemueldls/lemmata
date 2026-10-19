@@ -9,8 +9,9 @@
 //! reference font are both there, because it starts an external build.
 
 // A captured advance is a whole number of font units, so rounding it into the
-// field the font stores is the conversion rather than a truncation.
-#![allow(clippy::cast_possible_truncation)]
+// field the font stores is the conversion rather than a truncation, and it is
+// never negative.
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
 use std::path::{Path, PathBuf};
 
