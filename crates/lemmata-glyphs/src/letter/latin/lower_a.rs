@@ -710,46 +710,7 @@ impl LowerA<'_> {
     /// `RightwardTailedBar`: the bar's foot turned right.
     #[must_use]
     pub fn rightward_tailed_bar(&self, x: f64, low: f64, high: f64, sw: f64) -> Dispiro {
-        let metrics = self.metrics;
-        // `Math.max` takes three arguments here: the indented `AdviceStroke 8`
-        // and `0.625 * (SB - 0)` sit at the same level, so both are siblings of
-        // `SideJut` rather than one being an argument of the other.
-        let hook_depth = metrics
-            .side_jut
-            .max(self.df.advice_stroke(8.0, 1.0))
-            .max(0.625 * self.df.sb);
-        let advice16 = self.df.advice_stroke(16.0, 1.0);
-        let hook_turn = advice16.max(hook_depth - advice16);
-        let items = vec![
-            Item::Af(self.kit.widths_lhs(Some(sw))),
-            self.kit.knot(
-                KnotType::Left,
-                x - self.hsw_to_v(sw),
-                high,
-                self.kit.heading(downward(metrics.hv_contrast)),
-            ),
-            self.kit.knot(
-                KnotType::Right,
-                x - self.hsw_to_v(sw),
-                low + metrics.o + sw + hook_turn,
-                self.kit.heading(downward(metrics.hv_contrast)),
-            ),
-            self.kit.arcvh(None, None),
-            self.kit.knot(
-                KnotType::Left,
-                x + hook_turn,
-                low + metrics.o,
-                self.kit.heading(rightward()),
-            ),
-            self.kit.knot(
-                KnotType::Right,
-                x + hook_depth + 0.0_f64.max(sw * metrics.tan_slope),
-                low + metrics.o,
-                Vec::new(),
-            ),
-        ];
-
-        self.kit.dispiro(items)
+        shapes::rightward_tailed_bar(self.kit, self.metrics, self.df, x, low, high, sw)
     }
 
     /// The ring, as [`shapes::OBarContext`] sees it.

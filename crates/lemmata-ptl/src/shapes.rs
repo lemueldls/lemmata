@@ -1614,3 +1614,55 @@ pub fn bb_bar_left(
         hbar_b(kit, metrics, x, x + bbd, y_bot, Some(bbs)).geometry(kurbo::Affine::IDENTITY),
     ]
 }
+
+/// `RightwardTailedBar`: a vertical bar whose foot turns right.
+#[must_use]
+pub fn rightward_tailed_bar(
+    kit: &Kit,
+    metrics: &Metrics,
+    df: &crate::letter_model::DivFrame,
+    x: f64,
+    low: f64,
+    high: f64,
+    sw: f64,
+) -> Dispiro {
+    // `Math.max` takes three arguments upstream: the indented `AdviceStroke 8`
+    // and `0.625 * SB` are siblings of `SideJut` rather than one being an
+    // argument of the other.
+    let hook_depth = metrics
+        .side_jut
+        .max(df.advice_stroke(8.0, 1.0))
+        .max(0.625 * df.sb);
+    let advice16 = df.advice_stroke(16.0, 1.0);
+    let hook_turn = advice16.max(hook_depth - advice16);
+    let items = vec![
+        Item::Af(kit.widths_lhs(Some(sw))),
+        kit.knot(
+            KnotType::Left,
+            x - sw * metrics.hv_contrast,
+            high,
+            kit.heading(downward(metrics.hv_contrast)),
+        ),
+        kit.knot(
+            KnotType::Right,
+            x - sw * metrics.hv_contrast,
+            low + metrics.o + sw + hook_turn,
+            kit.heading(downward(metrics.hv_contrast)),
+        ),
+        kit.arcvh(None, None),
+        kit.knot(
+            KnotType::Left,
+            x + hook_turn,
+            low + metrics.o,
+            kit.heading(rightward()),
+        ),
+        kit.knot(
+            KnotType::Right,
+            x + hook_depth + 0.0_f64.max(sw * metrics.tan_slope),
+            low + metrics.o,
+            Vec::new(),
+        ),
+    ];
+
+    kit.dispiro(items)
+}
