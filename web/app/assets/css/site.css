@@ -20,23 +20,37 @@ math {
 :root {
   color-scheme: dark;
 
-  --bg: #0a0b0d;
-  --surface: #12141a;
-  --ink: #eef0f4;
-  --dim: #b6bec9;
-  --faint: #6f7a88;
-  --rule: #262b35;
-  --rule-2: #39404d;
-  /* The accent is for machine output and nothing else: hashes, counts, timings
-     and status lines. It reads as verified, which is the claim the numbers make,
-     and it pairs with the red below the way a light does with its switch.
-     One colour for both themes. A value that clears 4.5:1 against near-black is
-     too bright for paper and one that clears it against paper is too dark for
-     near-black, so the accent is mixed toward whatever the theme's own ink is:
-     it lightens on the dark theme and darkens on paper, from one value. */
-  --accent-base: #3e9e5c;
-  --accent: color-mix(in oklab, var(--accent-base) 72%, var(--ink));
-  --bad: #ff9d9d;
+  /* Everforest (sainnhe/everforest), dark at its default medium contrast. The
+     ground is that palette's green-grey, the ink its cream, and the greys are
+     the two it names for comments and for borders. The two theme blocks set
+     only these `--m-*` values, so the roles below resolve against whichever one
+     is active. */
+  --m-bg: #2d353b;
+  --m-float: #343f44;
+  --m-sel: #3d484d;
+  --m-ui: #859289;
+  --m-com: #9da9a0;
+  --m-fg: #d3c6aa;
+  --m-green: #a7c080;
+  --m-red: #e67e80;
+
+  --bg: var(--m-bg);
+  --surface: var(--m-float);
+  --raised: var(--m-sel);
+  --ink: var(--m-fg);
+  /* Three levels of text: `com` for prose, a step quieter for labels, and a mix
+     of the two for everything that is neither. */
+  --dim: var(--m-com);
+  --faint: color-mix(in oklab, var(--m-ui) 50%, var(--m-com));
+  /* Everforest names one border colour and the site needs two weights, so both
+     are mixed from it: one that sits under text, one that draws a grid. */
+  --rule: color-mix(in oklab, var(--m-ui) 30%, var(--m-float));
+  --rule-2: color-mix(in oklab, var(--m-ui) 62%, var(--m-float));
+  /* The accent is for machine output and nothing else: counts, timings and
+     status lines. It is the palette's green, and the red is the pair it names
+     for the same job. */
+  --accent: var(--m-green);
+  --bad: var(--m-red);
   --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
 
   --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "DejaVu Sans Mono",
@@ -65,14 +79,26 @@ math {
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #faf8f4;
-  --surface: #ffffff;
-  --ink: #16181c;
-  --dim: #4a5260;
-  --faint: #858d99;
-  --rule: #e6e2da;
-  --rule-2: #d3cec4;
-  --bad: #b3261e;
+  /* Everforest, light at the same contrast. */
+  --m-bg: #fdf6e3;
+  --m-float: #f4f0d9;
+  --m-sel: #efebd4;
+  --m-ui: #939f91;
+  --m-com: #829181;
+  --m-fg: #5c6a72;
+  --m-green: #8da101;
+  --m-red: #f85552;
+
+  /* The palette's greys are tuned for a light ground and sit closer to it than
+     a paragraph can: 3.1:1 and 2.7:1 against the page. Pulled toward the
+     foreground they land at 4.5:1 and 3.7:1, which is what prose and a label
+     need, and the dark theme takes the palette's own greys unchanged.
+     The green needs the same pull for the same reason: the light variant's is
+     2.7:1 against this ground, so the accent is mixed until it holds. */
+  --dim: color-mix(in oklab, var(--m-fg) 80%, var(--m-com));
+  --faint: color-mix(in oklab, var(--m-fg) 50%, var(--m-com));
+  --accent: color-mix(in oklab, var(--m-green) 55%, var(--m-fg));
+
   --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
 }
 
@@ -94,7 +120,7 @@ body {
   font-size: var(--step-0);
   line-height: 1.6;
   font-variant-ligatures: none;
-  /* font-feature-settings: "calt" 1; */
+  font-feature-settings: "calt" 1;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -329,7 +355,7 @@ kbd {
 }
 
 .note {
-  color: var(--faint);
+  color: var(--dim);
   font-size: var(--step--1);
 }
 
@@ -580,7 +606,6 @@ kbd {
     var(--rule) 0 1px,
     transparent 1px var(--cell)
   );
-  mask-image: linear-gradient(180deg, #000 10%, transparent 96%);
 }
 
 /* The math face is built separately from the prose face and registered under
@@ -1004,51 +1029,45 @@ a:focus-visible {
 
 /* Texture healing ------------------------------------------------------ */
 
-/* Two lines of the same text: one as the font sets it, and one with the narrow
-   letters' sidebearings given to their wide neighbours. The grid behind them is
-   one cell per advance, which is what shows that the ink moved and the cell did
-   not. */
-/* Two states of the same word, side by side, so the drawing can be compared
-   rather than remembered. */
+/* The change is a sixteenth of a cell, which is two or three pixels at a reading
+   size. Two columns of that look identical and two rows have to be remembered,
+   so this is one set of words whose setting changes instead, which is motion,
+   and the eye reads motion far better than it reads a static offset. The cells
+   are ruled so it stays clear that the ink moved and the cell did not. */
 .heal-lines {
+  position: relative;
   display: grid;
-  gap: 4px;
+  gap: 6px;
   padding: 16px;
-  font-size: clamp(34px, 6vw, 60px);
+  font-size: clamp(56px, 11vw, 140px);
 }
 
-.heal-head,
-.heal-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-}
-
-.heal-head {
-  font-size: var(--step--2);
-}
-
-.heal-pair + .heal-pair {
-  border-top: 1px solid var(--rule);
-  padding-top: 4px;
-}
-
-.heal-text {
+.heal-word {
   margin: 0;
   font-family: var(--built);
-  line-height: 1.45;
-  overflow-x: auto;
+  line-height: 1.55;
   white-space: pre;
+  overflow-x: auto;
 }
 
-/* The only difference between the two lines. `calt` is on by default, so the
-   line that shows the healing is the one with nothing set. */
-.heal-text--plain {
+/* The setting is an attribute because the measuring row below uses it too, and
+   it holds the same words under the same rule. */
+[data-calt="off"] {
   font-feature-settings: "calt" 0;
 }
 
-.heal-text--healed {
+[data-calt="on"] {
   font-feature-settings: "calt" 1;
+}
+
+/* Laid out and never shown: the first word in both settings at once, so the
+   readout compares two widths instead of asserting one. */
+.heal-probe {
+  position: absolute;
+  visibility: hidden;
+  margin: 0;
+  font-family: var(--built);
+  white-space: pre;
 }
 
 /* The specimen plate -------------------------------------------------- */
@@ -1254,7 +1273,7 @@ a:focus-visible {
 /* A mock interface, so the font can be read doing a job. */
 .mock {
   border: 1px solid var(--rule-2);
-  background: var(--surface);
+  background: var(--raised);
   font-family: var(--built);
 }
 
@@ -1348,6 +1367,31 @@ a:focus-visible {
   font-size: var(--step--1);
   line-height: 1.7;
   overflow-x: auto;
+  white-space: pre;
+}
+
+/* The samples are highlighted by Shiki, which writes both of the palette's
+   themes into the same markup as `--shiki-light` and `--shiki-dark`: the
+   stylesheet picks between them, so changing the page's theme costs nothing and
+   the code never needs a second pass. The card is the background, so the code
+   carries none of its own. */
+.example__body .shiki,
+.example__body .shiki span {
+  color: var(--shiki-dark);
+  background: none;
+}
+
+:root[data-theme="light"] .example__body .shiki,
+:root[data-theme="light"] .example__body .shiki span {
+  color: var(--shiki-light);
+}
+
+.example__body .shiki {
+  margin: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   white-space: pre;
 }
 

@@ -1,60 +1,114 @@
 <script setup lang="ts">
-// One card per kind of text a reader might set: code, prose, figures, a
-// terminal, an address, a table.
+// One card per kind of text a reader might set.
 //
-// Every sample is written in the characters the capture holds, which is the
-// letters, the digits and some punctuation, so nothing here falls back to
-// another face without saying so.
-import { useLemmataFont } from "~/composables/font";
+// Every sample is written in the characters the capture holds: the lowercase
+// letters, the digits, and the punctuation around them. That is why the source
+// sample is Python and the proof is Lean rather than, say, C or Rocq, and why
+// the proof is arithmetic with no type names in it. An uppercase letter or a
+// bracket would borrow another face, and the point of the section is that
+// nothing here does.
+//
+// The samples are highlighted when the page is built and the markup is carried
+// in the payload, so the browser gets it as HTML and never loads a highlighter.
+interface Sample {
+  kind: string;
+  lang: string | null;
+  source: string;
+}
 
-useLemmataFont();
+interface Block extends Sample {
+  html: string | null;
+}
 
-const EXAMPLES = [
+const SAMPLES: Sample[] = [
   {
-    kind: "code",
-    text: `for (let i = 0; i < 10; i += 1) {
-  total = total + i;
-}`,
+    kind: "source",
+    lang: "python",
+    source: `# bisect, until the span is small
+def root(f, a, b, eps):
+    while b - a > eps:
+        m = (a + b) / 2.0
+        if f(m) < 0.0:
+            a = m
+        else:
+            b = m
+    return (a + b) / 2.0`,
+  },
+  {
+    kind: "proof",
+    lang: "lean4",
+    source: `example : 2 + 3 = 5 := by decide
+
+example : 6 * 7 = 42 := by
+  have h : 6 * 7 = 42 := by decide
+  exact h`,
   },
   {
     kind: "prose",
-    text: `the quick brown fox jumps
+    lang: null,
+    source: `the quick brown fox jumps
 over the lazy dog, and
 then it does it again`,
   },
   {
     kind: "figures",
-    text: `0123456789
+    lang: null,
+    source: `0123456789
 1,234.56 -7.8% 3/4
-U+0061 · U+002E · U+2042`,
+1e6 0.5% 2 + 2`,
   },
   {
     kind: "terminal",
-    text: `$ make -j 8 all
+    lang: "shellscript",
+    source: `$ make -j 8 all
 built 3 files in 1.2s
 $ echo "done" && exit 0`,
   },
   {
-    kind: "address",
-    text: `  Ordinal   Glyph
-  -------   -----
-     1st      U+0031
-     2nd      U+0032`,
+    kind: "table",
+    lang: null,
+    source: `  part    qty   price
+  ------  ---  ------
+  bolt     12   3.40
+  nut       8   1.25
+  cog      40   0.75`,
   },
   {
-    kind: "maths",
-    text: `x = (a + b) / (c - d)
+    kind: "formulas",
+    lang: null,
+    source: `x = (a + b) / (c - d)
 f(x) = 2 * x + 1
-p ^ q => not p or q`,
+p & q  =>  not p or q`,
   },
 ];
+
+const { data: blocks } = await useAsyncData<Block[]>(
+  "examples",
+  async () => {
+    if (import.meta.server) {
+      const { highlight } = await import("~/utils/highlight");
+
+      return Promise.all(
+        SAMPLES.map(async (sample) => ({
+          ...sample,
+          html: sample.lang ? await highlight(sample.source, sample.lang) : null,
+        })),
+      );
+    }
+
+    // Only reached if the payload did not arrive. Uncoloured code still reads.
+    return SAMPLES.map((sample) => ({ ...sample, html: null }));
+  },
+  { default: () => SAMPLES.map((sample) => ({ ...sample, html: null })) },
+);
 </script>
 
 <template>
   <div class="examples">
-    <div v-for="example in EXAMPLES" :key="example.kind" class="example">
-      <div class="example__head">{{ example.kind }}</div>
-      <pre class="example__body">{{ example.text }}</pre>
+    <div v-for="block in blocks" :key="block.kind" class="example">
+      <div class="example__head">{{ block.kind }}</div>
+      <div v-if="block.html" class="example__body" v-html="block.html" />
+      <pre v-else class="example__body">{{ block.source }}</pre>
     </div>
   </div>
 </template>
