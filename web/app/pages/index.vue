@@ -61,8 +61,27 @@ const status = computed(() => {
 
   return (
     `${metrics.drawn.toLocaleString()} glyphs · ${metrics.mapped} characters · ` +
-    `fingerprint ${font.digest.slice(0, 12)} · ready in ${Math.round(font.elapsed)} ms`
+    `ready in ${Math.round(font.elapsed)} ms`
   );
+});
+
+/// The readings, as one line, in the order a specimen sheet gives them.
+const readings = computed(() => {
+  const metrics = font.metrics;
+  if (!metrics) return "";
+  const label = (name: string, value: number | null): string =>
+    value === null ? "" : `${name} ${value}`;
+
+  return [
+    label("units per em", metrics.upem),
+    label("x-height", metrics.xHeight),
+    label("ascender", metrics.ascender),
+    label("descender", metrics.descender),
+    label("advance", metrics.advance),
+    `${metrics.mapped} characters`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 });
 </script>
 
@@ -70,7 +89,7 @@ const status = computed(() => {
   <BootCover />
   <section class="hero" data-key-section>
     <div class="wrap">
-      <p class="kicker">A plan, a font, a whole character set</p>
+      <p class="kicker">after Iosevka 34.9.0</p>
       <HeroWord />
       <p class="lede">
         This page is set in the font it describes. The plan is the input, the font
@@ -109,6 +128,8 @@ const status = computed(() => {
     <div class="rule-art"><i /></div>
     <LetterGrid />
     <div class="rule-art"><i /></div>
+    <StatusLine state="ok">{{ readings }}</StatusLine>
+    <div class="rule-art"><i /></div>
     <p>And the same font doing a job, with the sizes a page would give it.</p>
     <MockUi />
   </SectionBlock>
@@ -133,17 +154,7 @@ const status = computed(() => {
     <HealingPlate />
   </SectionBlock>
 
-  <SectionBlock id="numbers" number="05" label="Numbers">
-    <h2>The numbers</h2>
-    <p>
-      The font is fingerprinted in the browser, and the number it gives is the one
-      the reference build gives. The readings beside it come out of the font's own
-      tables.
-    </p>
-    <ChecksumPanel />
-  </SectionBlock>
-
-  <SectionBlock id="math" number="06" label="Equations">
+  <SectionBlock id="math" number="05" label="Equations">
     <h2>Equations, set in the font</h2>
     <p>
       The same build writes a MATH table: the constants, the italic corrections,

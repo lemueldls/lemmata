@@ -3,10 +3,10 @@
   <style>
     /* One green for both, because the tile is what changes: a tab strip is a
        dark place in most browsers and a light one in some. */
-    rect.tile { fill: #0b0c0f; }
+    rect.tile { fill: #0a0b0d; }
     rect.dot { fill: #3e9e5c; }
     @media (prefers-color-scheme: light) {
-      rect.tile { fill: #f7f7f5; }
+      rect.tile { fill: #faf8f4; }
     }
   </style>
   <rect class="tile" width="32" height="32" rx="7" />
