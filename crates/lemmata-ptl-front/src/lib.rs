@@ -252,3 +252,148 @@ pub fn inventory(program: &Sexpr) -> BTreeMap<String, usize> {
 
     counts
 }
+
+/// The macros `meta/macros.ptl` defines, less the operator forms.
+///
+/// A translator must not treat these as calls: a macro that reaches it unexpanded
+/// is a gap in the expander, and emitting `glyph_proc(...)` would hide it behind
+/// code that does not compile for a reason nobody can see.
+pub const MACROS: &[&str] = &[
+    "Just",
+    "lift-",
+    "with-params",
+    "flex-params",
+    "glyph-proc",
+    "composite-proc",
+    "set-width",
+    "include",
+    "set-mark-anchor",
+    "set-base-anchor",
+    "eject-contour",
+    "new-glyph",
+    "create-glyph",
+    "create-aliased-glyph",
+    "create-forked-glyph",
+    "glyph-is-needed",
+    "glyph-module",
+    "run-glyph-module",
+    "glyph-block-import",
+    "glyph-block-export",
+    "for-width-kinds",
+    "end-glyph-block",
+    "glyph-block",
+];
+
+/// The form a node names, if its head is one of `names`.
+fn named<'a>(node: &'a Sexpr, names: &[&str]) -> Option<&'a str> {
+    let form = node.form()?;
+    names.contains(&form).then_some(form)
+}
+
+/// Rust for one expanded node.
+///
+/// # Errors
+///
+/// Returns the head it cannot translate. A macro head is one of those: the
+/// expander's job is to have removed it first.
+pub fn translate(node: &Sexpr) -> Result<String, String> {
+    match node {
+        Sexpr::Atom(text) => Ok(text.clone()),
+        Sexpr::Number(value) => Ok(format!("{value}")),
+        Sexpr::Bool(value) => Ok(format!("{value}")),
+        Sexpr::Null => Ok("None".to_string()),
+        Sexpr::List(items) => {
+            let Some(head) = node.form() else {
+                return Err("<call>".to_string());
+            };
+            if MACROS.contains(&head) {
+                return Err(head.to_string());
+            }
+            let args =
+                || -> Result<Vec<String>, String> { items[1..].iter().map(translate).collect() };
+            match head {
+                ".quote" => {
+                    let quoted = items.get(1).ok_or(".quote without a value")?;
+                    translate(quoted)
+                }
+                "." => {
+                    let args = args()?;
+                    Ok(args.join("."))
+                }
+                ".operatorPiece" => {
+                    let args = args()?;
+                    if args.len() == 3 {
+                        Ok(format!("({} {} {})", args[0], args[1], args[2]))
+                    } else {
+                        Err(".operatorPiece".to_string())
+                    }
+                }
+                "begin" => Ok(format!("{{ {} }}", args()?.join(" "))),
+                "local" => {
+                    let args = args()?;
+                    Ok(format!("let {} = {};", args[0], args[1]))
+                }
+                "define" => {
+                    let args = args()?;
+                    Ok(format!("let {} = {};", args[0], args[1]))
+                }
+                "return" => translate(items.get(1).ok_or("return without a value")?),
+                "if" => {
+                    let args = args()?;
+                    if args.len() == 3 {
+                        Ok(format!(
+                            "if {} {{ {} }} else {{ {} }}",
+                            args[0], args[1], args[2]
+                        ))
+                    } else {
+                        Err("if".to_string())
+                    }
+                }
+                "function" => {
+                    let args = args()?;
+                    Ok(format!("|{}| {{ {} }}", args[0], args[1]))
+                }
+                "match" => Err("match".to_string()),
+                "object" => Err("object".to_string()),
+                _ if named(node, MACROS).is_some() => Err(head.to_string()),
+                _ => Ok(format!("{head}({})", args()?.join(", "))),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse, translate};
+
+    fn rust(text: &str) -> String {
+        translate(&parse(text).expect("parse")).expect("translate")
+    }
+
+    #[test]
+    fn a_local_becomes_a_let() {
+        assert_eq!(
+            rust(r#"["begin",["local","sw",["Sw","df"]],["return","sw"]]"#),
+            "{ let sw = Sw(df); sw }"
+        );
+    }
+
+    #[test]
+    fn an_operator_piece_keeps_its_grouping() {
+        assert_eq!(
+            rust(r#"[".operatorPiece","barTop","-",[".","df",[".quote","y"]]]"#),
+            "(barTop - df.y)"
+        );
+    }
+
+    #[test]
+    fn a_macro_head_is_refused_rather_than_called() {
+        let node = parse(r#"["glyph-proc",["include","x"]]"#).expect("parse");
+        assert_eq!(translate(&node).expect_err("refused"), "glyph-proc");
+    }
+
+    #[test]
+    fn a_member_access_is_a_dot() {
+        assert_eq!(rust(r#"[".","df",[".quote","rightSB"]]"#), "df.rightSB");
+    }
+}
