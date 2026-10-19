@@ -1031,3 +1031,69 @@ fn flattened_accents_are_carried_by_flac() {
     }
     eprintln!("flac: {} flattened accents", flattened.len());
 }
+
+/// `r[math.script-style]`: the two single substitutions reach a shaper, not just
+/// the table.
+///
+/// A read-back proves the table says the right thing and cannot prove a shaper
+/// acts on it, and for a feature registered under a script that is the whole
+/// question: `ssty` was written and inert until the run's script was set to
+/// math, and this is the same check for the other two.
+#[test]
+fn the_math_substitutions_reach_a_shaper() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let glyphs: Vec<GlyphData> = captured
+        .iter()
+        .map(|glyph| GlyphData {
+            name: glyph.name.clone(),
+            unicodes: glyph.unicodes.clone(),
+            advance: advance_to_u16(glyph.advance),
+            contours: lemmata_capture::contours(glyph),
+        })
+        .collect();
+    let mut all = glyphs.clone();
+    all.extend(lemmata_build::font::derived(&glyphs, &Metrics::default()));
+
+    let blob: harfrust::font::Blob = bytes.into();
+    let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
+    let shaper = harfrust::ShaperFont::new(&font);
+    let shape = |text: &str, tag: &[u8; 4]| -> String {
+        let mut buffer = harfrust::Buffer::new();
+        buffer.push_str(text);
+        buffer.guess_segment_properties();
+        // `dtls` and `flac` are registered under `math`, like `ssty`, and a text
+        // run never selects it.
+        buffer.set_script(Some(harfrust::Script::MATH));
+        let features = [harfrust::Feature::new(Tag::new(tag), 1, ..)];
+        harfrust::shape(
+            &shaper,
+            &mut buffer,
+            harfrust::ShapeOptions::default().features(&features),
+        )
+        .expect("shape the run");
+
+        let id = GlyphId::new(buffer.glyph_infos()[0].glyph_id);
+        let index = usize::try_from(id.to_u32()).expect("an id");
+        all.get(index - 1)
+            .unwrap_or_else(|| panic!("glyph {index} is not in the font"))
+            .name
+            .clone()
+    };
+
+    // `dtls` is the dotless form, which is what an accent sits on.
+    assert_eq!(
+        shape("i", b"dtls"),
+        lemmata_build::dotless::dotless_name("i"),
+        "dtls should draw the dotless `i`"
+    );
+    // `flac` is the flattened accent, which is what a tall base takes.
+    assert_eq!(
+        shape("\u{300}", b"flac"),
+        lemmata_build::flac::flattened_name("graveAbove"),
+        "flac should draw the flattened grave"
+    );
+    eprintln!("shaper: dtls and flac both fire");
+}

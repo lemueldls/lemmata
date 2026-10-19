@@ -1,0 +1,6 @@
+the quick brown fox jumps over the lazy dog, and the dog does not mind.
+a typeface is a set of decisions: how wide a stem is, where a curve turns,
+and how much of the cell a letter is allowed to leave empty. set a paragraph
+in it and the decisions show up as rhythm, or as its absence.
+terminal output looks like this: 42 files changed, 3 insertions(+), 1 deletion(-)
+percentages, ranges (1-9), quotes "like this" and 'like this', and a question?

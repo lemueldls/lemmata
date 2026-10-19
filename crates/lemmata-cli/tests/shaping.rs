@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_build::texture::Side;
+use read_fonts::TableProvider;
 use read_fonts::types::GlyphId;
 
 fn capture_path() -> PathBuf {
@@ -171,4 +172,98 @@ fn texture_healing_fires_in_context() {
         vec![form('m', Side::Right), mark('.')],
         "and toward the one after it"
     );
+}
+
+/// Where a corpus lives.
+fn corpus_path(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("corpus")
+        .join(name)
+}
+
+/// `r[test.corpus]`: the corpora, and the coverage each one needs.
+///
+/// A corpus is what a suite runs, so a character the font does not carry makes it
+/// a corpus for a different font. The prose and the ligature corpora are written
+/// in what the coverage capture holds. The code one is not, and the characters it
+/// needs are named rather than left to shape `.notdef` quietly: that set is the
+/// coverage gap, and the day it closes the assertion flips.
+#[test]
+fn the_corpora_are_within_the_coverage() {
+    let Some((bytes, _)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let font = read_fonts::FontRef::new(&bytes).expect("reopen the font");
+    let cmap = font.cmap().expect("cmap");
+
+    let gaps: [(&str, &[char]); 3] = [
+        ("prose.txt", &[]),
+        ("ligatures.txt", &['|']),
+        ("code.txt", &['V', '[', ']', '{', '|', '}']),
+    ];
+    for (name, expected) in gaps {
+        let text = std::fs::read_to_string(corpus_path(name))
+            .unwrap_or_else(|error| panic!("reading {name}: {error}"));
+        let mut unmapped: Vec<char> = text
+            .chars()
+            .filter(|character| {
+                !character.is_whitespace() && cmap.map_codepoint(u32::from(*character)).is_none()
+            })
+            .collect();
+        unmapped.sort_unstable();
+        unmapped.dedup();
+        assert_eq!(
+            unmapped.as_slice(),
+            expected,
+            "{name}: the characters it needs that the font does not carry"
+        );
+        eprintln!(
+            "{name}: {} characters, {} the font does not carry",
+            text.chars().count(),
+            expected.len()
+        );
+    }
+}
+
+/// `r[test.corpus]`: the ligature corpus is the half of the shaping requirement
+/// the font cannot meet yet.
+///
+/// The layout tables carry texture healing and the math features, and no
+/// ligature, so every trigger shapes as its own characters. The test pins that,
+/// so the day a ligature lands the assertion flips and the gap closes visibly.
+#[test]
+fn the_ligature_corpus_does_not_combine() {
+    let Some((bytes, _)) = build_font() else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let blob: harfrust::font::Blob = bytes.into();
+    let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
+    let shaper = harfrust::ShaperFont::new(&font);
+    let count = |text: &str| -> usize {
+        let mut buffer = harfrust::Buffer::new();
+        buffer.push_str(text);
+        buffer.guess_segment_properties();
+        // `calt` is on by default, which is where a ligature would live.
+        harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::default())
+            .expect("shape the run");
+
+        buffer.glyph_infos().len()
+    };
+
+    let text =
+        std::fs::read_to_string(corpus_path("ligatures.txt")).expect("read the ligature corpus");
+    let mut triggers = 0usize;
+    for trigger in text.lines().filter(|line| !line.is_empty()) {
+        assert_eq!(
+            count(trigger),
+            trigger.chars().count(),
+            "{trigger} combined, so a ligature has landed and this pin can go"
+        );
+        triggers += 1;
+    }
+    assert!(triggers > 0, "the corpus has no triggers");
+    eprintln!("ligatures: {triggers} triggers, none of them combine yet");
 }

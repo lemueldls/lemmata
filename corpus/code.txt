@@ -1,0 +1,6 @@
+fn main() -> i32 { let x = 1 + 2; if x >= 3 && x != 4 { return x; } 0 }
+const total = items.filter((i) => i.count > 0).reduce((a, b) => a + b, 0);
+for (let i = 0; i < n; i++) { sum += values[i]; }
+# a comment, and a shebang: #!/usr/bin/env sh
+let xs: Vec<u32> = (0..10).map(|i| i * i).collect();
+if (a <= b || c >= d) { println!("{a} != {b}"); }
