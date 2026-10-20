@@ -144,6 +144,19 @@ pub fn ink(contours: &[Vec<QuadifyPoint>]) -> Option<(i16, i16, i16, i16)> {
 /// do not collide.
 #[must_use]
 pub fn derived(glyphs: &[GlyphData], metrics: &Metrics) -> Vec<GlyphData> {
+    derived_with(glyphs, metrics, &crate::texture::Drawn::new())
+}
+
+/// The derived glyphs, with the texture forms the port draws.
+///
+/// A form in `drawn` is used instead of scaling the captured outline, so a dot
+/// stays round and a serif is not stretched.
+#[must_use]
+pub fn derived_with(
+    glyphs: &[GlyphData],
+    metrics: &Metrics,
+    drawn: &crate::texture::Drawn,
+) -> Vec<GlyphData> {
     let mut derived = crate::variants::derive(glyphs);
     let next_code = |derived: &[GlyphData]| {
         crate::variants::PRIVATE_USE_START + u32::try_from(derived.len()).unwrap_or(0)
@@ -160,7 +173,7 @@ pub fn derived(glyphs: &[GlyphData], metrics: &Metrics) -> Vec<GlyphData> {
     derived.extend(script);
     let flattened = crate::flac::derive(glyphs, next_code(&derived));
     derived.extend(flattened);
-    let healed = crate::texture::derive(glyphs, next_code(&derived));
+    let healed = crate::texture::derive_with(glyphs, next_code(&derived), drawn);
     derived.extend(healed);
 
     derived
@@ -450,13 +463,37 @@ pub fn build_with(
     variants: &[(String, String)],
     ligatures: &[Ligature],
 ) -> Result<Vec<u8>, String> {
+    build_all(
+        glyphs,
+        metrics,
+        names,
+        variants,
+        ligatures,
+        &crate::texture::Drawn::new(),
+    )
+}
+
+/// Builds a font, with the texture forms the port draws.
+///
+/// # Errors
+///
+/// Returns a message when a contour cannot be written or a table fails to
+/// compile.
+pub fn build_all(
+    glyphs: &[GlyphData],
+    metrics: &Metrics,
+    names: &Names,
+    variants: &[(String, String)],
+    ligatures: &[Ligature],
+    drawn: &crate::texture::Drawn,
+) -> Result<Vec<u8>, String> {
     // The derived size variants join the set first, before anything counts the
     // glyphs or indexes into them. Appending them later leaves them past
     // `maxp.num_glyphs`, where they are ignored until something references one
     // and the reference is out of range.
     let glyphs = crate::character::apply(glyphs, variants);
     let mut with_variants = glyphs.clone();
-    with_variants.extend(derived(&glyphs, metrics));
+    with_variants.extend(derived_with(&glyphs, metrics, drawn));
     let glyphs = with_variants.as_slice();
 
     let mut glyf_builder = GlyfLocaBuilder::new();

@@ -27,6 +27,8 @@
 //! drawing's middle, so it is moved with the form and never scaled: the `i` and
 //! the `j` keep a round dot.
 
+use std::collections::BTreeMap;
+
 use crate::font::GlyphData;
 
 /// How far a form reaches, as a fraction of the advance.
@@ -266,16 +268,36 @@ fn extent(contour: &[lemmata_geom::QuadifyPoint]) -> f64 {
     ((x_max - x_min) * (y_max - y_min)).max(0.0)
 }
 
+/// The drawn forms, by glyph and form: a glyph the port builds in the scaled
+/// frame, before its side is chosen.
+pub type Drawn = BTreeMap<(String, Form), Vec<Vec<lemmata_geom::QuadifyPoint>>>;
+
 /// The forms for every glyph that has a role, encoded from `first_code` upward.
 #[must_use]
 pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
+    derive_with(glyphs, first_code, &Drawn::new())
+}
+
+/// The forms, using `drawn` where the port built the glyph and scaling the
+/// captured outline everywhere else.
+///
+/// A drawn form is the definition re-run at `1 ± 1/12`, so a dot stays a dot and
+/// a serif is re-drawn rather than stretched. Only the side is applied here,
+/// because the caller does not know the glyph's advance.
+#[must_use]
+pub fn derive_with(glyphs: &[GlyphData], first_code: u32, drawn: &Drawn) -> Vec<GlyphData> {
     let mut derived = Vec::new();
     for (index, role) in classify(glyphs) {
         if role == Role::Stationary {
             continue;
         }
         let glyph = &glyphs[index];
-        for (form, contours) in forms(glyph, glyph.advance) {
+        let shift = f64::from(glyph.advance) * SHIFT;
+        for (form, scaled) in forms(glyph, glyph.advance) {
+            let contours = match drawn.get(&(glyph.name.clone(), form)) {
+                Some(contours) => translated(contours, form.shift() * shift),
+                None => scaled,
+            };
             let code = first_code + u32::try_from(derived.len()).unwrap_or(0);
             derived.push(GlyphData {
                 name: form_name(&glyph.name, form),
@@ -287,4 +309,23 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
     }
 
     derived
+}
+
+/// The contours moved along x.
+fn translated(
+    contours: &[Vec<lemmata_geom::QuadifyPoint>],
+    dx: f64,
+) -> Vec<Vec<lemmata_geom::QuadifyPoint>> {
+    contours
+        .iter()
+        .map(|contour| {
+            contour
+                .iter()
+                .map(|point| lemmata_geom::QuadifyPoint {
+                    x: point.x + dx,
+                    ..*point
+                })
+                .collect()
+        })
+        .collect()
 }

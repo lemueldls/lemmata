@@ -28,8 +28,16 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
     let captured = lemmata_capture::load(capture)?;
     let mut glyphs = lemmata_source::glyphs(&plan, &captured);
     let rules = lemmata_build::ligatures::add(&mut glyphs);
+    let drawn = lemmata_source::texture_forms(&plan, &captured);
 
-    lemmata_build::font::build_with(&glyphs, &metrics, &Names::default(), &plan.variants, rules)
+    lemmata_build::font::build_all(
+        &glyphs,
+        &metrics,
+        &Names::default(),
+        &plan.variants,
+        rules,
+        &drawn,
+    )
 }
 
 /// The same build, for the page.
@@ -123,6 +131,50 @@ pub fn registry_font(plan: &str) -> Result<Vec<u8>, String> {
 #[wasm_bindgen]
 pub fn registry_specimen(plan: &str) -> Result<Vec<u8>, JsValue> {
     registry_font(plan).map_err(|message| JsValue::from_str(&message))
+}
+
+/// A font with the variants of one group, for the page.
+///
+/// # Errors
+///
+/// Returns a message when the group is absent, the plan or the parameter data
+/// cannot be read, or the font does not assemble.
+pub fn registry_group(plan: &str, group: &str) -> Result<Vec<u8>, String> {
+    let plan = lemmata_plan::from_json(plan)?;
+
+    lemmata_source::registry_group_font(&plan, group)
+}
+
+/// The group font, for the page.
+///
+/// # Errors
+///
+/// Returns the message from [`registry_group`] as a JavaScript string.
+#[wasm_bindgen]
+pub fn registry_group_specimen(plan: &str, group: &str) -> Result<Vec<u8>, JsValue> {
+    registry_group(plan, group).map_err(|message| JsValue::from_str(&message))
+}
+
+/// A font with one representative drawing per letter, for the page.
+///
+/// # Errors
+///
+/// Returns a message when the plan or the parameter data cannot be read, or the
+/// font does not assemble.
+pub fn registry_index(plan: &str) -> Result<Vec<u8>, String> {
+    let plan = lemmata_plan::from_json(plan)?;
+
+    lemmata_source::registry_index_font(&plan)
+}
+
+/// The letter-index font, for the page.
+///
+/// # Errors
+///
+/// Returns the message from [`registry_index`] as a JavaScript string.
+#[wasm_bindgen]
+pub fn registry_index_specimen(plan: &str) -> Result<Vec<u8>, JsValue> {
+    registry_index(plan).map_err(|message| JsValue::from_str(&message))
 }
 
 /// The variants a group has in a capture, as a JSON array of plan names.

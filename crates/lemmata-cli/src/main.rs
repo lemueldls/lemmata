@@ -258,8 +258,15 @@ fn build_font(build: Build) -> Result<(), String> {
     // so both front ends add them. A rule naming a glyph the subset removed is
     // dropped by the build.
     let ligatures = lemmata_build::ligatures::add(&mut glyphs);
-    let bytes =
-        lemmata_build::font::build_with(&glyphs, &metrics, &names, &plan.variants, ligatures)?;
+    let drawn = lemmata_source::texture_forms(&plan, &captured);
+    let bytes = lemmata_build::font::build_all(
+        &glyphs,
+        &metrics,
+        &names,
+        &plan.variants,
+        ligatures,
+        &drawn,
+    )?;
     // The extension decides the container. A `.woff2` is the same font
     // compressed, which is what a page serves and what a subsetter reads.
     let compressed = out_path

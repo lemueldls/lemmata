@@ -453,53 +453,190 @@ pub fn registry_names() -> Vec<String> {
     names
 }
 
+/// The variant names for one group, sorted.
+fn group_names(registry: &Registry, group: &str) -> Vec<String> {
+    let prefix = format!("{group}.");
+    let mut names: Vec<String> = registry
+        .iter()
+        .filter_map(|(name, _)| {
+            let suffix = name.strip_prefix(&prefix)?;
+            if suffix.is_empty() || !suffix.chars().all(|c| c.is_ascii_alphanumeric()) {
+                return None;
+            }
+
+            Some(name.clone())
+        })
+        .collect();
+    names.sort();
+
+    names
+}
+
+/// The advance the registry fonts use for every glyph.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn registry_advance(metrics: &Metrics) -> u16 {
+    metrics.width.clamp(0.0, f64::from(u16::MAX)).round() as u16
+}
+
+/// Assembles a font from the registry glyphs the caller prepared.
+fn registry_build(plan: &Plan, glyphs: Vec<GlyphData>) -> Result<Vec<u8>, String> {
+    lemmata_build::font::build(
+        &glyphs,
+        &plan.to_font_metrics(),
+        &lemmata_build::font::Names::default(),
+        &[],
+    )
+}
+
 /// A font with one private-use codepoint for every primary registry variant.
 ///
 /// The codepoints start at `U+E000` and follow the sorted names
-/// [`registry_names`] returns, filtered to the single-character groups.
+/// [`registry_names`] returns, filtered to the single-character groups. The
+/// registry and its contours are cached on the shape, so a second call after a
+/// variant choice reuses everything but the font assembly.
 ///
 /// # Errors
 ///
 /// Returns a message when the parameter data cannot be read or the font does not
 /// assemble.
 pub fn registry_font(plan: &Plan) -> Result<Vec<u8>, String> {
-    let font_metrics = plan.to_font_metrics();
+    let Some(registry) = registry_for(plan) else {
+        return Err("the parameter data did not load".to_string());
+    };
     let metrics = metrics(plan).ok_or_else(|| "the parameter data did not load".to_string())?;
-    let mut entries: Vec<(String, Geometry)> =
-        lemmata_glyphs::registry::build(&metrics, &Design::default())
-            .into_iter()
-            .filter(|(name, _)| primary_group(name).is_some())
-            .collect();
-    entries.sort_by(|left, right| left.0.cmp(&right.0));
+    let mut names: Vec<String> = registry
+        .iter()
+        .filter(|(name, _)| primary_group(name).is_some())
+        .map(|(name, _)| name.clone())
+        .collect();
+    names.sort();
 
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let advance = metrics.width.clamp(0.0, f64::from(u16::MAX)).round() as u16;
-
-    let glyphs: Vec<GlyphData> = entries
+    let only: BTreeSet<String> = names.iter().cloned().collect();
+    fill(plan, Some(&only));
+    let advance = registry_advance(&metrics);
+    let glyphs: Vec<GlyphData> = names
         .into_iter()
         .enumerate()
-        .map(|(index, (name, geometry))| {
+        .map(|(index, name)| {
             let codepoint = 0xE000 + u32::try_from(index).unwrap_or(0);
+            let contours = contours_of(&name)
+                .map(|contours| contours.as_ref().clone())
+                .unwrap_or_default();
 
             GlyphData {
                 name,
                 unicodes: vec![codepoint],
                 advance,
-                contours: Geometry::Simplify {
-                    gizmo: kurbo::Affine::IDENTITY,
-                    geom: Box::new(geometry),
-                }
-                .to_contours(),
+                contours,
             }
         })
         .collect();
 
-    lemmata_build::font::build(
-        &glyphs,
-        &font_metrics,
-        &lemmata_build::font::Names::default(),
-        &[],
-    )
+    registry_build(plan, glyphs)
+}
+
+/// A font with one private-use codepoint for every variant of one group.
+///
+/// The codepoints start at `U+E000` and follow the group's sorted names, which
+/// is the same order the page lists them in. Only this group's contours are
+/// filled, so changing the group does not cost the rest of the registry.
+///
+/// # Errors
+///
+/// Returns a message when the group is absent, the parameter data cannot be
+/// read, or the font does not assemble.
+pub fn registry_group_font(plan: &Plan, group: &str) -> Result<Vec<u8>, String> {
+    let Some(registry) = registry_for(plan) else {
+        return Err("the parameter data did not load".to_string());
+    };
+    let names = group_names(&registry, group);
+    if names.is_empty() {
+        return Err(format!("{group} is not in the registry"));
+    }
+    let metrics = metrics(plan).ok_or_else(|| "the parameter data did not load".to_string())?;
+
+    let only: BTreeSet<String> = names.iter().cloned().collect();
+    fill(plan, Some(&only));
+    let advance = registry_advance(&metrics);
+    let glyphs: Vec<GlyphData> = names
+        .into_iter()
+        .enumerate()
+        .map(|(index, name)| {
+            let codepoint = 0xE000 + u32::try_from(index).unwrap_or(0);
+            let contours = contours_of(&name)
+                .map(|contours| contours.as_ref().clone())
+                .unwrap_or_default();
+
+            GlyphData {
+                name,
+                unicodes: vec![codepoint],
+                advance,
+                contours,
+            }
+        })
+        .collect();
+
+    registry_build(plan, glyphs)
+}
+
+/// A font with one representative drawing per letter, mapped to the letter.
+///
+/// The letter grid uses this font, so a group's tile shows the drawing the plan
+/// currently chooses for it without carrying every variant. Only the
+/// representative contours are filled.
+///
+/// # Errors
+///
+/// Returns a message when the parameter data cannot be read or the font does not
+/// assemble.
+pub fn registry_index_font(plan: &Plan) -> Result<Vec<u8>, String> {
+    let Some(registry) = registry_for(plan) else {
+        return Err("the parameter data did not load".to_string());
+    };
+    let metrics = metrics(plan).ok_or_else(|| "the parameter data did not load".to_string())?;
+
+    let mut names: Vec<String> = registry
+        .iter()
+        .filter_map(|(name, _)| primary_group(name).map(|_| name.clone()))
+        .collect();
+    names.sort();
+
+    let mut representatives: BTreeMap<String, String> = BTreeMap::new();
+    for name in names {
+        let Some(group) = primary_group(&name) else {
+            continue;
+        };
+        representatives.entry(group.to_string()).or_insert(name);
+    }
+    for (group, variant) in &plan.variants {
+        if !representatives.contains_key(group) {
+            continue;
+        }
+        let chosen = format!("{group}.{}", lemmata_build::character::camel(variant));
+        if registry.iter().any(|(name, _)| name == &chosen) {
+            representatives.insert(group.clone(), chosen);
+        }
+    }
+
+    let only: BTreeSet<String> = representatives.values().cloned().collect();
+    fill(plan, Some(&only));
+    let advance = registry_advance(&metrics);
+    let glyphs: Vec<GlyphData> = representatives
+        .into_iter()
+        .filter_map(|(group, name)| {
+            let codepoint = u32::from(group.chars().next()?);
+            let contours = contours_of(&name)?;
+
+            Some(GlyphData {
+                name,
+                unicodes: vec![codepoint],
+                advance,
+                contours: contours.as_ref().clone(),
+            })
+        })
+        .collect();
+
+    registry_build(plan, glyphs)
 }
 
 #[cfg(test)]
@@ -551,4 +688,59 @@ mod cache_tests {
         let all = CONTOURS.with(|cache| cache.borrow().len());
         assert!(all > 100, "the full fill covered {all} glyphs");
     }
+}
+
+/// The texture forms the port draws, by base glyph and form.
+///
+/// A base letter's name is not the name of the drawing the registry builds; the
+/// capture's contours identify the variant, and the same variant is built at
+/// `1 ± 1/12`. The side is applied by the build, which knows the advance.
+#[must_use]
+pub fn texture_forms(
+    plan: &Plan,
+    captured: &[lemmata_capture::Glyph],
+) -> lemmata_build::texture::Drawn {
+    use lemmata_build::texture::{Drawn, Form, SHIFT};
+
+    let Some(metrics) = metrics(plan) else {
+        return Drawn::new();
+    };
+    let design = Design::default();
+    let wide = lemmata_glyphs::registry::build_at(&metrics, &design, 1.0 + SHIFT);
+    let narrow = lemmata_glyphs::registry::build_at(&metrics, &design, 1.0 - SHIFT);
+    let contours = |set: &[(String, Geometry)], name: &str| -> Option<Contours> {
+        let (_, geometry) = set.iter().find(|(built, _)| built == name)?;
+
+        Some(
+            Geometry::Simplify {
+                gizmo: kurbo::Affine::IDENTITY,
+                geom: Box::new(geometry.clone()),
+            }
+            .to_contours(),
+        )
+    };
+
+    let capture = capture_map(captured);
+    let bases = base_variants(captured, &capture);
+    let mut out = Drawn::new();
+    for (base, variant) in &bases {
+        let Some(wide) = contours(&wide, variant) else {
+            continue;
+        };
+        let Some(narrow) = contours(&narrow, variant) else {
+            continue;
+        };
+        for (form, source) in [
+            (Form::ExtL, &wide),
+            (Form::ExtR, &wide),
+            (Form::ExtLR, &wide),
+            (Form::ShrL, &narrow),
+            (Form::ShrR, &narrow),
+            (Form::ShrLR, &narrow),
+        ] {
+            out.insert((base.clone(), form), source.clone());
+        }
+    }
+
+    out
 }
