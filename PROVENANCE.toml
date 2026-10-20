@@ -89,6 +89,10 @@ upstream = "packages/glyph/src/glyph.mjs"
 ours = "crates/lemmata-ptl/src/store.rs"
 upstream = "packages/glyph/src/store.mjs"
 
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/o.rs"
+upstream = "packages/font-glyphs/src/letter/latin/o.ptl"
+
 [[layer]]
 ours = "crates/lemmata-ptl/src/shoulder.rs"
 upstream = "packages/font-glyphs/src/letter/shared.ptl"

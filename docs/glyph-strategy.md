@@ -229,6 +229,10 @@ crossing or detached tail, for `Q` and `smcpQ`, eight captured glyphs, 244
 knots, exact. It needed `OShape` as a di-spiro beside the outline, and
 `DiagCor`/`ExtLineCenter`.
 
+`letter/latin/o.ptl` gave the ring itself: `O`, `smcpO`, `o`, the two slashes,
+the two barred forms and the two blackboard ones, nine captured glyphs, 268
+knots, exact. The Cyrillic, Polish, numeral and horn forms are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
