@@ -185,6 +185,11 @@ had been written with `pair`, which emits two control knots, where upstream
 writes a `flat` and a `curl`. The arc came out two knots long and the drift was
 zero, because every knot it did emit sat where it belonged.
 
+`letter/latin/upper-l.ptl` (130 lines) is the same idea in a simpler shape: a
+stem, a foot bar and three serif grades, with `LSlash`, `smcpL`, `smcpLSlash`,
+`LHighBar` and `mathbb/L` around it. Sixteen captured glyphs, 136 knots, exact.
+It needed nothing new beyond the shapes already there.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

@@ -184,7 +184,11 @@ D.standardUnilateralSerifed,D.standardBilateralSerifed,\
 D.moreRoundedSerifless,D.moreRoundedUnilateralSerifed,\
 D.moreRoundedBilateralSerifed,smcpD.moreRoundedSerifless,\
 smcpD.moreRoundedUnilateralSerifed,smcpD.moreRoundedBilateralSerifed,\
-Eth,smcpEth,mathbb/D'
+Eth,smcpEth,mathbb/D,L.serifless,LSlash.serifless,smcpL.serifless,\
+smcpLSlash.serifless,LHighBar.serifless,L.motionSerifed,\
+LSlash.motionSerifed,smcpL.motionSerifed,smcpLSlash.motionSerifed,\
+LHighBar.motionSerifed,L.serifed,LSlash.serifed,smcpL.serifed,\
+smcpLSlash.serifed,LHighBar.serifed,mathbb/L'
 npm run build -- ttf-unhinted::RefA
 ```
 
