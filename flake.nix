@@ -88,22 +88,53 @@
           # The committed capture is the one the site ships, so the package
           # builds the same font the page does.
           capture = ./web/public/glyphs.bin;
-          fonts = pkgs.runCommand "lemmata-fonts" {
-            nativeBuildInputs = [ lemmata ];
-            meta.description = "Lemmata fonts, as TTF and WOFF2";
-          } ''
-            mkdir -p $out/share/fonts/truetype $out/share/fonts/woff2
-            lemmata build --glyphs ${capture} \
-              --out $out/share/fonts/truetype/Lemmata-Regular.ttf
-            lemmata build --glyphs ${capture} \
-              --out $out/share/fonts/woff2/Lemmata-Regular.woff2
-          '';
+
+          # `mkFont` takes a plan the way the Iosevka package does: an attrset,
+          # or the JSON a file already holds. The plan reaches the font's
+          # metrics and its variant choices; the outlines are the capture's
+          # shape, so a plan that asks for another weight or slope needs a
+          # capture of that shape.
+          mkFont =
+            {
+              family ? "Lemmata",
+              name ? "Lemmata-Regular",
+              extension ? "ttf",
+              capture ? ./web/public/glyphs.bin,
+              plan ? { },
+            }:
+            pkgs.runCommand "lemmata-${name}-${extension}" {
+              nativeBuildInputs = [ lemmata ];
+              meta.description = "A Lemmata font, ${name}.${extension}";
+            } ''
+              kind=${if extension == "woff2" then "woff2" else "truetype"}
+              mkdir -p "$out/share/fonts/$kind"
+              lemmata build \
+                --glyphs ${capture} \
+                --family ${lib.escapeShellArg family} \
+                --plan ${
+                  if builtins.isString plan then
+                    pkgs.writeText "lemmata-plan.json" plan
+                  else
+                    pkgs.writeText "lemmata-plan.json" (builtins.toJSON plan)
+                } \
+                --out "$out/share/fonts/$kind/${name}.${extension}"
+            '';
+
+          fonts = pkgs.buildEnv {
+            name = "lemmata-fonts";
+            paths = [
+              (mkFont { extension = "ttf"; })
+              (mkFont { extension = "woff2"; })
+            ];
+          };
         in
         {
           packages = {
             inherit lemmata fonts;
             default = fonts;
           };
+
+          lib = { inherit mkFont; };
 
           apps.default = {
             type = "app";
@@ -174,5 +205,6 @@
       packages = nixpkgs.lib.genAttrs systems (system: (perSystem system).packages);
       apps = nixpkgs.lib.genAttrs systems (system: (perSystem system).apps);
       devShells = nixpkgs.lib.genAttrs systems (system: (perSystem system).devShells);
+      lib = nixpkgs.lib.genAttrs systems (system: (perSystem system).lib);
     };
 }
