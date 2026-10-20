@@ -35,6 +35,7 @@ pub mod glyph;
 pub mod letter_model;
 pub mod metrics;
 pub mod param;
+pub mod serif;
 pub mod shapes;
 pub mod spiro_kit;
 pub mod store;

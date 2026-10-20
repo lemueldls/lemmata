@@ -1036,3 +1036,224 @@ impl LowerA<'_> {
 fn arc_start_serif_width(stroke: f64, v_jut_stroke: f64) -> f64 {
     (stroke * 0.875).max(stroke).min(v_jut_stroke)
 }
+
+/// The double-storey bodies `DoubleStoreyConfig` selects.
+#[derive(Clone, Copy)]
+enum DoubleBody {
+    Serifless,
+    Serifed,
+    Tailed,
+    FlatBottomSerifless,
+    FlatBottomSerifed,
+    ToothlessCorner,
+    ToothlessRounded,
+}
+
+impl DoubleBody {
+    fn build(self, body: &LowerA, hook: i32) -> Vec<Dispiro> {
+        match self {
+            Self::Serifless => body.serifless(hook, None),
+            Self::Serifed => body.serifed(hook, None),
+            Self::Tailed => body.tailed(hook, None),
+            Self::FlatBottomSerifless => body.flat_bottom_serifless(hook, None),
+            Self::FlatBottomSerifed => body.flat_bottom_serifed(hook, None),
+            Self::ToothlessCorner => body.toothless_corner(hook, None),
+            Self::ToothlessRounded => body.toothless_rounded(hook, None),
+        }
+    }
+}
+
+/// The double-storey suffixes, in `DoubleStoreyConfig`'s order.
+const DOUBLE: &[(&str, DoubleBody)] = &[
+    ("doubleStoreySerifless", DoubleBody::Serifless),
+    ("doubleStoreySerifed", DoubleBody::Serifed),
+    ("doubleStoreyTailed", DoubleBody::Tailed),
+    (
+        "doubleStoreyFlatBottomSerifless",
+        DoubleBody::FlatBottomSerifless,
+    ),
+    (
+        "doubleStoreyFlatBottomSerifed",
+        DoubleBody::FlatBottomSerifed,
+    ),
+    ("doubleStoreyToothlessCorner", DoubleBody::ToothlessCorner),
+    ("doubleStoreyToothlessRounded", DoubleBody::ToothlessRounded),
+];
+
+/// The single-storey suffixes and the body and bar each selects.
+const SINGLE: &[(&str, SingleStoreyBody, SingleStoreyBar)] = &[
+    (
+        "singleStoreySerifless",
+        SingleStoreyBody::FullBar,
+        SingleStoreyBar::Serifless,
+    ),
+    (
+        "singleStoreyTopCutSerifless",
+        SingleStoreyBody::TopCut,
+        SingleStoreyBar::Serifless,
+    ),
+    (
+        "singleStoreyFlatTopSerifless",
+        SingleStoreyBody::FlatTop,
+        SingleStoreyBar::Serifless,
+    ),
+    (
+        "singleStoreyEarlessCornerSerifless",
+        SingleStoreyBody::EarlessCorner,
+        SingleStoreyBar::Serifless,
+    ),
+    (
+        "singleStoreyEarlessRoundedSerifless",
+        SingleStoreyBody::EarlessRounded,
+        SingleStoreyBar::Serifless,
+    ),
+    (
+        "singleStoreySerifed",
+        SingleStoreyBody::FullBar,
+        SingleStoreyBar::BottomSerifed,
+    ),
+    (
+        "singleStoreyTopCutSerifed",
+        SingleStoreyBody::TopCut,
+        SingleStoreyBar::BottomSerifed,
+    ),
+    (
+        "singleStoreyFlatTopSerifed",
+        SingleStoreyBody::FlatTop,
+        SingleStoreyBar::BottomSerifed,
+    ),
+    (
+        "singleStoreyEarlessCornerSerifed",
+        SingleStoreyBody::EarlessCorner,
+        SingleStoreyBar::BottomSerifed,
+    ),
+    (
+        "singleStoreyEarlessRoundedSerifed",
+        SingleStoreyBody::EarlessRounded,
+        SingleStoreyBar::BottomSerifed,
+    ),
+    (
+        "singleStoreyDoubleSerifed",
+        SingleStoreyBody::FullBar,
+        SingleStoreyBar::DoubleSerifed,
+    ),
+    (
+        "singleStoreyFlatTopDoubleSerifed",
+        SingleStoreyBody::FlatTop,
+        SingleStoreyBar::DoubleSerifed,
+    ),
+    (
+        "singleStoreyTailed",
+        SingleStoreyBody::FullBar,
+        SingleStoreyBar::Tailed,
+    ),
+    (
+        "singleStoreyTopCutTailed",
+        SingleStoreyBody::TopCut,
+        SingleStoreyBar::Tailed,
+    ),
+    (
+        "singleStoreyFlatTopTailed",
+        SingleStoreyBody::FlatTop,
+        SingleStoreyBar::Tailed,
+    ),
+    (
+        "singleStoreyEarlessCornerTailed",
+        SingleStoreyBody::EarlessCorner,
+        SingleStoreyBar::Tailed,
+    ),
+    (
+        "singleStoreyEarlessRoundedTailed",
+        SingleStoreyBody::EarlessRounded,
+        SingleStoreyBar::Tailed,
+    ),
+    (
+        "singleStoreyTailedSerifed",
+        SingleStoreyBody::FullBar,
+        SingleStoreyBar::TailedSerifed,
+    ),
+    (
+        "singleStoreyFlatTopTailedSerifed",
+        SingleStoreyBody::FlatTop,
+        SingleStoreyBar::TailedSerifed,
+    ),
+];
+
+fn single_storey(
+    body: &LowerA,
+    kind: SingleStoreyBody,
+    top: f64,
+    bar: SingleStoreyBar,
+    ada: Option<f64>,
+    adb: Option<f64>,
+) -> Vec<Geometry> {
+    match kind {
+        SingleStoreyBody::FullBar => body.full_bar_body(top, bar, None, ada, adb),
+        SingleStoreyBody::TopCut => body.top_cut_body(top, bar, None, ada, adb),
+        SingleStoreyBody::FlatTop => body.flat_top_body(top, bar, None, ada, adb),
+        SingleStoreyBody::EarlessCorner => body.earless_corner_body(top, bar, None, ada, adb),
+        SingleStoreyBody::EarlessRounded => body.earless_rounded_body(top, bar, None, ada, adb),
+    }
+}
+
+impl LowerA<'_> {
+    /// Every glyph this definition builds, by name.
+    ///
+    /// The order is the variant tables' and the names are the ones the build
+    /// gives them, so a caller can file them in a store and a reader can compare
+    /// them with a capture.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let metrics = self.metrics;
+        let combine = |operands: Vec<Geometry>| Geometry::Combine(operands);
+        let from_dispiros = |dispiros: Vec<Dispiro>| {
+            combine(
+                dispiros
+                    .iter()
+                    .map(|dispiro| dispiro.geometry(kurbo::Affine::IDENTITY))
+                    .collect(),
+            )
+        };
+        let mut out = Vec::new();
+        for (suffix, kind) in DOUBLE {
+            out.push((
+                format!("a.{suffix}"),
+                from_dispiros(kind.build(self, HOOK_SLAB_NONE)),
+            ));
+            out.push((
+                format!("aHalf.{suffix}"),
+                from_dispiros(kind.build(self, HOOK_HALF)),
+            ));
+            out.push((
+                format!(
+                    "a.doubleStoreyHookInwardSerifed{}",
+                    &suffix["doubleStorey".len()..]
+                ),
+                from_dispiros(kind.build(self, HOOK_SLAB_INWARD)),
+            ));
+        }
+        out.push((
+            "a.crossing".to_string(),
+            combine(vec![self.crossing_body(metrics.xh)]),
+        ));
+        for (suffix, kind, bar) in SINGLE {
+            out.push((
+                format!("a.{suffix}"),
+                combine(single_storey(self, *kind, metrics.xh, *bar, None, None)),
+            ));
+            out.push((
+                format!("aCap.{suffix}"),
+                combine(single_storey(
+                    self,
+                    *kind,
+                    metrics.cap,
+                    *bar,
+                    Some(metrics.arch_depth_a),
+                    Some(metrics.arch_depth_b),
+                )),
+            ));
+        }
+
+        out
+    }
+}

@@ -24,6 +24,10 @@ ours = "crates/lemmata-glyphs/src/letter/latin/lower_d.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-d.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_p.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-p.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/upper_d.rs"
 upstream = "packages/font-glyphs/src/letter/latin/upper-d.ptl"
 
@@ -68,6 +72,10 @@ upstream = "packages/glyph/src/glyph.mjs"
 [[layer]]
 ours = "crates/lemmata-ptl/src/store.rs"
 upstream = "packages/glyph/src/store.mjs"
+
+[[layer]]
+ours = "crates/lemmata-ptl/src/serif.rs"
+upstream = "packages/font-glyphs/src/letter/shared.ptl"
 
 [[layer]]
 ours = "crates/lemmata-ptl/src/shapes.rs"

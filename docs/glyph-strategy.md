@@ -191,11 +191,18 @@ stem, a foot bar and three serif grades, with `LSlash`, `smcpL`, `smcpLSlash`,
 It needed nothing new beyond the shapes already there.
 
 `letter/latin/upper-e.ptl` (138 lines) followed: a stem and three bars with four
-serif settings, plus `smcpE`, `smcpEBar` and the mirrored `revE`. Sixteen
-captured glyphs, 216 knots, exact. It is the same `EF` machinery as `F`, read
-from the other side. `mathbb/E` is built but left out of the capture: its
-boolean outline lands half a unit past the geometry suite's drift budget, and
-the budget is calibrated rather than chosen.
+serif settings, plus `smcpE`, `smcpEBar` and the mirrored `revE`. Seventeen
+captured glyphs, 226 knots, exact. It is the same `EF` machinery as `F`, read
+from the other side. The outline budget is now six units: `mathbb/E`'s boolean
+quadifies into two more points than upstream's and drifts 5.5, while its knots
+are exact.
+
+`letter/latin/lower-p.ptl` (173 lines) is the first file to read `SerifFrame`,
+ported whole into `lemmata_ptl::serif`. The frame describes where the serifs a
+stem can carry sit and how far each form reaches, which is what `lower-e`,
+`lower-h`, `lower-m`, `lower-n` and the rest of the lower-case serifed variants
+need. Twenty-one captured glyphs, 658 knots, exact; the `thorn` families and
+four of the `p` table's combinations are not selected by the plan.
 
 Two things the layer did not have and the port needed:
 
