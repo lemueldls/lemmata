@@ -33,6 +33,10 @@ enum Command {
 }
 
 /// Build a font.
+///
+/// A shape option asks upstream's glyph code to draw a shape the repository
+/// does not hold, so it needs `IOSEVKA_BUILD_DIR` pointing at a scratch copy of
+/// `vendor/Iosevka` with `npm install` run in it.
 #[derive(Debug, Facet)]
 struct Build {
     /// Glyph capture to read.
@@ -184,8 +188,12 @@ fn build_font(build: Build) -> Result<(), String> {
         let name = lemmata_host::plan_name(&shape);
         let cached = PathBuf::from("target/host").join(format!("{name}.bin"));
         if !cached.exists() {
-            let build_dir = std::env::var("IOSEVKA_BUILD_DIR")
-                .unwrap_or_else(|_| "/tmp/opencode/iosevka-build".to_string());
+            let build_dir = std::env::var("IOSEVKA_BUILD_DIR").map_err(|_| {
+                "--weight, --width, --slope, --serifs and --spacing need \
+                 IOSEVKA_BUILD_DIR, a scratch copy of vendor/Iosevka with \
+                 `npm install` run in it"
+                    .to_string()
+            })?;
             // The capture carries ASCII, which is what a naming plan asks for and
             // what a build of the whole set would spend minutes on.
             let codepoints: Vec<u32> = (0x20..=0x7E).collect();

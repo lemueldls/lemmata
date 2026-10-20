@@ -51,9 +51,11 @@ fn a_capture_is_the_plan_it_claims_to_be() {
         eprintln!("skipping: set LEMMATA_HOST_BUILD to run the host");
         return;
     }
-    let build = PathBuf::from(
-        std::env::var("IOSEVKA_BUILD_DIR").unwrap_or_else(|_| "/tmp/opencode/iosevka-build".into()),
-    );
+    let Ok(build) = std::env::var("IOSEVKA_BUILD_DIR") else {
+        eprintln!("skipping: set IOSEVKA_BUILD_DIR to a scratch copy of vendor/Iosevka");
+        return;
+    };
+    let build = PathBuf::from(build);
     if !build.join("verdafile.mjs").exists() {
         eprintln!("skipping: no scratch build at {}", build.display());
         return;
