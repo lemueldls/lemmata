@@ -2211,3 +2211,63 @@ pub fn flatside_rd(kit: &Kit, side: &FlatSide) -> Vec<Item> {
         )]
     }
 }
+
+/// `HSerif.mtAsymmetric`: a top serif extending `l` left and `r` right.
+#[must_use]
+pub fn hserif_mt_asymmetric(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    l: f64,
+    r: f64,
+    sw: Option<f64>,
+) -> Dispiro {
+    let sw = sw.unwrap_or(metrics.stroke);
+    let shift = sw * metrics.serif_shift_x;
+    let items = vec![
+        Item::Af(kit.widths_lhs(Some(sw))),
+        kit.knot(KnotType::Left, x + r - shift, y, Vec::new()),
+        kit.knot(KnotType::Right, x - l - shift, y, Vec::new()),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `HSerif.mbAsymmetric`: a bottom serif extending `l` left and `r` right.
+#[must_use]
+pub fn hserif_mb_asymmetric(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    l: f64,
+    r: f64,
+    sw: Option<f64>,
+) -> Dispiro {
+    let sw = sw.unwrap_or(metrics.stroke);
+    let shift = sw * metrics.serif_shift_x;
+    let items = vec![
+        Item::Af(kit.widths_rhs(Some(sw))),
+        kit.knot(KnotType::Left, x + r + shift, y, Vec::new()),
+        kit.knot(KnotType::Right, x - l + shift, y, Vec::new()),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `JutIn`: how far a serif reaches when the two sides share the space.
+#[must_use]
+pub fn jut_in(
+    metrics: &Metrics,
+    left: f64,
+    right: f64,
+    jut: f64,
+    sw_ref: f64,
+    h_split: f64,
+) -> f64 {
+    let ink = sw_ref * metrics.hv_contrast;
+    let gap = (right - left - h_split * ink) / (h_split - 1.0);
+
+    jut.min(0.5 * ink + (metrics.stroke * metrics.tan_slope).max(0.375 * gap))
+}
