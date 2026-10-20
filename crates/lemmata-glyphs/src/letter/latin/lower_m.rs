@@ -435,14 +435,14 @@ impl LowerM<'_> {
             ty: KnotType::Left,
             x: self.right_sb(),
             y: (top - adb).max(rbot + metrics.tiny),
-            af: Vec::new(),
+            af: self.kit.heading(shapes::downward(metrics.hv_contrast)),
         };
         let mut items = vec![
             Item::Af(self.kit.widths_rhs(Some(sw))),
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
         items.extend(self.arch_after(top, &before, &after, sw));
-        items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
+        items.push(self.kit.knot(after.ty, after.x, after.y, after.af.clone()));
         items.push(self.kit.knot(
             KnotType::Right,
             self.right_sb(),
@@ -490,14 +490,14 @@ impl LowerM<'_> {
             ty: KnotType::Left,
             x,
             y: (top - adb).max(mbot + metrics.tiny),
-            af: Vec::new(),
+            af: self.kit.heading(shapes::downward(metrics.hv_contrast)),
         };
         let mut items = vec![
             Item::Af(self.kit.widths_rhs(Some(sw))),
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
         items.extend(self.arch_after(top, &before, &after, sw));
-        items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
+        items.push(self.kit.knot(after.ty, after.x, after.y, after.af.clone()));
         items.push(self.kit.knot(
             end_ty,
             x,
@@ -530,7 +530,7 @@ impl LowerM<'_> {
             ty: KnotType::Left,
             x: self.right_sb(),
             y: (top - adb).max(rbot + metrics.tiny),
-            af: Vec::new(),
+            af: self.kit.heading(shapes::downward(metrics.hv_contrast)),
         };
         let mut items = vec![
             Item::Af(self.kit.widths_rhs(Some(sw))),
@@ -543,7 +543,7 @@ impl LowerM<'_> {
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
         items.extend(self.arch_after(top, &before, &after, sw));
-        items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
+        items.push(self.kit.knot(after.ty, after.x, after.y, after.af.clone()));
         items.push(self.kit.knot(
             KnotType::Right,
             self.right_sb(),
