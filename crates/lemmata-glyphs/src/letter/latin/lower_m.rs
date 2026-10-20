@@ -13,7 +13,7 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::Item;
+use lemmata_ptl::control::{Item, UserControlKnot};
 use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::metrics::Metrics;
 use lemmata_ptl::serif::SerifFrame;
@@ -26,6 +26,9 @@ use lemmata_ptl::util::{join_camel, mix};
 pub enum Body {
     Arches,
     FlatTop,
+    EarlessSingleArch,
+    EarlessCornerDoubleArch,
+    EarlessRoundedDoubleArch,
 }
 
 /// The five serif settings.
@@ -48,7 +51,13 @@ pub struct Variant {
 }
 
 /// The bodies, in the table's order.
-pub const BODIES: &[(&str, Body)] = &[("", Body::Arches), ("flatTop", Body::FlatTop)];
+pub const BODIES: &[(&str, Body)] = &[
+    ("", Body::Arches),
+    ("flatTop", Body::FlatTop),
+    ("earlessSingleArch", Body::EarlessSingleArch),
+    ("earlessCornerDoubleArch", Body::EarlessCornerDoubleArch),
+    ("earlessRoundedDoubleArch", Body::EarlessRoundedDoubleArch),
+];
 
 /// The leg heights, in the table's order.
 pub const LEGS: &[(&str, bool)] = &[("", false), ("shortLeg", true)];
@@ -363,6 +372,355 @@ impl LowerM<'_> {
         ]
     }
 
+    const fn params(&self) -> shapes::ArchParams {
+        let metrics = self.metrics;
+
+        shapes::ArchParams {
+            superness: self.design.superness,
+            tan_slope: metrics.tan_slope,
+            hv_contrast: metrics.hv_contrast,
+            o: metrics.o,
+            correction_o_mid_x: metrics.correction_o_mid_x,
+        }
+    }
+
+    fn arch_after(&self, y: f64, before: &UserControlKnot, after: &UserControlKnot) -> Vec<Item> {
+        let df = self.frame();
+
+        shapes::arch(
+            self.kit,
+            &shapes::ArchArgs {
+                y,
+                p: None,
+                sw: df.mvs,
+                compact: false,
+                o: self.metrics.o,
+                angle_pre: None,
+                angle_post: None,
+                blend_pre: Some(false),
+                blend_post: None,
+                sw_before: Some(df.mvs),
+                sw_after: Some(df.mvs),
+                lhs: false,
+            },
+            before,
+            after,
+            &self.params(),
+        )
+    }
+
+    /// `EarlessSingleArchSmallMShape`.
+    #[must_use]
+    pub fn earless_single_arch(&self, top: f64, lbot: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
+        let metrics = self.metrics;
+        let df = self.frame();
+        let sw = df.mvs;
+        let rise = metrics.d_toothless_rise;
+        let adb = self.smooth_b();
+        let before = UserControlKnot {
+            ty: KnotType::G4,
+            x: df.sb,
+            y: top - rise,
+            af: Vec::new(),
+        };
+        let after = UserControlKnot {
+            ty: KnotType::Left,
+            x: self.right_sb(),
+            y: (top - adb).max(rbot + metrics.tiny),
+            af: Vec::new(),
+        };
+        let mut items = vec![
+            Item::Af(self.kit.widths_rhs(Some(sw))),
+            self.kit.knot(before.ty, before.x, before.y, Vec::new()),
+        ];
+        items.extend(self.arch_after(top, &before, &after));
+        items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
+        items.push(self.kit.knot(
+            KnotType::Right,
+            self.right_sb(),
+            rbot,
+            self.kit.heading(shapes::downward(metrics.hv_contrast)),
+        ));
+
+        vec![
+            Geometry::Tagged(Box::new(
+                shapes::vbar_l(self.kit, metrics, df.sb, lbot, top - rise, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+            )),
+            Geometry::Tagged(Box::new(
+                shapes::vbar_m(self.kit, metrics, self.middle(), mbot, top - 0.25 * sw, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+            )),
+            self.kit.dispiro(items).geometry(kurbo::Affine::IDENTITY),
+        ]
+    }
+
+    /// `leftKnots` of `EarlessCornerDoubleArchSmallMShape`.
+    fn corner_left(&self, top: f64, mbot: f64, offset: f64, outline: bool) -> Vec<Item> {
+        let metrics = self.metrics;
+        let df = self.frame();
+        let sw = df.mvs;
+        let rise = metrics.d_toothless_rise;
+        let adb = self.smooth_b();
+        let x = self.middle() + self.hsw_to_v(0.5 * sw) - offset;
+        let start_ty = if outline {
+            KnotType::Corner
+        } else {
+            KnotType::G2
+        };
+        let end_ty = if outline {
+            KnotType::Corner
+        } else {
+            KnotType::Right
+        };
+        let before = UserControlKnot {
+            ty: start_ty,
+            x: df.sb - offset,
+            y: top - rise,
+            af: Vec::new(),
+        };
+        let after = UserControlKnot {
+            ty: KnotType::Left,
+            x,
+            y: (top - adb).max(mbot + metrics.tiny),
+            af: Vec::new(),
+        };
+        let mut items = vec![
+            Item::Af(self.kit.widths_rhs(Some(sw))),
+            self.kit.knot(before.ty, before.x, before.y, Vec::new()),
+        ];
+        items.extend(self.arch_after(top, &before, &after));
+        items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
+        items.push(self.kit.knot(
+            end_ty,
+            x,
+            mbot,
+            self.kit.heading(shapes::downward(metrics.hv_contrast)),
+        ));
+        if outline {
+            items.push(
+                self.kit
+                    .knot(KnotType::Corner, df.sb - offset, 0.0, Vec::new()),
+            );
+        }
+
+        items
+    }
+
+    /// `rightKnots` of `EarlessCornerDoubleArchSmallMShape`.
+    fn corner_right(&self, top: f64, rbot: f64) -> Vec<Item> {
+        let metrics = self.metrics;
+        let df = self.frame();
+        let sw = df.mvs;
+        let rise = metrics.d_toothless_rise;
+        let adb = self.smooth_b();
+        let x_mid_left = self.middle() - self.hsw_to_v(0.5 * sw);
+        let before = UserControlKnot {
+            ty: KnotType::G2,
+            x: x_mid_left,
+            y: top - rise,
+            af: Vec::new(),
+        };
+        let after = UserControlKnot {
+            ty: KnotType::Left,
+            x: self.right_sb(),
+            y: (top - adb).max(rbot + metrics.tiny),
+            af: Vec::new(),
+        };
+        let mut items = vec![
+            Item::Af(self.kit.widths_rhs(Some(sw))),
+            self.kit.knot(
+                KnotType::G2,
+                mix(self.right_sb(), x_mid_left, 1.5),
+                top - 2.0 * rise,
+                Vec::new(),
+            ),
+            self.kit.knot(before.ty, before.x, before.y, Vec::new()),
+        ];
+        items.extend(self.arch_after(top, &before, &after));
+        items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
+        items.push(self.kit.knot(
+            KnotType::Right,
+            self.right_sb(),
+            rbot,
+            self.kit.heading(shapes::downward(metrics.hv_contrast)),
+        ));
+
+        items
+    }
+
+    /// `EarlessCornerDoubleArchSmallMShape`.
+    #[must_use]
+    pub fn earless_corner_double_arch(
+        &self,
+        top: f64,
+        lbot: f64,
+        mbot: f64,
+        rbot: f64,
+    ) -> Vec<Geometry> {
+        let metrics = self.metrics;
+        let df = self.frame();
+        let sw = df.mvs;
+        let rise = metrics.d_toothless_rise;
+        let left = self.kit.dispiro(self.corner_left(top, mbot, 0.0, false));
+        let left_outline = self
+            .kit
+            .spiro_outline(self.corner_left(top, mbot, 0.1, true));
+        let right = self.kit.dispiro(self.corner_right(top, rbot));
+        let difference = lemmata_ptl::glyph::difference(vec![
+            right.geometry(kurbo::Affine::IDENTITY),
+            Geometry::Spiro {
+                gizmo: kurbo::Affine::IDENTITY,
+                closed: left_outline.closed,
+                knots: left_outline.knots,
+            },
+        ]);
+
+        vec![
+            Geometry::Tagged(Box::new(
+                shapes::vbar_l(self.kit, metrics, df.sb, lbot, top - rise, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+            )),
+            left.geometry(kurbo::Affine::IDENTITY),
+            difference,
+        ]
+    }
+
+    /// `RevSmallMShoulderSpiro`.
+    fn rev_shoulder_items(&self, shoulder: &Shoulder, right_y0: f64) -> Vec<Item> {
+        let metrics = self.metrics;
+        let stroke = shoulder.stroke;
+        let fix = self.hsw_to_v(metrics.tan_slope * stroke);
+        let left_inner = shoulder.left + self.hsw_to_v(stroke);
+        let right_inner = shoulder.right - self.hsw_to_v(shoulder.fine);
+
+        vec![
+            self.kit
+                .knot(KnotType::Corner, left_inner, shoulder.bottom, Vec::new()),
+            self.kit.knot(
+                KnotType::Right,
+                left_inner,
+                (shoulder.top - shoulder.ada - fix).max(shoulder.bottom + metrics.tiny),
+                Vec::new(),
+            ),
+            self.kit.arcvh(Some(8), None),
+            self.kit.pair(
+                lemmata_ptl::spiro_kit::Family::G2,
+                lemmata_ptl::spiro_kit::Direction::Right,
+                lemmata_ptl::spiro_kit::Position::Mid,
+                mix(left_inner, right_inner, 0.5),
+                (shoulder.top - metrics.o) - stroke,
+                Vec::new(),
+            ),
+            self.kit.archv(Some(8), None),
+            self.kit.knot(
+                KnotType::Left,
+                right_inner,
+                (right_y0.max(shoulder.bottom) + metrics.tiny)
+                    .max(shoulder.top - shoulder.adb + fix),
+                Vec::new(),
+            ),
+            self.kit.knot(
+                KnotType::Corner,
+                right_inner,
+                right_y0.max(
+                    shoulder
+                        .bottom
+                        .max((shoulder.top - shoulder.adb + fix) - metrics.tiny),
+                ),
+                Vec::new(),
+            ),
+            self.kit.knot(
+                KnotType::Corner,
+                shoulder.right,
+                right_y0.max(
+                    shoulder
+                        .bottom
+                        .max((shoulder.top - shoulder.adb) - metrics.tiny),
+                ),
+                Vec::new(),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                shoulder.right,
+                (right_y0.max(shoulder.bottom) + metrics.tiny).max(shoulder.top - shoulder.adb),
+                Vec::new(),
+            ),
+            self.kit.arcvh(Some(8), None),
+            self.kit.pair(
+                lemmata_ptl::spiro_kit::Family::G2,
+                lemmata_ptl::spiro_kit::Direction::Right,
+                lemmata_ptl::spiro_kit::Position::Mid,
+                mix(shoulder.right, shoulder.left, 0.5),
+                shoulder.top - metrics.o,
+                Vec::new(),
+            ),
+            self.kit.archv(Some(8), None),
+            self.kit.knot(
+                KnotType::Left,
+                shoulder.left,
+                (shoulder.top - shoulder.ada).max(shoulder.bottom + metrics.tiny),
+                Vec::new(),
+            ),
+            self.kit
+                .knot(KnotType::Corner, shoulder.left, shoulder.bottom, Vec::new()),
+            self.kit.close(),
+        ]
+    }
+
+    /// `EarlessRoundedDoubleArchSmallMShape`.
+    #[must_use]
+    pub fn earless_rounded_double_arch(
+        &self,
+        top: f64,
+        lbot: f64,
+        mbot: f64,
+        rbot: f64,
+    ) -> Vec<Geometry> {
+        let metrics = self.metrics;
+        let df = self.frame();
+        let sw = df.mvs;
+        let fine = sw * metrics.c_thin;
+        let rev = self.kit.spiro_outline(self.rev_shoulder_items(
+            &Shoulder {
+                left: df.sb,
+                right: self.middle() - self.hsw_to_v(0.5 * sw - fine),
+                fine,
+                top,
+                bottom: lbot,
+                ada: self.smooth_a(),
+                adb: self.smooth_b(),
+                stroke: sw,
+                left_y0: None,
+            },
+            mbot,
+        ));
+        let arch = self.kit.spiro_outline(self.shoulder_items(&Shoulder {
+            left: self.middle() + self.hsw_to_v(0.5 * sw - fine),
+            right: self.right_sb(),
+            fine,
+            top,
+            bottom: rbot,
+            ada: self.smooth_a(),
+            adb: self.smooth_b(),
+            stroke: sw,
+            left_y0: Some(mbot),
+        }));
+
+        vec![lemmata_ptl::glyph::union(vec![
+            Geometry::Spiro {
+                gizmo: kurbo::Affine::IDENTITY,
+                closed: rev.closed,
+                knots: rev.knots,
+            },
+            Geometry::Spiro {
+                gizmo: kurbo::Affine::IDENTITY,
+                closed: arch.closed,
+                knots: arch.knots,
+            },
+        ])]
+    }
+
     /// The body the variant selects.
     fn body(&self, variant: Variant, top: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
         let lbot = 0.0;
@@ -370,6 +728,11 @@ impl LowerM<'_> {
         match variant.body {
             Body::Arches => self.arches(top, lbot, mbot, rbot),
             Body::FlatTop => self.flat_top(top, lbot, mbot, rbot),
+            Body::EarlessSingleArch => self.earless_single_arch(top, lbot, mbot, rbot),
+            Body::EarlessCornerDoubleArch => self.earless_corner_double_arch(top, lbot, mbot, rbot),
+            Body::EarlessRoundedDoubleArch => {
+                self.earless_rounded_double_arch(top, lbot, mbot, rbot)
+            }
         }
     }
 
@@ -420,11 +783,21 @@ impl LowerM<'_> {
         }
         let full = self.enough_space_for_full_serifs();
         let left_full = full || variant.short_leg;
+        let earless = matches!(
+            variant.body,
+            Body::EarlessSingleArch
+                | Body::EarlessCornerDoubleArch
+                | Body::EarlessRoundedDoubleArch
+        );
         let mut parts = Vec::new();
-        if matches!(
-            variant.serif,
-            Serif::Serifed | Serif::TopLeftSerifed | Serif::TopLeftAndBottomRightSerifed
-        ) {
+        // `FullSerifs` leaves the top-left serif off an earless body; the
+        // settings that name it explicitly still draw it.
+        let wants_top_left = match variant.serif {
+            Serif::Serifed => !earless,
+            Serif::TopLeftSerifed | Serif::TopLeftAndBottomRightSerifed => true,
+            Serif::Serifless | Serif::BottomRightSerifed => false,
+        };
+        if wants_top_left {
             parts.push(self.top_left(top));
         }
         if variant.serif == Serif::Serifed {

@@ -2462,3 +2462,98 @@ pub fn dot_at(
 ) -> crate::spiro_kit::SpiroOutline {
     ring(kit, metrics, y + r, y - r, x - r, x + r)
 }
+
+/// `xLinkStroke`: the bar that ties a descender hook back to the stem.
+fn x_link_stroke(
+    kit: &Kit,
+    metrics: &Metrics,
+    x_link: Option<f64>,
+    x: f64,
+    y_attach: f64,
+    sw: f64,
+) -> Vec<Geometry> {
+    let half = 0.5 * sw * metrics.hv_contrast;
+    let Some(x_link) = x_link else {
+        return Vec::new();
+    };
+
+    vec![
+        hbar_b(
+            kit,
+            metrics,
+            x_link.min(x - half),
+            x_link.max(x + half),
+            y_attach,
+            Some(sw),
+        )
+        .geometry(kurbo::Affine::IDENTITY),
+    ]
+}
+
+/// `RetroflexHook`: the tail that turns right under the letter.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn retroflex_hook(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    x_link: Option<f64>,
+    y_attach: f64,
+    y_overflow: f64,
+    sw: f64,
+) -> Vec<Geometry> {
+    let full_depth = (-metrics.descender) - 0.5 * sw - metrics.o;
+    let start = y - (full_depth - metrics.tail_y);
+    let extension = (y_attach + y_overflow - y + (full_depth - metrics.tail_y)).max(0.0);
+    let mut parts = x_link_stroke(kit, metrics, x_link, x, y_attach, sw);
+    parts.push(
+        vertical_hook_m(
+            kit,
+            metrics,
+            x,
+            start,
+            metrics.tail_x,
+            metrics.tail_y,
+            sw,
+            extension,
+        )
+        .geometry(kurbo::Affine::IDENTITY),
+    );
+
+    parts
+}
+
+/// `PalatalHook`: the same hook turned left under the letter.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn palatal_hook(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    x_link: Option<f64>,
+    y_attach: f64,
+    y_overflow: f64,
+    sw: f64,
+) -> Vec<Geometry> {
+    let full_depth = (-metrics.descender) - 0.5 * sw - metrics.o;
+    let start = y - (full_depth - metrics.tail_y);
+    let extension = (y_attach + y_overflow - y + (full_depth - metrics.tail_y)).max(0.0);
+    let mut parts = x_link_stroke(kit, metrics, x_link, x, y_attach, sw);
+    parts.push(
+        vertical_hook_m(
+            kit,
+            metrics,
+            x,
+            start,
+            -metrics.tail_x,
+            metrics.tail_y,
+            sw,
+            extension,
+        )
+        .geometry(kurbo::Affine::IDENTITY),
+    );
+
+    parts
+}
