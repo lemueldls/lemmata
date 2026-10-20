@@ -144,3 +144,17 @@ fn the_registry_font_maps_the_variants() {
     }
     eprintln!("registry font: {} bytes", bytes.len());
 }
+
+#[test]
+fn a_preview_responds_to_the_plan() {
+    let Ok(capture) = fs::read(dump_path()) else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+
+    let light = lemmata_web::build_preview(&capture, "", "aaa").expect("preview");
+    let bold = lemmata_web::build_preview(&capture, r#"{"weight":700}"#, "aaa").expect("preview");
+    assert_ne!(light, bold, "the preview drew the same font at two weights");
+    read_fonts::FontRef::new(&light).expect("reopen the light preview");
+    read_fonts::FontRef::new(&bold).expect("reopen the bold preview");
+}

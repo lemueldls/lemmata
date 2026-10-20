@@ -20,6 +20,7 @@ defineEmits<{ build: [] }>();
 
 const SAMPLE = `the quick brown fox
 jumps over the lazy dog
+if (a <= b) return a
 0123456789 ():;,."'*`;
 
 const rows = computed(() => [
@@ -78,16 +79,25 @@ const rows = computed(() => [
         class="build-card__sample"
         :style="{
           '--preview': preview,
-          fontSize: `${Math.round(specimenSize * 0.65)}px`,
+          fontSize: `${Math.round(specimenSize * 0.72)}px`,
         }"
       >
         {{ SAMPLE }}
       </div>
+      <div class="build-card__sample-foot">
+        <span>{{ bytes ? "built file" : "site face" }}</span>
+        <span>{{ specimenSize }} px</span>
+      </div>
     </div>
 
     <div class="build-card__foot">
-      <span>size {{ specimenSize }} px</span>
-      <input v-model.number="specimenSize" type="range" min="12" max="80" step="1" />
+      <RangeControl
+        v-model="specimenSize"
+        label="size"
+        unit="px"
+        :min="12"
+        :max="80"
+      />
     </div>
   </div>
 </template>

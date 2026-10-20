@@ -7,6 +7,27 @@
 
 import { expect, test } from "@playwright/test";
 
+test("the plus marks sit on one column grid", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".grid-guide__cross").first().waitFor();
+
+  const xs = await page.evaluate(() =>
+    [
+      ...new Set(
+        [...document.querySelectorAll(".grid-guide__cross")].map((cross) => {
+          const box = cross.getBoundingClientRect();
+
+          return Math.round(box.left + box.width / 2);
+        }),
+      ),
+    ].sort((left, right) => left - right),
+  );
+
+  expect(xs).toHaveLength(5);
+  expect(xs[0]).toBeGreaterThan(0);
+  expect(xs[4]).toBeLessThan(1440);
+});
+
 test("the index equation is set in the face the page loaded", async ({ page }) => {
   const failures = [];
   page.on("console", (message) => {

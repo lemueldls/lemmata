@@ -24,7 +24,7 @@ const LABELS = [
   "matrix",
 ];
 
-const PICKS = [3, 4, 5, 11, 6];
+const PICKS = [3, 4, 5, 6, 11, 10];
 
 const shown = computed(() =>
   PICKS.map((index) => ({
@@ -38,10 +38,9 @@ const shown = computed(() =>
 <template>
   <div class="eq-grid">
     <figure
-      v-for="(equation, index) in shown"
+      v-for="equation in shown"
       :key="equation.label"
       class="eq-card"
-      :class="{ 'eq-card--wide': shown.length % 2 === 1 && index === shown.length - 1 }"
     >
       <figcaption class="eq-card__bar">
         <span>{{ equation.label }}</span>

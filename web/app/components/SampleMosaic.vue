@@ -10,7 +10,6 @@ interface Sample {
   category: "code" | "text" | "data";
   lang: string | null;
   source: string;
-  span: "wide" | "full" | "normal";
 }
 
 interface Block extends Sample {
@@ -22,7 +21,6 @@ const SAMPLES: Sample[] = [
     kind: "python",
     category: "code",
     lang: "python",
-    span: "normal",
     source: `# bisect a span until it is small
 def root(f, a, b, eps):
     while b - a > eps:
@@ -37,7 +35,6 @@ def root(f, a, b, eps):
     kind: "shell",
     category: "code",
     lang: "shellscript",
-    span: "normal",
     source: `$ lemmata build --plan plan.json
 wrote lemmata.ttf
 127 glyphs / 18104 bytes / 41 ms
@@ -47,7 +44,6 @@ $ open lemmata.ttf`,
     kind: "prose",
     category: "text",
     lang: null,
-    span: "wide",
     source: `the quick brown fox jumps over
 the lazy dog, then turns around
 and does the whole thing again`,
@@ -56,7 +52,6 @@ and does the whole thing again`,
     kind: "table",
     category: "data",
     lang: null,
-    span: "normal",
     source: `part      qty   price
 ------    ---   -----
 bolt       12    3.40
@@ -67,7 +62,6 @@ cog        40    0.75`,
     kind: "diff",
     category: "code",
     lang: "diff",
-    span: "normal",
     source: `@@ cap height @@
 -735
 +748
@@ -79,7 +73,6 @@ cog        40    0.75`,
     kind: "config",
     category: "data",
     lang: null,
-    span: "normal",
     source: `weight      400
 spacing     normal
 capHeight   735
@@ -91,7 +84,6 @@ descender   -215`,
     kind: "editorial",
     category: "text",
     lang: null,
-    span: "wide",
     source: `a typeface is a set of decisions.
 the page is where they show, line
 after line, at the size you chose.`,
@@ -100,7 +92,6 @@ after line, at the size you chose.`,
     kind: "metrics",
     category: "data",
     lang: null,
-    span: "normal",
     source: `glyphs      127
 characters  59
 units/em    1000
@@ -111,7 +102,6 @@ math        yes`,
     kind: "lean",
     category: "code",
     lang: "lean4",
-    span: "normal",
     source: `example : 2 + 3 = 5 := by decide
 
 example : 6 * 7 = 42 := by
@@ -122,7 +112,6 @@ example : 6 * 7 = 42 := by
     kind: "alphabet",
     category: "text",
     lang: null,
-    span: "normal",
     source: `abcdefghijklmnopqrstuvwxyz
 0123456789
 the quick brown fox`,
@@ -131,7 +120,6 @@ the quick brown fox`,
     kind: "interface",
     category: "text",
     lang: null,
-    span: "normal",
     source: `save changes
 build again
 your file is ready`,
@@ -195,10 +183,6 @@ function chars(source: string): number {
       v-for="block in shown"
       :key="block.kind"
       class="sample"
-      :class="{
-        'sample--wide': block.span === 'wide',
-        'sample--full': block.span === 'full',
-      }"
     >
       <header class="sample__head">
         <span class="sample__kind">{{ block.kind }}</span>
