@@ -1,12 +1,12 @@
-//! The lower-case `m` from `letter/latin/lower-m.ptl`, the arches body.
+//! The lower-case `m` from `letter/latin/lower-m.ptl`.
 //!
-//! `m` is a left stem and two shoulders drawn as closed spi ro outlines. The
-//! file's table has a hundred entries across five bodies, two leg heights, two
-//! tails and five serif settings; this module ports the arches body with the
-//! serifless and serifed settings.
+//! `m` is a left stem and two shoulders; the bodies differ in how the shoulders
+//! close and how tall the middle leg is. Two of the file's five bodies are
+//! ported, the arches and the flat top, with both leg heights, both terminals
+//! and all five serif settings. `meng` is ported with them.
 //!
-//! The other bodies, the tails, `meng`, `mCrossedTail` and the turned forms are
-//! not ported. The anchors are not either.
+//! The three earless bodies, `mCrossedTail`, the Cyrillic forms and the turned
+//! family are not ported. The anchors are not either.
 
 // The arithmetic mirrors upstream's expression order and stays clear of fused
 // multiply-add, which would round differently from JavaScript.
@@ -18,19 +18,84 @@ use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::metrics::Metrics;
 use lemmata_ptl::serif::SerifFrame;
 use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::{Kit, SpiroOutline};
-use lemmata_ptl::util::mix;
+use lemmata_ptl::spiro_kit::Kit;
+use lemmata_ptl::util::{join_camel, mix};
 
-/// The two serif settings ported.
+/// The two bodies ported.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Body {
+    Arches,
+    FlatTop,
+}
+
+/// The five serif settings.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Serif {
     Serifless,
     Serifed,
+    TopLeftSerifed,
+    BottomRightSerifed,
+    TopLeftAndBottomRightSerifed,
 }
 
-/// The variants, in the table's order.
-pub const VARIANTS: &[(&str, Serif)] =
-    &[("serifless", Serif::Serifless), ("serifed", Serif::Serifed)];
+/// One row of the table.
+#[derive(Clone, Copy, Debug)]
+pub struct Variant {
+    pub body: Body,
+    pub short_leg: bool,
+    pub tailed: bool,
+    pub serif: Serif,
+}
+
+/// The bodies, in the table's order.
+pub const BODIES: &[(&str, Body)] = &[("", Body::Arches), ("flatTop", Body::FlatTop)];
+
+/// The leg heights, in the table's order.
+pub const LEGS: &[(&str, bool)] = &[("", false), ("shortLeg", true)];
+
+/// The terminals, in the table's order.
+pub const TERMINALS: &[(&str, bool)] = &[("", false), ("tailed", true)];
+
+/// The serifs, in the table's order.
+pub const SERIFS: &[(&str, Serif)] = &[
+    ("serifless", Serif::Serifless),
+    ("serifed", Serif::Serifed),
+    ("topLeftSerifed", Serif::TopLeftSerifed),
+    ("bottomRightSerifed", Serif::BottomRightSerifed),
+    (
+        "topLeftAndBottomRightSerifed",
+        Serif::TopLeftAndBottomRightSerifed,
+    ),
+];
+
+/// Every variant the table names, as `(suffix, variant)` pairs.
+#[must_use]
+pub fn variants() -> Vec<(String, Variant)> {
+    let mut out = Vec::new();
+    for (body_key, body) in BODIES {
+        for (leg_key, short_leg) in LEGS {
+            for (terminal_key, tailed) in TERMINALS {
+                for (serif_key, serif) in SERIFS {
+                    let suffix = join_camel(
+                        &join_camel(&join_camel(body_key, leg_key), terminal_key),
+                        serif_key,
+                    );
+                    out.push((
+                        suffix,
+                        Variant {
+                            body: *body,
+                            short_leg: *short_leg,
+                            tailed: *tailed,
+                            serif: *serif,
+                        },
+                    ));
+                }
+            }
+        }
+    }
+
+    out
+}
 
 /// One shoulder: the parameters its outline reads.
 #[derive(Clone, Copy, Debug)]
@@ -73,6 +138,10 @@ impl LowerM<'_> {
         df.width - df.sb
     }
 
+    fn adjust_x_top(&self, x: f64, sw: f64) -> f64 {
+        x - self.metrics.correction_o_mid_x * sw
+    }
+
     /// `SmallMSmoothA`.
     fn smooth_a(&self) -> f64 {
         let df = self.frame();
@@ -87,6 +156,22 @@ impl LowerM<'_> {
 
         df.slice(Some(3.0), Some(2.0), None)
             .arch_depth_b_of(self.metrics.small_arch_depth, Some(df.mvs))
+    }
+
+    /// `SmallMShortLegHeight`.
+    fn short_leg_height(&self, top: f64) -> f64 {
+        let df = self.frame();
+
+        mix(0.0, top - df.mvs, 0.45)
+    }
+
+    /// `SmallMSmoothHeight`.
+    fn smooth_height(&self, top: f64) -> f64 {
+        let df = self.frame();
+
+        top - self.smooth_b()
+            - self.metrics.tiny
+            - self.hsw_to_v(self.metrics.tan_slope.abs() * df.mvs)
     }
 
     /// `SmallMShoulderSpiro`.
@@ -175,10 +260,6 @@ impl LowerM<'_> {
         ]
     }
 
-    fn shoulder(&self, shoulder: &Shoulder) -> SpiroOutline {
-        self.kit.spiro_outline(self.shoulder_items(shoulder))
-    }
-
     /// `SmallMArches`: the left stem and the two shoulders.
     #[must_use]
     pub fn arches(&self, top: f64, lbot: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
@@ -188,7 +269,7 @@ impl LowerM<'_> {
         let fine = sw * (metrics.shoulder_fine / metrics.stroke);
         let stem = shapes::vbar_l(self.kit, metrics, df.sb, lbot, top, sw)
             .geometry(kurbo::Affine::IDENTITY);
-        let left_shoulder = self.shoulder(&Shoulder {
+        let left_shoulder = self.kit.spiro_outline(self.shoulder_items(&Shoulder {
             left: df.sb + self.hsw_to_v(sw - fine),
             right: self.middle() + self.hsw_to_v(0.5 * sw),
             fine,
@@ -198,8 +279,8 @@ impl LowerM<'_> {
             adb: self.smooth_b(),
             stroke: sw,
             left_y0: None,
-        });
-        let right_shoulder = self.shoulder(&Shoulder {
+        }));
+        let right_shoulder = self.kit.spiro_outline(self.shoulder_items(&Shoulder {
             left: self.middle() + self.hsw_to_v(0.5 * sw - fine),
             right: self.right_sb(),
             fine,
@@ -209,7 +290,7 @@ impl LowerM<'_> {
             adb: self.smooth_b(),
             stroke: sw,
             left_y0: Some(mbot),
-        });
+        }));
 
         vec![
             stem,
@@ -226,6 +307,72 @@ impl LowerM<'_> {
         ]
     }
 
+    /// `FlatTopSmallMShape`.
+    #[must_use]
+    pub fn flat_top(&self, top: f64, lbot: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
+        let metrics = self.metrics;
+        let df = self.frame();
+        let sw = df.mvs;
+        let adb = self.smooth_b();
+        let arch = self.kit.dispiro(vec![
+            Item::Af(self.kit.widths_rhs(Some(sw))),
+            self.kit.knot(
+                KnotType::Left,
+                df.sb + metrics.tiny,
+                top,
+                self.kit.heading(shapes::rightward()),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                self.adjust_x_top(
+                    mix(
+                        self.middle() - self.hsw_to_v(0.5 * sw),
+                        self.right_sb(),
+                        0.5,
+                    ),
+                    sw,
+                ),
+                top,
+                Vec::new(),
+            ),
+            self.kit.archv(None, None),
+            self.kit.knot(
+                KnotType::Left,
+                self.right_sb(),
+                (top - adb).max(rbot + metrics.tiny),
+                Vec::new(),
+            ),
+            self.kit.knot(
+                KnotType::Right,
+                self.right_sb(),
+                rbot,
+                self.kit.heading(shapes::downward(metrics.hv_contrast)),
+            ),
+        ]);
+
+        vec![
+            Geometry::Tagged(Box::new(
+                shapes::vbar_l(self.kit, metrics, df.sb, lbot, top, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+            )),
+            Geometry::Tagged(Box::new(
+                shapes::vbar_m(self.kit, metrics, self.middle(), mbot, top - 0.25 * sw, sw)
+                    .geometry(kurbo::Affine::IDENTITY),
+            )),
+            arch.geometry(kurbo::Affine::IDENTITY),
+        ]
+    }
+
+    /// The body the variant selects.
+    fn body(&self, variant: Variant, top: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
+        let lbot = 0.0;
+
+        match variant.body {
+            Body::Arches => self.arches(top, lbot, mbot, rbot),
+            Body::FlatTop => self.flat_top(top, lbot, mbot, rbot),
+        }
+    }
+
     /// `MEnoughSpaceForFullSerifs`.
     fn enough_space_for_full_serifs(&self) -> bool {
         let df = self.frame();
@@ -239,39 +386,126 @@ impl LowerM<'_> {
         SerifFrame::from_df(self.metrics, &self.frame(), top, bot, None, None, false)
     }
 
-    /// `FullSerifs` for the plain body.
-    fn full_serifs(&self, top: f64, lbot: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
-        let metrics = self.metrics;
-        let full = self.enough_space_for_full_serifs();
-        let mut parts = vec![self.serif_frame(top, 0.0).lt_outer(self.kit, metrics)];
-        parts.push(if full {
-            self.serif_frame(top, lbot).lb_full(self.kit, metrics)
-        } else {
-            self.serif_frame(top, lbot).lb_outer(self.kit, metrics)
-        });
-        // `SmallMBottomMiddleSerif` draws only when the space carries a full
-        // serif; otherwise the middle bar has none.
+    fn top_left(&self, top: f64) -> Geometry {
+        self.serif_frame(top, 0.0).lt_outer(self.kit, self.metrics)
+    }
+
+    fn bottom_left(&self, top: f64, lbot: f64, full: bool) -> Geometry {
         if full {
-            parts.push(self.serif_frame(top, mbot).mb_full(self.kit, metrics));
-        }
-        parts.push(if full {
-            self.serif_frame(top, rbot).rb_full(self.kit, metrics)
+            self.serif_frame(top, lbot).lb_full(self.kit, self.metrics)
         } else {
-            self.serif_frame(top, rbot).rb_outer(self.kit, metrics)
-        });
+            self.serif_frame(top, lbot).lb_outer(self.kit, self.metrics)
+        }
+    }
+
+    fn bottom_right(&self, top: f64, rbot: f64, full: bool) -> Geometry {
+        if full {
+            self.serif_frame(top, rbot).rb_full(self.kit, self.metrics)
+        } else {
+            self.serif_frame(top, rbot).rb_outer(self.kit, self.metrics)
+        }
+    }
+
+    /// The serif setting's shapes.
+    fn serifs(
+        &self,
+        variant: Variant,
+        top: f64,
+        mbot: f64,
+        rbot: f64,
+        include_rb: bool,
+    ) -> Vec<Geometry> {
+        if variant.serif == Serif::Serifless {
+            return Vec::new();
+        }
+        let full = self.enough_space_for_full_serifs();
+        let left_full = full || variant.short_leg;
+        let mut parts = Vec::new();
+        if matches!(
+            variant.serif,
+            Serif::Serifed | Serif::TopLeftSerifed | Serif::TopLeftAndBottomRightSerifed
+        ) {
+            parts.push(self.top_left(top));
+        }
+        if variant.serif == Serif::Serifed {
+            parts.push(self.bottom_left(top, 0.0, left_full));
+            if full {
+                parts.push(self.serif_frame(top, mbot).mb_full(self.kit, self.metrics));
+            }
+            if !variant.tailed && include_rb {
+                parts.push(self.bottom_right(top, rbot, left_full));
+            }
+        }
+        if matches!(
+            variant.serif,
+            Serif::BottomRightSerifed | Serif::TopLeftAndBottomRightSerifed
+        ) {
+            parts.push(self.serif_frame(top, rbot).rb_outer(self.kit, self.metrics));
+        }
 
         parts
     }
 
+    /// `m.<suffix>`, with the right-bottom serif optional so `meng` can leave it
+    /// out without the tag, which the geometry does not carry.
+    fn glyph_inner(&self, variant: Variant, include_rb: bool) -> Geometry {
+        let metrics = self.metrics;
+        let df = self.frame();
+        let top = metrics.xh;
+        let mbot = if variant.short_leg {
+            self.short_leg_height(top)
+        } else {
+            0.0
+        };
+        let smooth_height = self.smooth_height(top);
+        let rbot = if variant.tailed {
+            smooth_height + metrics.o
+        } else {
+            0.0
+        };
+        let mut parts = self.body(variant, top, mbot, rbot);
+        if variant.tailed {
+            parts.push(
+                shapes::rightward_tailed_bar(
+                    self.kit,
+                    metrics,
+                    &df,
+                    self.right_sb(),
+                    0.0,
+                    smooth_height,
+                    df.mvs,
+                )
+                .geometry(kurbo::Affine::IDENTITY),
+            );
+        }
+        parts.extend(self.serifs(variant, top, mbot, rbot, include_rb));
+
+        Geometry::Combine(parts)
+    }
+
     /// `m.<suffix>`.
     #[must_use]
-    pub fn glyph(&self, serif: Serif) -> Geometry {
+    pub fn glyph(&self, variant: Variant) -> Geometry {
+        self.glyph_inner(variant, true)
+    }
+
+    /// `meng.<suffix>`, which the untailed half gets.
+    #[must_use]
+    pub fn eng(&self, variant: Variant) -> Geometry {
         let metrics = self.metrics;
-        let top = metrics.xh;
-        let mut parts = self.arches(top, 0.0, 0.0, 0.0);
-        if serif == Serif::Serifed {
-            parts.extend(self.full_serifs(top, 0.0, 0.0, 0.0));
-        }
+        let base = self.glyph_inner(variant, false);
+        let mut parts = vec![base];
+        parts.push(
+            shapes::eng_hook(
+                self.kit,
+                metrics,
+                self.right_sb(),
+                0.0,
+                metrics.descender,
+                self.frame().mvs,
+            )
+            .geometry(kurbo::Affine::IDENTITY),
+        );
 
         Geometry::Combine(parts)
     }
@@ -280,8 +514,11 @@ impl LowerM<'_> {
     #[must_use]
     pub fn glyphs(&self) -> Vec<(String, Geometry)> {
         let mut out = Vec::new();
-        for (suffix, serif) in VARIANTS {
-            out.push((format!("m.{suffix}"), self.glyph(*serif)));
+        for (suffix, variant) in variants() {
+            out.push((format!("m.{suffix}"), self.glyph(variant)));
+            if !variant.tailed {
+                out.push((format!("meng.{suffix}"), self.eng(variant)));
+            }
         }
 
         out
