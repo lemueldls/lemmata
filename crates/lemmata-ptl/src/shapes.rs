@@ -2557,3 +2557,123 @@ pub fn palatal_hook(
 
     parts
 }
+
+/// What `CurlyTail` reads: the widths and the endpoints of the curl.
+#[derive(Clone, Copy, Debug)]
+pub struct CurlyTailArgs {
+    pub fine: f64,
+    pub bottom: f64,
+    pub x_outer: f64,
+    pub x2: f64,
+    /// The terminal's height, required by the non-flat form.
+    pub y2: Option<f64>,
+    pub y_loop_top: Option<f64>,
+    pub sw_before: f64,
+    pub terminal_slope_adj: f64,
+    /// The `f` form draws a flat pair at the loop's top instead of an arch.
+    pub flat: bool,
+}
+
+/// `CurlyTail`: the items a tail appends to the knot it attaches to.
+///
+/// Upstream this is a `FunctionInterpolator` whose blender reads the knot
+/// before it, so the port takes that knot as an argument and resolves the two
+/// arches against it.
+#[must_use]
+pub fn curly_tail(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    before: &UserControlKnot,
+    args: &CurlyTailArgs,
+) -> Vec<Item> {
+    let ltr = args.x_outer > before.x;
+    let r_inner = 0.5 * (args.x_outer - before.x).abs() - args.fine * metrics.hv_contrast;
+    let top = args
+        .y_loop_top
+        .unwrap_or(args.bottom + 2.0 * (args.fine + r_inner));
+    let y_outer = if ltr {
+        ysmooth_mid_r(
+            top,
+            args.bottom,
+            Some(metrics.arch_depth_a),
+            Some(metrics.arch_depth_b),
+            metrics.arch_depth_a,
+            metrics.arch_depth_b,
+        )
+    } else {
+        ysmooth_mid_l(
+            top,
+            args.bottom,
+            Some(metrics.arch_depth_a),
+            Some(metrics.arch_depth_b),
+            metrics.arch_depth_a,
+            metrics.arch_depth_b,
+        )
+    };
+    let params = ArchParams {
+        superness: design.superness,
+        tan_slope: metrics.tan_slope,
+        hv_contrast: metrics.hv_contrast,
+        o: metrics.o,
+        correction_o_mid_x: metrics.correction_o_mid_x,
+    };
+    let arch_args = |y: f64, blend_post: Option<bool>| ArchArgs {
+        y,
+        p: None,
+        sw: args.fine,
+        compact: false,
+        o: metrics.o,
+        angle_pre: None,
+        angle_post: None,
+        blend_pre: None,
+        blend_post,
+        sw_before: Some(args.sw_before),
+        sw_after: Some(args.fine),
+        lhs: ltr,
+    };
+    let outer = UserControlKnot {
+        ty: KnotType::G4,
+        x: args.x_outer,
+        y: y_outer,
+        af: Vec::new(),
+    };
+    let mut items = arch(kit, &arch_args(args.bottom, None), before, &outer, &params);
+    items.push(kit.knot(outer.ty, outer.x, outer.y, Vec::new()));
+    if args.flat {
+        items.push(kit.knot(
+            KnotType::Left,
+            mix(args.x_outer, before.x, 0.5) - metrics.correction_o_mid_x * args.fine,
+            top,
+            Vec::new(),
+        ));
+        items.push(kit.knot(KnotType::Right, args.x2, top, Vec::new()));
+    } else {
+        let y2 = args.y2.unwrap_or(0.0);
+        let delta_y = 0.01;
+        let delta_x = delta_y
+            * args.terminal_slope_adj
+            * ((mix(before.x, args.x_outer, 0.5) - args.x2) / (top - y2));
+        let mock = UserControlKnot {
+            ty: KnotType::G2,
+            x: mix(args.x2, args.x_outer, 0.33),
+            y: args.bottom,
+            af: Vec::new(),
+        };
+        items.extend(arch(
+            kit,
+            &ArchArgs {
+                sw_before: Some(args.fine),
+                blend_post: Some(false),
+                ..arch_args(top, Some(false))
+            },
+            &outer,
+            &mock,
+            &params,
+        ));
+        items.push(kit.knot(KnotType::G2, args.x2 + delta_x, y2 + delta_y, Vec::new()));
+        items.push(kit.knot(KnotType::G2, args.x2, y2, Vec::new()));
+    }
+
+    items
+}
