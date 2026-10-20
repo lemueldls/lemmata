@@ -40,31 +40,41 @@ const state = reactive<FontState>({
   progress: 0.03,
 });
 
-/// Reads a response in chunks, counting them from the declared length.
-async function download(response: Response, upTo: number): Promise<Uint8Array> {
-  const declared = Number(response.headers.get("content-length") ?? 0);
-  const reader = response.body?.getReader();
+/// A dev tool that restarts under a page can leave a request open forever. The
+/// read is small, so a timeout is cheaper than a stuck status line.
+const FILE_TIMEOUT = 10_000;
+const FACE_TIMEOUT = 5_000;
 
-  if (!reader) return new Uint8Array(await response.arrayBuffer());
+function after<T>(work: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    work,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
 
-  const chunks: Uint8Array[] = [];
-  let seen = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    seen += value.length;
-    if (declared > 0) state.progress = Math.min(upTo, (seen / declared) * upTo);
+async function fetchFont(url: string): Promise<Uint8Array> {
+  const once = async (): Promise<Uint8Array> => {
+    const response = await after(fetch(url), FILE_TIMEOUT, "the font file did not arrive");
+    if (!response.ok) throw new Error(`the font file answered ${response.status}`);
+    const buffer = await after(
+      response.arrayBuffer(),
+      FILE_TIMEOUT,
+      "the font file stopped arriving",
+    );
+
+    return new Uint8Array(buffer);
+  };
+
+  try {
+    return await once();
+  } catch {
+    // One retry covers a page opened while the dev tool is restarting.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    return once();
   }
-
-  const bytes = new Uint8Array(seen);
-  let at = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, at);
-    at += chunk.length;
-  }
-
-  return bytes;
 }
 
 const DECLARED = "/fonts/lemmata.ttf";
@@ -100,10 +110,9 @@ async function load(): Promise<void> {
   const started = performance.now();
   try {
     const url = servedUrl("Lemmata") ?? DECLARED;
-    const response = await fetch(url);
-    const bytes = await download(response, 0.8);
+    const bytes = await fetchFont(url);
     state.byteLength = bytes.length;
-    state.progress = 0.84;
+    state.progress = 0.6;
 
     const map = cmap(bytes);
     const vertical = verticalMetrics(bytes);
@@ -117,9 +126,17 @@ async function load(): Promise<void> {
       descender: vertical.descender,
       advance: advance(map, bytes, "x"),
     };
-    state.progress = 0.93;
+    state.progress = 0.85;
 
-    await document.fonts.load('100px "Lemmata"', "lemmata");
+    // A face that has not painted yet should not hold the page at "loading".
+    // The tables above are already read, and the CSS will swap the face in when
+    // it is ready.
+    await after(
+      document.fonts.load('100px "Lemmata"', "lemmata"),
+      FACE_TIMEOUT,
+      "the face took too long to paint",
+    ).catch(() => {});
+
     state.progress = 1;
     state.elapsed = performance.now() - started;
     state.ready = true;
