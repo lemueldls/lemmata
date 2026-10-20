@@ -271,10 +271,9 @@ impl LowerM<'_> {
 
     /// `SmallMArches`: the left stem and the two shoulders.
     #[must_use]
-    pub fn arches(&self, top: f64, lbot: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
+    pub fn arches(&self, top: f64, lbot: f64, mbot: f64, rbot: f64, sw: f64) -> Vec<Geometry> {
         let metrics = self.metrics;
         let df = self.frame();
-        let sw = df.mvs;
         let fine = sw * (metrics.shoulder_fine / metrics.stroke);
         let stem = shapes::vbar_l(self.kit, metrics, df.sb, lbot, top, sw)
             .geometry(kurbo::Affine::IDENTITY);
@@ -318,10 +317,9 @@ impl LowerM<'_> {
 
     /// `FlatTopSmallMShape`.
     #[must_use]
-    pub fn flat_top(&self, top: f64, lbot: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
+    pub fn flat_top(&self, top: f64, lbot: f64, mbot: f64, rbot: f64, sw: f64) -> Vec<Geometry> {
         let metrics = self.metrics;
         let df = self.frame();
-        let sw = df.mvs;
         let adb = self.smooth_b();
         let arch = self.kit.dispiro(vec![
             Item::Af(self.kit.widths_rhs(Some(sw))),
@@ -384,23 +382,27 @@ impl LowerM<'_> {
         }
     }
 
-    fn arch_after(&self, y: f64, before: &UserControlKnot, after: &UserControlKnot) -> Vec<Item> {
-        let df = self.frame();
-
+    fn arch_after(
+        &self,
+        y: f64,
+        before: &UserControlKnot,
+        after: &UserControlKnot,
+        sw: f64,
+    ) -> Vec<Item> {
         shapes::arch(
             self.kit,
             &shapes::ArchArgs {
                 y,
                 p: None,
-                sw: df.mvs,
+                sw,
                 compact: false,
                 o: self.metrics.o,
                 angle_pre: None,
                 angle_post: None,
                 blend_pre: Some(false),
                 blend_post: None,
-                sw_before: Some(df.mvs),
-                sw_after: Some(df.mvs),
+                sw_before: Some(sw),
+                sw_after: Some(sw),
                 lhs: false,
             },
             before,
@@ -411,10 +413,16 @@ impl LowerM<'_> {
 
     /// `EarlessSingleArchSmallMShape`.
     #[must_use]
-    pub fn earless_single_arch(&self, top: f64, lbot: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
+    pub fn earless_single_arch(
+        &self,
+        top: f64,
+        lbot: f64,
+        mbot: f64,
+        rbot: f64,
+        sw: f64,
+    ) -> Vec<Geometry> {
         let metrics = self.metrics;
         let df = self.frame();
-        let sw = df.mvs;
         let rise = metrics.d_toothless_rise;
         let adb = self.smooth_b();
         let before = UserControlKnot {
@@ -433,7 +441,7 @@ impl LowerM<'_> {
             Item::Af(self.kit.widths_rhs(Some(sw))),
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
-        items.extend(self.arch_after(top, &before, &after));
+        items.extend(self.arch_after(top, &before, &after, sw));
         items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
         items.push(self.kit.knot(
             KnotType::Right,
@@ -456,10 +464,9 @@ impl LowerM<'_> {
     }
 
     /// `leftKnots` of `EarlessCornerDoubleArchSmallMShape`.
-    fn corner_left(&self, top: f64, mbot: f64, offset: f64, outline: bool) -> Vec<Item> {
+    fn corner_left(&self, top: f64, mbot: f64, offset: f64, outline: bool, sw: f64) -> Vec<Item> {
         let metrics = self.metrics;
         let df = self.frame();
-        let sw = df.mvs;
         let rise = metrics.d_toothless_rise;
         let adb = self.smooth_b();
         let x = self.middle() + self.hsw_to_v(0.5 * sw) - offset;
@@ -489,7 +496,7 @@ impl LowerM<'_> {
             Item::Af(self.kit.widths_rhs(Some(sw))),
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
-        items.extend(self.arch_after(top, &before, &after));
+        items.extend(self.arch_after(top, &before, &after, sw));
         items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
         items.push(self.kit.knot(
             end_ty,
@@ -508,10 +515,8 @@ impl LowerM<'_> {
     }
 
     /// `rightKnots` of `EarlessCornerDoubleArchSmallMShape`.
-    fn corner_right(&self, top: f64, rbot: f64) -> Vec<Item> {
+    fn corner_right(&self, top: f64, rbot: f64, sw: f64) -> Vec<Item> {
         let metrics = self.metrics;
-        let df = self.frame();
-        let sw = df.mvs;
         let rise = metrics.d_toothless_rise;
         let adb = self.smooth_b();
         let x_mid_left = self.middle() - self.hsw_to_v(0.5 * sw);
@@ -537,7 +542,7 @@ impl LowerM<'_> {
             ),
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
-        items.extend(self.arch_after(top, &before, &after));
+        items.extend(self.arch_after(top, &before, &after, sw));
         items.push(self.kit.knot(after.ty, after.x, after.y, Vec::new()));
         items.push(self.kit.knot(
             KnotType::Right,
@@ -557,16 +562,18 @@ impl LowerM<'_> {
         lbot: f64,
         mbot: f64,
         rbot: f64,
+        sw: f64,
     ) -> Vec<Geometry> {
         let metrics = self.metrics;
         let df = self.frame();
-        let sw = df.mvs;
         let rise = metrics.d_toothless_rise;
-        let left = self.kit.dispiro(self.corner_left(top, mbot, 0.0, false));
+        let left = self
+            .kit
+            .dispiro(self.corner_left(top, mbot, 0.0, false, sw));
         let left_outline = self
             .kit
-            .spiro_outline(self.corner_left(top, mbot, 0.1, true));
-        let right = self.kit.dispiro(self.corner_right(top, rbot));
+            .spiro_outline(self.corner_left(top, mbot, 0.1, true, sw));
+        let right = self.kit.dispiro(self.corner_right(top, rbot, sw));
         let difference = lemmata_ptl::glyph::difference(vec![
             right.geometry(kurbo::Affine::IDENTITY),
             Geometry::Spiro {
@@ -676,10 +683,10 @@ impl LowerM<'_> {
         lbot: f64,
         mbot: f64,
         rbot: f64,
+        sw: f64,
     ) -> Vec<Geometry> {
         let metrics = self.metrics;
         let df = self.frame();
-        let sw = df.mvs;
         let fine = sw * metrics.c_thin;
         let rev = self.kit.spiro_outline(self.rev_shoulder_items(
             &Shoulder {
@@ -722,16 +729,18 @@ impl LowerM<'_> {
     }
 
     /// The body the variant selects.
-    fn body(&self, variant: Variant, top: f64, mbot: f64, rbot: f64) -> Vec<Geometry> {
+    fn body(&self, variant: Variant, top: f64, mbot: f64, rbot: f64, sw: f64) -> Vec<Geometry> {
         let lbot = 0.0;
 
         match variant.body {
-            Body::Arches => self.arches(top, lbot, mbot, rbot),
-            Body::FlatTop => self.flat_top(top, lbot, mbot, rbot),
-            Body::EarlessSingleArch => self.earless_single_arch(top, lbot, mbot, rbot),
-            Body::EarlessCornerDoubleArch => self.earless_corner_double_arch(top, lbot, mbot, rbot),
+            Body::Arches => self.arches(top, lbot, mbot, rbot, sw),
+            Body::FlatTop => self.flat_top(top, lbot, mbot, rbot, sw),
+            Body::EarlessSingleArch => self.earless_single_arch(top, lbot, mbot, rbot, sw),
+            Body::EarlessCornerDoubleArch => {
+                self.earless_corner_double_arch(top, lbot, mbot, rbot, sw)
+            }
             Body::EarlessRoundedDoubleArch => {
-                self.earless_rounded_double_arch(top, lbot, mbot, rbot)
+                self.earless_rounded_double_arch(top, lbot, mbot, rbot, sw)
             }
         }
     }
@@ -836,7 +845,7 @@ impl LowerM<'_> {
         } else {
             0.0
         };
-        let mut parts = self.body(variant, top, mbot, rbot);
+        let mut parts = self.body(variant, top, mbot, rbot, df.mvs);
         if variant.tailed {
             parts.push(
                 shapes::rightward_tailed_bar(
