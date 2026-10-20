@@ -1,22 +1,107 @@
 //! The `lemmata` command line tool.
 //!
-//! For now it builds a font from a glyph capture. The plan's argument parser
-//! and the rest of the commands come later.
+//! The arguments, `--help`, `--version` and shell completions come from
+//! `figue`, so a command is a struct and a flag is a field. `build` is the only
+//! command so far.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use facet::Facet;
+use figue as args;
 use lemmata_build::font::{GlyphData, Names};
 use lemmata_ptl::param::Shape;
 
+/// The command line.
+#[derive(Debug, Facet)]
+struct Cli {
+    /// Standard `--help`, `--version` and shell completion flags.
+    #[facet(flatten)]
+    builtins: args::FigueBuiltins,
+
+    /// The command to run.
+    #[facet(args::subcommand)]
+    command: Command,
+}
+
+/// What the tool can do.
+#[derive(Debug, Facet)]
+#[repr(u8)]
+enum Command {
+    /// Build a font from a glyph capture and a plan.
+    Build(Build),
+}
+
+/// Build a font.
+#[derive(Debug, Facet)]
+struct Build {
+    /// Glyph capture to read.
+    #[facet(args::named, default = "target/glyphs.bin")]
+    glyphs: String,
+
+    /// Font to write; a `.woff2` extension compresses it.
+    #[facet(args::named, default = "target/Lemmata-Regular.ttf")]
+    out: String,
+
+    /// Family name for the output font.
+    #[facet(args::named, default = "Lemmata")]
+    family: String,
+
+    /// JSON plan for the font's metrics.
+    #[facet(args::named, default)]
+    plan: Option<String>,
+
+    /// Unicode ranges to keep, as `U+XXXX` or `U+XXXX-U+YYYY`, comma separated.
+    #[facet(args::named, default)]
+    subset: Option<String>,
+
+    /// Weight to draw, in hundreds. Names a shape upstream builds.
+    #[facet(args::named, default)]
+    weight: Option<f64>,
+
+    /// Width to draw, in font units.
+    #[facet(args::named, default)]
+    width: Option<f64>,
+
+    /// Slope to draw, in degrees.
+    #[facet(args::named, default)]
+    slope: Option<f64>,
+
+    /// Serif style to draw.
+    #[facet(args::named, default)]
+    serifs: Option<String>,
+
+    /// Spacing to draw.
+    #[facet(args::named, default)]
+    spacing: Option<String>,
+}
+
 fn main() -> ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    match run(&args) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(message) => {
-            eprintln!("lemmata: {message}");
-            ExitCode::FAILURE
-        }
+    // `unwrap` prints help, version or completions and exits for those, and
+    // prints a diagnostic and exits non-zero for a parse error.
+    let config = figue::builder::<Cli>()
+        .expect("the argument schema builds")
+        .cli(|cli| cli.args(std::env::args().skip(1)))
+        .help(|help| {
+            help.program_name("lemmata")
+                .version(env!("CARGO_PKG_VERSION"))
+                .description("A programmatic typeface factory.")
+        })
+        .build();
+    let cli = figue::Driver::new(config).run().unwrap();
+
+    run(cli)
+}
+
+fn run(cli: Cli) -> ExitCode {
+    match cli.command {
+        Command::Build(build) => match build_font(build) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(message) => {
+                eprintln!("lemmata: {message}");
+                ExitCode::FAILURE
+            }
+        },
     }
 }
 
@@ -24,46 +109,6 @@ fn main() -> ExitCode {
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn advance_to_u16(advance: f64) -> u16 {
     advance.round().clamp(0.0, f64::from(u16::MAX)) as u16
-}
-
-fn run(args: &[String]) -> Result<(), String> {
-    match args.first().map(String::as_str) {
-        Some("build") => build(&args[1..]),
-        Some("help" | "--help" | "-h") | None => {
-            println!("{USAGE}");
-            Ok(())
-        }
-        Some(other) => Err(format!("unknown command {other:?}\n{USAGE}")),
-    }
-}
-
-const USAGE: &str = "\
-Usage: lemmata build [--glyphs <capture>] [--out <font.ttf>] [--family <name>]
-
-  --glyphs  glyph capture to read (default target/glyphs.bin)
-  --out     font to write; a .woff2 extension compresses it (default
-            target/Lemmata-Regular.ttf)
-  --subset  Unicode ranges to keep, as U+XXXX or U+XXXX-U+YYYY, comma
-            separated (default: everything the capture holds)
-  --family  family name for the output font (default Lemmata)
-  --plan    JSON plan for the font's metrics (default: the reference plan)
-
-  --weight  weight to draw, in hundreds (default: the captured one)
-  --width   width to draw, in font units (default: the captured one)
-  --slope   slope to draw, in degrees (default: the captured one)
-  --serifs  serif style to draw (default: the captured one)
-  --spacing spacing to draw (default: the captured one)
-
-Naming any of the shape options asks for outlines nothing in the repository
-holds, so upstream's glyph code runs for that shape and the capture is cached
-under target/host. It needs the scratch build and IOSEVKA_BUILD_DIR.";
-
-/// A number from a command line argument.
-fn parse_number(value: &str, flag: &str) -> Result<f64, String> {
-    value
-        .trim()
-        .parse::<f64>()
-        .map_err(|_| format!("{flag} wants a number, not {value:?}"))
 }
 
 /// The Unicode ranges a `--subset` argument names.
@@ -89,55 +134,52 @@ fn parse_ranges(text: &str) -> Result<Vec<(u32, u32)>, String> {
         .collect()
 }
 
-fn build(args: &[String]) -> Result<(), String> {
-    let mut glyphs_path = PathBuf::from("target/glyphs.bin");
-    let mut out_path = PathBuf::from("target/Lemmata-Regular.ttf");
-    let mut names = Names::default();
-    let mut plan_path = String::new();
-    let mut subset: Option<String> = None;
-    let mut shape = Shape::default();
-    let mut shaped = false;
+fn build_font(build: Build) -> Result<(), String> {
+    let Build {
+        glyphs,
+        out,
+        family,
+        plan,
+        subset,
+        weight,
+        width,
+        slope,
+        serifs,
+        spacing,
+    } = build;
 
-    let mut index = 0;
-    while index < args.len() {
-        let flag = args[index].as_str();
-        let value = args
-            .get(index + 1)
-            .ok_or_else(|| format!("{flag} needs a value"))?;
-        match flag {
-            "--glyphs" => glyphs_path = PathBuf::from(value),
-            "--out" => out_path = PathBuf::from(value),
-            "--family" => names.family.clone_from(value),
-            "--plan" => plan_path.clone_from(value),
-            "--subset" => subset = Some(value.clone()),
-            "--weight" => {
-                shape.weight = parse_number(value, flag)?;
-                shaped = true;
-            }
-            "--width" => {
-                shape.width = parse_number(value, flag)?;
-                shaped = true;
-            }
-            "--slope" => {
-                shape.slope_angle = parse_number(value, flag)?;
-                shaped = true;
-            }
-            "--serifs" => {
-                shape.serifs = Some(value.clone());
-                shaped = true;
-            }
-            "--spacing" => {
-                shape.spacing = Some(value.clone());
-                shaped = true;
-            }
-            other => return Err(format!("unknown option {other:?}\n{USAGE}")),
-        }
-        index += 2;
-    }
+    let mut names = Names {
+        family,
+        ..Names::default()
+    };
+    let mut glyphs_path = PathBuf::from(glyphs);
+    let out_path = PathBuf::from(out);
+    let mut plan_path = plan.unwrap_or_default();
 
     // A shape names outlines the repository does not hold, so upstream's glyph
     // code runs for it. The capture is cached by shape, because a build is tens
     // of seconds and the shape is the whole of its identity.
+    let shaped = weight.is_some()
+        || width.is_some()
+        || slope.is_some()
+        || serifs.is_some()
+        || spacing.is_some();
+    let mut shape = Shape::default();
+    if let Some(value) = weight {
+        shape.weight = value;
+    }
+    if let Some(value) = width {
+        shape.width = value;
+    }
+    if let Some(value) = slope {
+        shape.slope_angle = value;
+    }
+    if let Some(value) = serifs {
+        shape.serifs = Some(value);
+    }
+    if let Some(value) = spacing {
+        shape.spacing = Some(value);
+    }
     if shaped {
         let name = lemmata_host::plan_name(&shape);
         let cached = PathBuf::from("target/host").join(format!("{name}.bin"));
@@ -184,12 +226,10 @@ fn build(args: &[String]) -> Result<(), String> {
         }
     }
 
-    let plan = if plan_path.is_empty() {
-        String::new()
-    } else {
-        std::fs::read_to_string(&plan_path)
-            .map_err(|error| format!("reading {plan_path}: {error}"))?
-    };
+    if !plan_path.is_empty() {
+        plan_path = std::fs::read_to_string(&plan_path)
+            .map_err(|error| format!("reading {plan_path}: {error}"))?;
+    }
 
     // The capture records the slant in each glyph's gizmo, so the face's angle
     // comes from the source rather than from a flag.
@@ -204,9 +244,8 @@ fn build(args: &[String]) -> Result<(), String> {
     let italic_angle = lemmata_geom::math::atan2(coefficients[2], coefficients[0]).to_degrees();
     // The plan supplies the font's metrics. The capture records its slant in
     // each glyph's gizmo, so the angle is taken from the source and overwrites
-    // whatever the plan said; once the glyph source responds to a plan, the plan
-    // is the one that decides.
-    let plan = lemmata_plan::from_json(&plan)?;
+    // whatever the plan said.
+    let plan = lemmata_plan::from_json(&plan_path)?;
     let metrics = {
         let mut metrics = plan.to_font_metrics();
         metrics.italic_angle = italic_angle;
@@ -214,16 +253,18 @@ fn build(args: &[String]) -> Result<(), String> {
     };
     // The style is one thing, so the subfamily follows the angle rather than a
     // flag that could disagree with it.
-    let names = Names {
-        subfamily: if italic_angle == 0.0 {
-            "Regular".to_string()
-        } else {
-            "Italic".to_string()
-        },
-        ..names
+    names.subfamily = if italic_angle == 0.0 {
+        "Regular".to_string()
+    } else {
+        "Italic".to_string()
     };
 
-    let bytes = lemmata_build::font::build(&glyphs, &metrics, &names, &plan.variants)?;
+    // The ligature rules and the glyphs they draw are part of the font source,
+    // so both front ends add them. A rule naming a glyph the subset removed is
+    // dropped by the build.
+    let ligatures = lemmata_build::ligatures::add(&mut glyphs);
+    let bytes =
+        lemmata_build::font::build_with(&glyphs, &metrics, &names, &plan.variants, ligatures)?;
     // The extension decides the container. A `.woff2` is the same font
     // compressed, which is what a page serves and what a subsetter reads.
     let compressed = out_path
@@ -238,8 +279,6 @@ fn build(args: &[String]) -> Result<(), String> {
         .map_err(|error| format!("writing {}: {error}", out_path.display()))?;
     // The font carries `.notdef`, the captured glyphs, and the derived ones:
     // the size variants of the stretchy glyphs and their assembly pieces.
-    // Reporting only the captured count was misleading enough to send me
-    // looking for the wrong thing once.
     let total = glyphs.len() + 1 + lemmata_build::font::derived(&glyphs, &metrics).len();
     println!(
         "{}: {} glyphs, {} bytes, {}",

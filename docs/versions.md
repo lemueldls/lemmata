@@ -4,11 +4,12 @@ Pinned 17 October 2026. Update only together with a drift report.
 
 ## Release candidates (exact pins)
 
-None. The workspace depends on released versions only, so there is nothing to pin
-exactly and nothing to record here. A candidate that nothing depends on is not a
-dependency and belongs in neither place: the last ones, `facet`, `facet-toml`,
-`figue`, `picante` and `rediff`, were carried here for a while with a row saying
-what each was for and no crate using any of them.
+| Crate | Version | For |
+| --- | --- | --- |
+| facet | =0.50.0-rc.7 | Reflection the CLI's argument structs derive |
+| figue | =5.0.0-rc.6 | CLI arguments, config and environment from one Facet struct |
+
+A candidate nothing depends on belongs in neither the manifest nor this table.
 
 ## Font stack
 

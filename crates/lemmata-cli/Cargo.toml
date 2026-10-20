@@ -13,6 +13,8 @@ path = "src/main.rs"
 workspace = true
 
 [dependencies]
+facet.workspace = true
+figue.workspace = true
 lemmata-build = { path = "../lemmata-build" }
 lemmata-capture = { path = "../lemmata-capture" }
 lemmata-geom = { path = "../lemmata-geom" }
