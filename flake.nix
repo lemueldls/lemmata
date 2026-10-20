@@ -1,5 +1,5 @@
 {
-  description = "Lemmata: development environment";
+  description = "Lemmata: a programmatic typeface factory";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -7,13 +7,22 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # The upstream tree the definitions mirror. A flake source leaves submodules
+    # out, so the parameter files the glyph source reads at compile time come
+    # from here rather than from `vendor/Iosevka`.
+    iosevka = {
+      url = "github:be5invis/Iosevka/2487637bb71f41b2a66134afd9faa6c316e5a438";
+      flake = false;
+    };
   };
 
   outputs =
     {
+      self,
       nixpkgs,
       rust-overlay,
-      ...
+      iosevka,
     }:
     let
       systems = [
@@ -22,84 +31,148 @@
         "x86_64-darwin"
         "aarch64-darwin"
       ];
-      forAllSystems =
-        f:
-        nixpkgs.lib.genAttrs systems (
-          system:
-          f (
-            import nixpkgs {
-              inherit system;
-              overlays = [ rust-overlay.overlays.default ];
-            }
-          )
-        );
+
+      perSystem =
+        system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ rust-overlay.overlays.default ];
+          };
+          lib = pkgs.lib;
+
+          # The toolchain `rust-toolchain.toml` pins, components and targets
+          # included, so a Nix build and a rustup checkout agree.
+          rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+          rustPlatform = pkgs.makeRustPlatform {
+            cargo = rustToolchain;
+            rustc = rustToolchain;
+          };
+
+          lemmata = rustPlatform.buildRustPackage {
+            pname = "lemmata";
+            version = "0.1.0";
+            # The git tree, so `vendor/kurbo` (a tracked patch) is present and
+            # the `vendor/Iosevka` submodule, which is not, is not expected.
+            src = self;
+            cargoLock.lockFile = ./Cargo.lock;
+            cargoBuildFlags = [
+              "-p"
+              "lemmata-cli"
+            ];
+
+            # `lemmata-web` reads the parameter files at compile time, and the
+            # submodule that carries them is not part of the source.
+            preBuild = ''
+              mkdir -p vendor/Iosevka
+              cp -r ${iosevka}/params vendor/Iosevka/params
+            '';
+
+            # The suite wants a capture, a reference build and a browser. Those
+            # are the oracle's inputs, not the package's.
+            doCheck = false;
+
+            installPhase = ''
+              runHook preInstall
+              install -Dm755 "target/${pkgs.stdenv.hostPlatform.rust.cargoShortTarget}/release/lemmata" $out/bin/lemmata
+              runHook postInstall
+            '';
+
+            meta = {
+              description = "Build a Lemmata font from a plan and a glyph capture";
+              license = lib.licenses.mit;
+              mainProgram = "lemmata";
+            };
+          };
+
+          # The committed capture is the one the site ships, so the package
+          # builds the same font the page does.
+          capture = ./web/public/glyphs.bin;
+          fonts = pkgs.runCommand "lemmata-fonts" {
+            nativeBuildInputs = [ lemmata ];
+            meta.description = "Lemmata fonts, as TTF and WOFF2";
+          } ''
+            mkdir -p $out/share/fonts/truetype $out/share/fonts/woff2
+            lemmata build --glyphs ${capture} \
+              --out $out/share/fonts/truetype/Lemmata-Regular.ttf
+            lemmata build --glyphs ${capture} \
+              --out $out/share/fonts/woff2/Lemmata-Regular.woff2
+          '';
+        in
+        {
+          packages = {
+            inherit lemmata fonts;
+            default = fonts;
+          };
+
+          apps.default = {
+            type = "app";
+            program = "${lemmata}/bin/lemmata";
+          };
+
+          devShells = {
+            # The browser suite needs a real browser and a driver. They are not
+            # in the default shell because the default shell has to build from
+            # the store alone, and these are large. `pnpm install` inside
+            # harness/browser needs the network too.
+            browser = pkgs.mkShell {
+              packages = with pkgs; [
+                nodejs_22
+                pnpm
+                playwright-driver
+                playwright-driver.browsers
+              ];
+
+              # Playwright looks in ~/.cache/ms-playwright by default, so it has
+              # to be told where the store put the engines.
+              PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+            };
+
+            default = pkgs.mkShell {
+              packages = with pkgs; [
+                (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
+
+                # The cargo config wraps rustc in sccache and links with clang,
+                # so host builds fail without both.
+                sccache
+                clang
+                pkg-config
+
+                # `cargo xtask parity` builds the wasm side with this, and the
+                # oracle and web tests need node.
+                nodejs_22
+                wasm-pack
+                pnpm
+
+                # The validity gates the plan asks for.
+                opentype-sanitizer
+                taplo
+                cargo-deny
+                ast-grep
+
+                # The equation corpus.
+                typst
+
+                # The browser build, pinned to match wasm-bindgen.
+                wasm-bindgen-cli
+                binaryen
+
+                fontconfig
+                python3
+                git
+              ];
+
+              shellHook = ''
+                echo "lemmata: $(rustc --version)"
+                echo "         ots-sanitize $(ots-sanitize --version 2>/dev/null | head -1)"
+              '';
+            };
+          };
+        };
     in
     {
-      devShells = forAllSystems (pkgs: {
-        # The browser suite in §7.1 needs a real browser and a driver. They are
-        # not in the default shell because the default shell has to build from the
-        # store alone, and these are large. `pnpm install` inside harness/browser
-        # needs the network too.
-        browser = pkgs.mkShell {
-          packages = with pkgs; [
-            nodejs_22
-            pnpm
-            playwright-driver
-            playwright-driver.browsers
-          ];
-
-          # Playwright looks in ~/.cache/ms-playwright by default, so it has to
-          # be told where the store put the engines. Without this the suite fails
-          # with "Executable doesn't exist" and suggests downloading a browser
-          # that the shell has already provided.
-          PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
-        };
-
-        default = pkgs.mkShell {
-          packages = with pkgs; [
-            # The toolchain is the one rust-toolchain.toml pins, components and
-            # targets included, so the shell and a rustup checkout agree.
-            (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
-
-            # The cargo config in ~/.cargo wraps rustc in sccache and links with
-            # clang, so host builds fail without both.
-            sccache
-            clang
-            pkg-config
-
-            # `cargo xtask parity` builds the wasm side with this, and the
-            # oracle and web tests need node.
-            nodejs_22
-            wasm-pack
-            pnpm
-
-            # The validity gates the plan asks for. `ots-sanitize` is
-            # r[build.valid]'s other half, and taplo owns the TOML formatting.
-            opentype-sanitizer
-            taplo
-            cargo-deny
-            ast-grep
-
-            # r[math.typst] compiles the equation corpus with this.
-            typst
-
-            # The browser build. The CLI is pinned to match wasm-bindgen in
-            # [workspace.dependencies], so a version bump has to move both.
-            wasm-bindgen-cli
-            binaryen
-
-            # fontconfig so a generated font can be inspected the way a
-            # renderer sees it, and python3 for one-off probes.
-            fontconfig
-            python3
-            git
-          ];
-
-          shellHook = ''
-            echo "lemmata: $(rustc --version)"
-            echo "         ots-sanitize $(ots-sanitize --version 2>/dev/null | head -1)"
-          '';
-        };
-      });
+      packages = nixpkgs.lib.genAttrs systems (system: (perSystem system).packages);
+      apps = nixpkgs.lib.genAttrs systems (system: (perSystem system).apps);
+      devShells = nixpkgs.lib.genAttrs systems (system: (perSystem system).devShells);
     };
 }

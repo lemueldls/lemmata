@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "iosevka": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790459617,
+        "narHash": "sha256-JJBsmUtWv8n4IO2AleO/Z1CI2Vbpc1JcwfwJMEUzkLU=",
+        "owner": "be5invis",
+        "repo": "Iosevka",
+        "rev": "2487637bb71f41b2a66134afd9faa6c316e5a438",
+        "type": "github"
+      },
+      "original": {
+        "owner": "be5invis",
+        "repo": "Iosevka",
+        "rev": "2487637bb71f41b2a66134afd9faa6c316e5a438",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1792094642,
@@ -18,6 +35,7 @@
     },
     "root": {
       "inputs": {
+        "iosevka": "iosevka",
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay"
       }
