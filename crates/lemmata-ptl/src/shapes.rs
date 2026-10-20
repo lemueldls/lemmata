@@ -714,6 +714,10 @@ impl OBarContext<'_> {
         x + self.metrics.correction_o_mid_x * sw
     }
 
+    fn adjust_x_top(&self, x: f64, sw: f64) -> f64 {
+        x - self.metrics.correction_o_mid_x * sw
+    }
+
     const fn arch_params(&self) -> ArchParams {
         ArchParams {
             superness: self.design.superness,
@@ -1437,12 +1441,13 @@ pub fn h_overlay_bar(
     kit.dispiro(items)
 }
 
-/// `LetterBarOverlay.l.in`: a bar across the letter, from its left side, at a
-/// fraction `py` of the way from `bot` to `top`.
-// The signature is upstream's: the position, the box, the reference stroke and the stroke.
+/// `LetterBarOverlay`: a bar across the letter, at a fraction `py` of the way
+/// from `bot` to `top`.
+///
+/// `p_x_in_sw` places the reference point: 0 at the left edge, 1 at the right.
 #[allow(clippy::too_many_arguments)]
 #[must_use]
-pub fn letter_bar_overlay_l_in(
+pub fn letter_bar_overlay_in(
     kit: &Kit,
     metrics: &Metrics,
     x: f64,
@@ -1452,11 +1457,12 @@ pub fn letter_bar_overlay_l_in(
     space: (f64, f64),
     ref_sw: f64,
     sw: f64,
+    p_x_in_sw: f64,
 ) -> Dispiro {
     let (x_left_space, x_right_space) = space;
     let hsw = |value: f64| value * metrics.hv_contrast;
-    let x_left_edge = x;
-    let x_right_edge = x + hsw(ref_sw);
+    let x_left_edge = x - p_x_in_sw * hsw(ref_sw);
+    let x_right_edge = x + (1.0 - p_x_in_sw) * hsw(ref_sw);
     let p = (x_left_edge - x_left_space)
         / ((x_right_space - x_right_edge) + (x_left_edge - x_left_space));
     let x_c = mix(x_left_edge, x_right_edge, mix(0.5, 1.0 - p, 0.5));
@@ -1474,6 +1480,40 @@ pub fn letter_bar_overlay_l_in(
         .min(1.25 * (top - bot) * (1.0 - py));
 
     h_overlay_bar(kit, metrics, left, right, y, Some(sw))
+}
+
+/// `LetterBarOverlay.l.in`.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn letter_bar_overlay_l_in(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    bot: f64,
+    top: f64,
+    py: f64,
+    space: (f64, f64),
+    ref_sw: f64,
+    sw: f64,
+) -> Dispiro {
+    letter_bar_overlay_in(kit, metrics, x, bot, top, py, space, ref_sw, sw, 0.0)
+}
+
+/// `LetterBarOverlay.r.in`.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn letter_bar_overlay_r_in(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    bot: f64,
+    top: f64,
+    py: f64,
+    space: (f64, f64),
+    ref_sw: f64,
+    sw: f64,
+) -> Dispiro {
+    letter_bar_overlay_in(kit, metrics, x, bot, top, py, space, ref_sw, sw, 1.0)
 }
 
 /// The arch parameters a definition reads from the design and the metrics.
@@ -1620,7 +1660,7 @@ pub fn bb_bar_left(
 pub fn rightward_tailed_bar(
     kit: &Kit,
     metrics: &Metrics,
-    df: &crate::letter_model::DivFrame,
+    _df: &crate::letter_model::DivFrame,
     x: f64,
     low: f64,
     high: f64,
@@ -1629,11 +1669,19 @@ pub fn rightward_tailed_bar(
     // `Math.max` takes three arguments upstream: the indented `AdviceStroke 8`
     // and `0.625 * SB` are siblings of `SideJut` rather than one being an
     // argument of the other.
+    // `AdviceStroke` and `SB` are the build's, not the frame's: a definition
+    // that draws the bar in a narrower frame still reads the global advice.
+    let weight = crate::metrics::WeightControl::new(
+        metrics.stroke,
+        metrics.width,
+        metrics.sb,
+        metrics.hv_contrast,
+    );
     let hook_depth = metrics
         .side_jut
-        .max(df.advice_stroke(8.0, 1.0))
-        .max(0.625 * df.sb);
-    let advice16 = df.advice_stroke(16.0, 1.0);
+        .max(weight.advice_stroke(8.0, 1.0, 1.0))
+        .max(0.625 * metrics.sb);
+    let advice16 = weight.advice_stroke(16.0, 1.0, 1.0);
     let hook_turn = advice16.max(hook_depth - advice16);
     let items = vec![
         Item::Af(kit.widths_lhs(Some(sw))),
@@ -1665,4 +1713,295 @@ pub fn rightward_tailed_bar(
     ];
 
     kit.dispiro(items)
+}
+
+/// `OBarLeft.earlessCorner`: the left side cut at `yend` with the bar's ear
+/// replaced by a corner at `rise`.
+#[must_use]
+pub fn obar_left_earless_corner(
+    ctx: &OBarContext<'_>,
+    ring: &OBarRing,
+    rise: f64,
+    yend: f64,
+) -> Dispiro {
+    let metrics = ctx.metrics;
+    let OBarRing {
+        top,
+        bot,
+        left,
+        right,
+        sw,
+        fine,
+        ada,
+        adb,
+    } = *ring;
+    let x = left + ctx.hsw_to_v(sw - fine);
+    let right_side = flatside_ru(
+        ctx.kit,
+        &FlatSide {
+            x: right,
+            d: bot,
+            u: top,
+            ada,
+            adb,
+            ox: metrics.ox,
+            af: Vec::new(),
+        },
+    );
+    let start = UserControlKnot {
+        ty: KnotType::Right,
+        x,
+        y: (bot + adb).min(yend - metrics.tiny),
+        af: ctx.kit.widths_lhs(Some(fine)),
+    };
+    let mut items = vec![
+        Item::Af(ctx.kit.widths_lhs(Some(fine))),
+        ctx.kit
+            .knot(KnotType::Left, x, yend, ctx.kit.widths_lhs(Some(fine))),
+        ctx.kit.knot(start.ty, start.x, start.y, start.af.clone()),
+    ];
+    items.extend(arch(
+        ctx.kit,
+        &ArchArgs {
+            y: bot,
+            p: None,
+            sw,
+            compact: false,
+            o: metrics.o,
+            angle_pre: None,
+            angle_post: None,
+            blend_pre: None,
+            blend_post: None,
+            sw_before: Some(fine),
+            sw_after: Some(sw),
+            lhs: true,
+        },
+        &start,
+        &knot_of(&right_side[0]),
+        &ctx.arch_params(),
+    ));
+    items.extend(right_side.iter().cloned());
+    if rise == 0.0 {
+        items.push(ctx.kit.arcvh(None, None));
+        items.push(ctx.kit.knot(
+            KnotType::Left,
+            ctx.adjust_x_top(mix(left, right, 0.5), sw),
+            top,
+            Vec::new(),
+        ));
+        items.push(ctx.kit.knot(
+            KnotType::Right,
+            left + metrics.tiny,
+            top,
+            ctx.kit.heading(leftward()),
+        ));
+    } else {
+        let corner = UserControlKnot {
+            ty: KnotType::G4,
+            x: left,
+            y: top - rise,
+            af: ctx.kit.widths_lhs(Some(sw)),
+        };
+        items.extend(arch(
+            ctx.kit,
+            &ArchArgs {
+                y: top,
+                p: None,
+                sw,
+                compact: false,
+                o: metrics.o,
+                angle_pre: None,
+                angle_post: None,
+                blend_pre: None,
+                blend_post: Some(false),
+                sw_before: Some(sw),
+                sw_after: Some(sw),
+                lhs: true,
+            },
+            &knot_of(right_side.last().expect("flatside item")),
+            &corner,
+            &ctx.arch_params(),
+        ));
+        items.push(ctx.kit.knot(corner.ty, corner.x, corner.y, corner.af));
+    }
+
+    ctx.kit.dispiro(items)
+}
+
+/// `OBarLeft.earlessRounded`: the left side cut at `yend` with the bar's ear
+/// rounded away at `yTerminal`.
+#[must_use]
+pub fn obar_left_earless_rounded(
+    ctx: &OBarContext<'_>,
+    ring: &OBarRing,
+    y_terminal: f64,
+    yend: f64,
+) -> Dispiro {
+    let metrics = ctx.metrics;
+    let OBarRing {
+        top,
+        bot,
+        left,
+        right,
+        sw,
+        fine,
+        ada,
+        adb,
+    } = *ring;
+    let x = left + ctx.hsw_to_v(sw - fine);
+    let right_side = flatside_ru(
+        ctx.kit,
+        &FlatSide {
+            x: right,
+            d: bot,
+            u: top,
+            ada,
+            adb,
+            ox: metrics.ox,
+            af: Vec::new(),
+        },
+    );
+    let start = UserControlKnot {
+        ty: KnotType::Right,
+        x,
+        y: (bot + adb).min(yend - metrics.tiny),
+        af: ctx.kit.widths_lhs(Some(fine)),
+    };
+    let mut items = vec![
+        Item::Af(ctx.kit.widths_lhs(Some(fine))),
+        ctx.kit
+            .knot(KnotType::Left, x, yend, ctx.kit.widths_lhs(Some(fine))),
+        ctx.kit.knot(start.ty, start.x, start.y, start.af.clone()),
+    ];
+    items.extend(arch(
+        ctx.kit,
+        &ArchArgs {
+            y: bot,
+            p: None,
+            sw,
+            compact: false,
+            o: metrics.o,
+            angle_pre: None,
+            angle_post: None,
+            blend_pre: None,
+            blend_post: None,
+            sw_before: Some(fine),
+            sw_after: Some(sw),
+            lhs: true,
+        },
+        &start,
+        &knot_of(&right_side[0]),
+        &ctx.arch_params(),
+    ));
+    items.extend(right_side.iter().cloned());
+    let terminal = UserControlKnot {
+        ty: KnotType::Left,
+        x: left,
+        y: (top - ada).max(y_terminal + metrics.tiny),
+        af: Vec::new(),
+    };
+    items.extend(arch(
+        ctx.kit,
+        &ArchArgs {
+            y: top,
+            p: None,
+            sw,
+            compact: false,
+            o: metrics.o,
+            angle_pre: None,
+            angle_post: None,
+            blend_pre: None,
+            blend_post: None,
+            sw_before: Some(sw),
+            sw_after: Some(sw),
+            lhs: true,
+        },
+        &knot_of(right_side.last().expect("flatside item")),
+        &terminal,
+        &ctx.arch_params(),
+    ));
+    items.push(
+        ctx.kit
+            .knot(terminal.ty, terminal.x, terminal.y, Vec::new()),
+    );
+    items.push(
+        ctx.kit.knot(
+            KnotType::Right,
+            left,
+            y_terminal,
+            ctx.kit
+                .widths_lhs_heading(Some(sw), downward(metrics.hv_contrast)),
+        ),
+    );
+
+    ctx.kit.dispiro(items)
+}
+
+/// `OBarRight.toothlessCorner`: `OBarLeft.earlessCorner` rotated half a turn.
+#[must_use]
+pub fn obar_right_toothless_corner(
+    ctx: &OBarContext<'_>,
+    ring: &OBarRing,
+    rise: f64,
+    ystart: f64,
+) -> Geometry {
+    flip(
+        &obar_left_earless_corner(ctx, ring, rise, ring.top - ystart),
+        ring,
+    )
+}
+
+/// `OBarRight.toothlessRounded`: `OBarLeft.earlessRounded` rotated half a turn.
+#[must_use]
+pub fn obar_right_toothless_rounded(
+    ctx: &OBarContext<'_>,
+    ring: &OBarRing,
+    y_terminal: f64,
+    ystart: f64,
+) -> Geometry {
+    flip(
+        &obar_left_earless_rounded(ctx, ring, ring.top - y_terminal, ring.top - ystart),
+        ring,
+    )
+}
+
+/// `TopHook.rBarInner`: the hook at a bar's right edge.
+#[must_use]
+pub fn top_hook_r_bar_inner(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y_bot: f64,
+    y_top: f64,
+    sw: f64,
+    sign: f64,
+) -> Vec<Geometry> {
+    top_hook_l_bar_inner(
+        kit,
+        metrics,
+        x - sw * metrics.hv_contrast,
+        y_bot,
+        y_top,
+        sw,
+        sign,
+    )
+}
+
+/// `BBBarRight`: a blackboard bar on the right of `x`.
+#[must_use]
+pub fn bb_bar_right(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y_bot: f64,
+    y_top: f64,
+    bbs: f64,
+    bbd: f64,
+) -> Vec<Geometry> {
+    vec![
+        vbar_r(kit, metrics, x, y_bot, y_top, bbs).geometry(kurbo::Affine::IDENTITY),
+        vbar_r(kit, metrics, x - bbd, y_bot, y_top, bbs).geometry(kurbo::Affine::IDENTITY),
+        hbar_t(kit, metrics, x, x - bbd, y_top, Some(bbs)).geometry(kurbo::Affine::IDENTITY),
+        hbar_b(kit, metrics, x, x - bbd, y_bot, Some(bbs)).geometry(kurbo::Affine::IDENTITY),
+    ]
 }

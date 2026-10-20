@@ -138,6 +138,25 @@ four orientations, `VerticalHook`, the letter-bar overlay, `OShapeOutline` and
 `FlatHookDepth`. That is the cost the port surface measured, paid once: the
 third letter should need less.
 
+## The third file
+
+`letter/latin/lower-d.ptl` (266 lines) followed, and the prediction held. The
+file draws the same bowl and stem as `b` on the other side, so the shapes were
+already there: `OBarRight`, `VBar.r`, `HSerif`, `VerticalHook`, the overlay and
+`OShapeOutline` covered every body and serif. Two asymmetric pieces had to be
+added, `OBarLeft.earlessCorner`/`.earlessRounded` and their flips
+`OBarRight.toothlessCorner`/`.toothlessRounded`.
+
+`tests/lower_d.rs` compares 63 of the 67 captured variants: `d`, `dCaron/base`
+in a 0.95 frame, `dStroke`, `latn/de`, `dHookTop` and `mathbb/d`, 2128 knots,
+worst deviation 0. The four it does not build are `dCurlyTail` and
+`cyrl/djeKomi`, which need `CurlyTail` and the arc-start/arc-end pair.
+
+One mistake the gate caught: `RightwardTailedBar` reads the build's
+`AdviceStroke` and `SB`, not the frame's, so a variant in a narrower frame keeps
+the same tail. The port had used the frame and was 1.4 units out on
+`dCaron/base.tailedSerifless`.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
