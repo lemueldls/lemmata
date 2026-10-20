@@ -20,3 +20,4 @@
 //! cannot be imported and run the way the geometry and kit packages can.
 
 pub mod letter;
+pub mod registry;

@@ -413,3 +413,29 @@ pub fn variants() -> Vec<(String, Body, Serif)> {
 
     out
 }
+
+impl LowerD<'_> {
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let narrow = DivFrame::new(self.metrics.clone(), Some(0.95), None, None);
+        let caron = LowerD {
+            df: &narrow,
+            metrics: self.metrics,
+            kit: self.kit,
+            design: self.design,
+        };
+        let mut out = vec![("mathbb/d".to_string(), self.mathbb_d())];
+        for (suffix, body, serif) in variants() {
+            out.push((format!("d.{suffix}"), self.glyph(body, serif)));
+            out.push((format!("dCaron/base.{suffix}"), caron.glyph(body, serif)));
+            out.push((format!("dStroke.{suffix}"), self.d_stroke(body, serif)));
+            out.push((format!("latn/de.{suffix}"), self.latn_de(body, serif)));
+            if !serif.has_top() {
+                out.push((format!("dHookTop.{suffix}"), self.d_hook_top(body, serif)));
+            }
+        }
+
+        out
+    }
+}

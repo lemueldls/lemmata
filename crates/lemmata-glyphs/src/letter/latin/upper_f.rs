@@ -322,3 +322,24 @@ impl UpperF<'_> {
         Geometry::Combine(parts)
     }
 }
+
+impl UpperF<'_> {
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let mut out = vec![("mathbb/F".to_string(), self.mathbb())];
+        for (suffix, config) in CONFIGS {
+            out.push((format!("F.{suffix}"), self.capital(*config)));
+            out.push((format!("FBar.{suffix}"), self.bar(*config)));
+            out.push((format!("smcpF.{suffix}"), self.small(*config)));
+            if *config != SerifConfig::SerifedCapped {
+                out.push((
+                    format!("currency/frenchFrancSign.{suffix}"),
+                    self.french_franc(*config),
+                ));
+            }
+        }
+
+        out
+    }
+}

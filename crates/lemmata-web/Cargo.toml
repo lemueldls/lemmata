@@ -14,7 +14,11 @@ workspace = true
 [dependencies]
 lemmata-build = { path = "../lemmata-build" }
 lemmata-capture = { path = "../lemmata-capture" }
+lemmata-geom = { path = "../lemmata-geom" }
+lemmata-glyphs = { path = "../lemmata-glyphs" }
 lemmata-plan = { path = "../lemmata-plan" }
+lemmata-ptl = { path = "../lemmata-ptl" }
+kurbo.workspace = true
 wasm-bindgen.workspace = true
 
 [dev-dependencies]

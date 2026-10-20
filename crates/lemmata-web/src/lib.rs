@@ -5,12 +5,86 @@
 //! [`build`] is the whole of it and stays free of the wasm types, so it runs
 //! under `cargo test` on the host as well as in the browser.
 //!
-//! The input is a glyph capture, which is scaffolding. Once the definitions
-//! generate outlines on their own this takes a plan instead, and the call shape
-//! is the part that survives: bytes in, font bytes out.
+//! The input is a capture and a plan. The glyphs the port draws are taken from
+//! the definitions, and everything else keeps the capture's outline, so a plan
+//! reaches the drawing for the letters that are ported and the tables for the
+//! rest. [`ported`] is the seam: one name to one set of contours.
+
+use std::collections::BTreeMap;
 
 use lemmata_build::font::{GlyphData, Names};
+use lemmata_geom::{Geometry, QuadifyPoint};
+use lemmata_ptl::metrics::{Metrics, Para};
+use lemmata_ptl::param::{self, Shape};
+use lemmata_ptl::shapes::Design;
 use wasm_bindgen::prelude::*;
+
+/// The parameter files the port's metrics are derived from. They are upstream's
+/// own, read verbatim, and together they are about twenty kilobytes.
+const PARAMETERS: &str = include_str!("../../../vendor/Iosevka/params/parameters.toml");
+const WEIGHTS: &str = include_str!("../../../vendor/Iosevka/params/shape-weight.toml");
+const WIDTHS: &str = include_str!("../../../vendor/Iosevka/params/shape-width.toml");
+const SLOPES: &str = include_str!("../../../vendor/Iosevka/params/shape-slope.toml");
+
+/// The shape a plan asks the glyph source for.
+///
+/// The plan carries the output metrics and the variant choices, not Iosevka's
+/// shape names, so the three that matter are read off the classes it does carry.
+/// The serifs default to sans, which is the family the fixtures were built from.
+fn shape_of(plan: &lemmata_plan::Plan) -> Shape {
+    Shape {
+        serifs: Some("sans".to_string()),
+        spacing: Some(plan.spacing.name().to_string()),
+        weight: f64::from(plan.weight_class),
+        width: f64::from(plan.width_class) * 100.0,
+        slope_angle: plan.italic_angle,
+        slope: if plan.italic_angle == 0.0 {
+            "Upright".to_string()
+        } else {
+            "Italic".to_string()
+        },
+    }
+}
+
+/// The metrics the ported definitions read, derived from the plan.
+///
+/// Returns `None` when the parameter data cannot be read, which leaves the
+/// capture's contours in place rather than failing the build.
+fn port_metrics(plan: &lemmata_plan::Plan) -> Option<Metrics> {
+    let data = param::load_data(PARAMETERS, WEIGHTS, WIDTHS, SLOPES).ok()?;
+    let hive = param::init(&data, &shape_of(plan));
+    let para = Para::from_named(
+        |key| hive.get(key).and_then(param::toml::Value::as_f64),
+        |key| hive.get(key).and_then(param::toml::Value::as_bool),
+    )
+    .ok()?;
+
+    Some(Metrics::calculate(&para))
+}
+
+/// The glyphs the port draws, as contours, by name.
+///
+/// Each is put through the same simplify and quadratic conversion the capture
+/// went through, so a caller can swap one set for the other without knowing
+/// where a glyph came from.
+#[must_use]
+pub fn ported(plan: &lemmata_plan::Plan) -> BTreeMap<String, Vec<Vec<QuadifyPoint>>> {
+    let Some(metrics) = port_metrics(plan) else {
+        return BTreeMap::new();
+    };
+
+    lemmata_glyphs::registry::build(&metrics, &Design::default())
+        .into_iter()
+        .map(|(name, geometry)| {
+            let contours = Geometry::Simplify {
+                gizmo: kurbo::Affine::IDENTITY,
+                geom: Box::new(geometry),
+            }
+            .to_contours();
+            (name, contours)
+        })
+        .collect()
+}
 
 /// Rounds a captured advance to the units the font table stores.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -21,7 +95,8 @@ fn advance_to_u16(advance: f64) -> u16 {
 /// Builds a font from a capture and a plan.
 ///
 /// The plan is a JSON object; any key it omits takes its default, so the page
-/// can send only what a control changed. Outlines still come from the capture.
+/// can send only what a control changed. A glyph the registry draws takes its
+/// contours from there, and a glyph it does not keeps the capture's.
 ///
 /// # Errors
 ///
@@ -31,13 +106,17 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
     let plan = lemmata_plan::from_json(plan)?;
     let metrics = plan.to_font_metrics();
     let captured = lemmata_capture::load(capture)?;
+    let ported = ported(&plan);
     let glyphs: Vec<GlyphData> = captured
         .iter()
         .map(|glyph| GlyphData {
             name: glyph.name.clone(),
             unicodes: glyph.unicodes.clone(),
             advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+            contours: ported
+                .get(&glyph.name)
+                .cloned()
+                .unwrap_or_else(|| lemmata_capture::contours(glyph)),
         })
         .collect();
 

@@ -264,3 +264,20 @@ impl UpperL<'_> {
         ])
     }
 }
+
+impl UpperL<'_> {
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let mut out = vec![("mathbb/L".to_string(), self.mathbb())];
+        for (suffix, serif) in CONFIGS {
+            out.push((format!("L.{suffix}"), self.capital(*serif)));
+            out.push((format!("LSlash.{suffix}"), self.slash(*serif)));
+            out.push((format!("smcpL.{suffix}"), self.small(*serif)));
+            out.push((format!("smcpLSlash.{suffix}"), self.small_slash(*serif)));
+            out.push((format!("LHighBar.{suffix}"), self.high_bar(*serif)));
+        }
+
+        out
+    }
+}

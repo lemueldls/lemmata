@@ -332,9 +332,13 @@ version = "0.1.0"
 name = "lemmata-web"
 version = "0.1.0"
 dependencies = [
+ "kurbo",
  "lemmata-build",
  "lemmata-capture",
+ "lemmata-geom",
+ "lemmata-glyphs",
  "lemmata-plan",
+ "lemmata-ptl",
  "read-fonts",
  "serde_json",
  "sha2",

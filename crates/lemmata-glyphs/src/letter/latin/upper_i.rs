@@ -186,3 +186,20 @@ impl UpperI<'_> {
         Geometry::Combine(parts)
     }
 }
+
+impl UpperI<'_> {
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let mut out = vec![
+            ("smcpI".to_string(), self.small()),
+            ("mathbb/I".to_string(), self.mathbb()),
+        ];
+        for (suffix, serif) in CONFIGS {
+            out.push((format!("I.{suffix}"), self.capital(*serif)));
+            out.push((format!("ILonga.{suffix}"), self.longa(*serif)));
+        }
+
+        out
+    }
+}

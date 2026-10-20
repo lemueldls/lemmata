@@ -450,3 +450,22 @@ pub fn variants() -> Vec<(String, Body, Serif)> {
 
     out
 }
+
+impl LowerB<'_> {
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let mut out = vec![("mathbb/b".to_string(), self.mathbb_b())];
+        for (suffix, body, serif) in variants() {
+            out.push((format!("b.{suffix}"), self.glyph(body, serif)));
+            out.push((format!("latn/be.{suffix}"), self.latn_be(body, serif)));
+            out.push((format!("bSlash.{suffix}"), self.b_slash(body, serif)));
+            out.push((format!("bStroke.{suffix}"), self.b_stroke(body, serif)));
+            if !serif.reaches_ascender() {
+                out.push((format!("bHookTop.{suffix}"), self.b_hook_top(body, serif)));
+            }
+        }
+
+        out
+    }
+}

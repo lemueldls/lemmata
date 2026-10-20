@@ -421,3 +421,19 @@ impl UpperE<'_> {
         ])
     }
 }
+
+impl UpperE<'_> {
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let mut out = vec![("mathbb/E".to_string(), self.mathbb())];
+        for (suffix, config) in CONFIGS {
+            out.push((format!("E.{suffix}"), self.capital(*config)));
+            out.push((format!("smcpE.{suffix}"), self.small(*config)));
+            out.push((format!("revE.{suffix}"), self.rev_e(*config)));
+            out.push((format!("smcpEBar.{suffix}"), self.small_bar(*config)));
+        }
+
+        out
+    }
+}

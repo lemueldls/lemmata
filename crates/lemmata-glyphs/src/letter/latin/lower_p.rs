@@ -347,3 +347,28 @@ pub fn variants() -> Vec<(String, Body, Serif)> {
 
     out
 }
+
+impl LowerP<'_> {
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let mut out = vec![("mathbb/p".to_string(), self.mathbb())];
+        for (suffix, body, serif) in variants() {
+            out.push((format!("p.{suffix}"), self.glyph(body, serif)));
+            out.push((
+                format!("pStrokeBottom.{suffix}"),
+                self.stroke_bottom(body, serif),
+            ));
+        }
+        for (suffix, serif) in SERIFS {
+            out.push((format!("thorn.{suffix}"), self.thorn(*serif)));
+            out.push((format!("thornStroke.{suffix}"), self.thorn_stroke(*serif)));
+            out.push((
+                format!("thornStrokeBottom.{suffix}"),
+                self.thorn_stroke_bottom(*serif),
+            ));
+        }
+
+        out
+    }
+}

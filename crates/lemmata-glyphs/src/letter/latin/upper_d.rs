@@ -384,3 +384,32 @@ pub fn variants() -> Vec<(String, Body, Serif)> {
 
     out
 }
+
+impl UpperD<'_> {
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let mut out = vec![
+            (
+                "Eth".to_string(),
+                self.eth(Body::Standard, Serif::Serifless),
+            ),
+            ("smcpEth".to_string(), self.smcp_eth(Serif::Serifless)),
+            ("mathbb/D".to_string(), self.mathbb()),
+        ];
+        for (suffix, body, serif) in variants() {
+            out.push((format!("D.{suffix}"), self.capital(body, serif)));
+        }
+        for (suffix, serif) in SERIFS {
+            out.push((
+                format!(
+                    "smcpD.{}",
+                    lemmata_ptl::util::join_camel("moreRounded", suffix)
+                ),
+                self.small(*serif),
+            ));
+        }
+
+        out
+    }
+}

@@ -50,7 +50,10 @@ fn ported_sources(directory: &Path) -> Vec<PathBuf> {
                 continue;
             }
             let name = path.file_name().unwrap_or_default().to_string_lossy();
-            if name == "lib.rs" || name == "mod.rs" {
+            // `lib.rs` and `mod.rs` are scaffolding. `registry.rs` assembles
+            // the definitions by name rather than porting a `.ptl` file, so it
+            // has no upstream to point at.
+            if name == "lib.rs" || name == "mod.rs" || name == "registry.rs" {
                 continue;
             }
             found.push(path);
