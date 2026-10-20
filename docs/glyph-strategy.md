@@ -321,7 +321,7 @@ tag moves.
 
 The registry is the seam between the definitions and the site. `lemmata_glyphs::registry::build` takes the metrics and the design and returns every glyph the port draws, by the name the build gives it. Each definition exposes `glyphs()` for its own variant table, so a glyph that exists in a module cannot be missing from the list.
 
-`lemmata-web` derives the metrics from the plan through `lemmata_ptl::param` and the four parameter files, builds the registry, and swaps a glyph's contours for the capture's when the name is in both. Everything else keeps the capture. The built font is still byte-identical to the recorded parity pair for the default plan, which is the test: 376 glyphs in the registry, 269 of them in the capture, 7539 knots, zero deviation, and the same font bytes the fingerprint records.
+`lemmata-source` derives the metrics from the plan through `lemmata_ptl::param` and the four parameter files, builds the registry, and swaps a glyph's contours for the capture's when the name is in both. Everything else keeps the capture. Both front ends call it: the page for its wasm surface and the CLI for its build. That is what keeps a drawn texture form the same in both, and the parity pair the check that they have not drifted. The built font is still byte-identical to the recorded parity pair for the default plan, which is the test: 376 glyphs in the registry, 269 of them in the capture, 7539 knots, zero deviation, and the same font bytes the fingerprint records.
 
 What that buys today is the `a` family, which is what the page's fixture holds. A visitor who changes the plan's weight, width or slope now moves those outlines, and the variant picker moves the drawing it selects. The other glyphs stay as drawn until they are ported.
 

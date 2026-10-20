@@ -14,7 +14,7 @@ use read_fonts::TableProvider;
 
 const BOX_TOLERANCE: f64 = 1.0;
 
-fn bounding_box(contours: &[Vec<lemmata_geom::QuadifyPoint>]) -> Option<(f64, f64, f64, f64)> {
+fn bounding_box(contours: &lemmata_source::Contours) -> Option<(f64, f64, f64, f64)> {
     contours.iter().flatten().fold(None, |acc, point| {
         Some(
             acc.map_or((point.x, point.y, point.x, point.y), |(l, b, r, t)| {
@@ -40,7 +40,7 @@ fn the_site_draws_the_ported_glyphs() {
         return;
     };
     let captured = load(&data).expect("decode capture");
-    let ported = lemmata_web::ported(&Plan::default());
+    let ported = lemmata_source::ported(&Plan::default());
 
     for name in [
         "a.doubleStoreySerifed",

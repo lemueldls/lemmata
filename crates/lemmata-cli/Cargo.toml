@@ -21,6 +21,7 @@ lemmata-geom = { path = "../lemmata-geom" }
 lemmata-host = { path = "../lemmata-host" }
 lemmata-ptl = { path = "../lemmata-ptl" }
 lemmata-plan = { path = "../lemmata-plan" }
+lemmata-source = { path = "../lemmata-source" }
 
 [dev-dependencies]
 harfrust.workspace = true

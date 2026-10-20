@@ -9,7 +9,7 @@ use std::process::ExitCode;
 
 use facet::Facet;
 use figue as args;
-use lemmata_build::font::{GlyphData, Names};
+use lemmata_build::font::Names;
 use lemmata_ptl::param::Shape;
 
 /// The command line.
@@ -109,12 +109,6 @@ fn run(cli: Cli) -> ExitCode {
     }
 }
 
-/// Rounds a captured advance to the units the font table stores.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn advance_to_u16(advance: f64) -> u16 {
-    advance.round().clamp(0.0, f64::from(u16::MAX)) as u16
-}
-
 /// The Unicode ranges a `--subset` argument names.
 fn parse_ranges(text: &str) -> Result<Vec<(u32, u32)>, String> {
     let code_point = |text: &str| -> Result<u32, String> {
@@ -212,31 +206,25 @@ fn build_font(build: Build) -> Result<(), String> {
         .map_err(|error| format!("reading {}: {error}", glyphs_path.display()))?;
     let captured = lemmata_capture::load(&data)?;
 
-    let glyphs: Vec<GlyphData> = captured
-        .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
-        })
-        .collect();
+    if !plan_path.is_empty() {
+        plan_path = std::fs::read_to_string(&plan_path)
+            .map_err(|error| format!("reading {plan_path}: {error}"))?;
+    }
+    let plan = lemmata_plan::from_json(&plan_path)?;
+
+    // The glyph source is shared with the browser build, so a plan draws the
+    // same outlines in both front ends.
+    let mut glyphs = lemmata_source::glyphs(&plan, &captured);
 
     // The restriction runs on the input rather than on the built font, so the
     // MATH table is assembled over the glyphs that are left and its ids stay
     // true. Subsetting a built font would have to renumber them, and the
     // subsetter does not close over MATH.
-    let mut glyphs = glyphs;
     if let Some(ranges) = &subset {
         lemmata_build::font::retain_ranges(&mut glyphs, &parse_ranges(ranges)?);
         if glyphs.is_empty() {
             return Err(format!("--subset {ranges} leaves no glyphs"));
         }
-    }
-
-    if !plan_path.is_empty() {
-        plan_path = std::fs::read_to_string(&plan_path)
-            .map_err(|error| format!("reading {plan_path}: {error}"))?;
     }
 
     // The capture records the slant in each glyph's gizmo, so the face's angle
@@ -253,7 +241,6 @@ fn build_font(build: Build) -> Result<(), String> {
     // The plan supplies the font's metrics. The capture records its slant in
     // each glyph's gizmo, so the angle is taken from the source and overwrites
     // whatever the plan said.
-    let plan = lemmata_plan::from_json(&plan_path)?;
     let metrics = {
         let mut metrics = plan.to_font_metrics();
         metrics.italic_angle = italic_angle;

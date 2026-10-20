@@ -664,6 +664,7 @@ dependencies = [
  "lemmata-host",
  "lemmata-plan",
  "lemmata-ptl",
+ "lemmata-source",
  "read-fonts",
 ]
 
@@ -739,10 +740,9 @@ name = "lemmata-ptl-front"
 version = "0.1.0"
 
 [[package]]
-name = "lemmata-web"
+name = "lemmata-source"
 version = "0.1.0"
 dependencies = [
- "harfrust",
  "kurbo",
  "lemmata-build",
  "lemmata-capture",
@@ -750,9 +750,23 @@ dependencies = [
  "lemmata-glyphs",
  "lemmata-plan",
  "lemmata-ptl",
+]
+
+[[package]]
+name = "lemmata-web"
+version = "0.1.0"
+dependencies = [
+ "harfrust",
+ "kurbo",
+ "lemmata-build",
+ "lemmata-capture",
+ "lemmata-oracle",
+ "lemmata-plan",
+ "lemmata-source",
  "read-fonts",
  "serde_json",
  "sha2",
+ "skrifa",
  "wasm-bindgen",
 ]
 
