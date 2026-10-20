@@ -2322,3 +2322,20 @@ pub fn eng_hook(
         0.0_f64.max(y_start - y),
     )
 }
+
+/// `BowlXDepth`: how deep a bowl's turn reaches.
+#[must_use]
+pub fn bowl_x_depth(
+    metrics: &Metrics,
+    top: f64,
+    bottom: f64,
+    left: f64,
+    right: f64,
+    sw: f64,
+) -> f64 {
+    let shrink = ((right - left) / (top - bottom)).sqrt();
+
+    (1.25 * sw * metrics.hv_contrast).max(
+        shrink * ((top - bottom) * 0.45).min((right - left + sw * metrics.hv_contrast) * 0.875),
+    )
+}

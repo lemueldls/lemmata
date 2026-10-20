@@ -5,6 +5,7 @@ pub mod lower_b;
 pub mod lower_d;
 pub mod lower_h;
 pub mod lower_p;
+pub mod upper_b;
 pub mod upper_d;
 pub mod upper_e;
 pub mod upper_f;

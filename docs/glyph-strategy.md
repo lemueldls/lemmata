@@ -211,6 +211,12 @@ across, which `h`, `n`, `m` and `b` share. `h`, `hStroke`, `hHookTop`, `heng`,
 exact. Two mistakes the knots caught: `Serifless` was still drawing the
 top-left serif, and the bottom serifs are `HSerif.mb` rather than `lb`.
 
+`letter/latin/upper-b.ptl` (560 lines) gave the first two-bowl capital. Four
+bodies differ in the bar's position and in whether a gap interrupts the stem;
+`B`, `BStroke` and `smcpB` are thirty captured glyphs, 1074 knots, exact. It
+needed `BowlXDepth`, the turn depth the two arcs share. `BHookLeft`, `BBar`, the
+currency signs, `latn/Beta` and the Cyrillic ve shapes are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
