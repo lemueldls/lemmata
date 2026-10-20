@@ -18,11 +18,14 @@
 // The build runs on the worker thread, which is the point: a full set is tens
 // of thousands of glyphs and would freeze the page.
 
-import init, { build_font, default_plan } from "lemmata-web";
+import init, { build_font, default_plan, preview_font } from "lemmata-web";
 
 interface Request {
   capture?: Uint8Array | ArrayBuffer;
   plan?: string | boolean;
+  /** A short text to preview. When present the request is a preview. */
+  text?: string;
+  id?: number;
   ask?: string;
   cancel?: boolean;
 }
@@ -64,17 +67,34 @@ self.onmessage = async (event: MessageEvent<Request>): Promise<void> => {
 
   try {
     await ready;
-    scope.postMessage({ phase: "building", done: 0, total: 1 });
-    const started = performance.now();
-    // A `Uint8Array`, not an `ArrayBuffer`: the binding's `&[u8]` reads
-    // `length`, and an `ArrayBuffer` only has `byteLength`, which is how this
-    // reported a truncated capture.
     const capture =
       message.capture instanceof Uint8Array
         ? message.capture
         : new Uint8Array(message.capture ?? new ArrayBuffer(0));
+    const started = performance.now();
+
+    // A preview recomputes only the glyphs the text draws, so it is cheap
+    // enough to run on every plan change.
+    if (typeof message.text === "string") {
+      const bytes = preview_font(capture, String(message.plan ?? ""), message.text);
+      scope.postMessage({
+        id: message.id,
+        bytes,
+        elapsed: performance.now() - started,
+        phase: "preview",
+        done: 1,
+        total: 1,
+      });
+      return;
+    }
+
+    scope.postMessage({ phase: "building", done: 0, total: 1 });
+    // A `Uint8Array`, not an `ArrayBuffer`: the binding's `&[u8]` reads
+    // `length`, and an `ArrayBuffer` only has `byteLength`, which is how this
+    // reported a truncated capture.
     const bytes = build_font(capture, String(message.plan ?? ""));
     scope.postMessage({
+      id: message.id,
       bytes,
       elapsed: performance.now() - started,
       phase: "done",
@@ -83,6 +103,7 @@ self.onmessage = async (event: MessageEvent<Request>): Promise<void> => {
     });
   } catch (error) {
     scope.postMessage({
+      id: message.id,
       error: error instanceof Error ? error.message : String(error),
     });
   } finally {

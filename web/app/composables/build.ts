@@ -1,6 +1,6 @@
 // The generator's half of the worker: the page and the worker exchange messages
-// rather than calls, and one pending reply is enough because requests are
-// serialised.
+// rather than calls. Requests are serialised, so each one carries an id and the
+// reply is matched back to it.
 //
 // The build runs on the worker thread, which is the point: a full set is tens
 // of thousands of glyphs and would freeze the page. The plan and the outlines
@@ -10,6 +10,7 @@ import init from "lemmata-web";
 import BuildWorker from "~/workers/build.ts?worker";
 
 interface BuildReply {
+  id?: number;
   bytes?: Uint8Array;
   error?: string;
   elapsed?: number;
@@ -25,6 +26,8 @@ interface Build {
   elapsed: Ref<number>;
   busy: Ref<boolean>;
   run: (plan: string, capture: Uint8Array) => Promise<void>;
+  /// A short preview of the plan, for the text the specimen shows.
+  preview: (plan: string, capture: Uint8Array, text: string) => Promise<Uint8Array>;
 }
 
 export function useBuild(): Build {
@@ -37,25 +40,42 @@ export function useBuild(): Build {
   const busy = ref(false);
 
   let worker: Worker | null = null;
-  let pending: ((reply: BuildReply) => void) | null = null;
+  let next = 1;
+  const pending = new Map<number, (reply: BuildReply) => void>();
 
-  const build = (
+  const request = (
+    message: Record<string, unknown>,
+  ): Promise<BuildReply> => {
+    const id = next++;
+    return new Promise((resolve, reject) => {
+      pending.set(id, (reply) =>
+        reply.error ? reject(new Error(reply.error)) : resolve(reply),
+      );
+      worker?.postMessage({ ...message, id });
+    });
+  };
+
+  const build = (plan: string, capture: Uint8Array): Promise<BuildReply> =>
+    request({ capture, plan });
+
+  const preview = async (
     plan: string,
     capture: Uint8Array,
-  ): Promise<BuildReply> =>
-    new Promise((resolve, reject) => {
-      pending = (reply) =>
-        reply.error ? reject(new Error(reply.error)) : resolve(reply);
-      worker?.postMessage({ capture, plan });
-    });
+    text: string,
+  ): Promise<Uint8Array> => {
+    const reply = await request({ capture, plan, text, preview: true });
+    return reply.bytes ?? new Uint8Array();
+  };
 
   onMounted(async () => {
     await init();
     worker = new BuildWorker();
     worker.addEventListener("message", (event: MessageEvent<BuildReply>) => {
-      const reply = pending;
+      const id = event.data.id;
+      if (id === undefined) return;
+      const reply = pending.get(id);
       if (!reply || !(event.data.bytes ?? event.data.error)) return;
-      pending = null;
+      pending.delete(id);
       reply(event.data);
     });
     status.value = "Ready.";
@@ -84,5 +104,5 @@ export function useBuild(): Build {
     }
   };
 
-  return { status, state, download, downloadName, bytes, elapsed, busy, run };
+  return { status, state, download, downloadName, bytes, elapsed, busy, run, preview };
 }
