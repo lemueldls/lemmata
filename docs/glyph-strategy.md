@@ -238,6 +238,12 @@ and an optional tail: `H` and `smcpH`, thirteen captured glyphs, 156 knots,
 exact. It added `Design::h_bar_pos`. The turned and half forms, the hooks and
 the descenders are not ported.
 
+`letter/latin/upper-p.ptl` is a stem and a bowl that closes on the crossbar,
+with two openness settings and three serif settings: `P` and `smcpP`, twelve
+captured glyphs, 248 knots, exact. The open forms cut a gap in the stem with a
+`difference`. The Greek rho, the hook, the stroke variants and the ruble sign
+are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

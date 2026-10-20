@@ -283,7 +283,10 @@ H.tailedSerifed,H.tailedSerifedBGR,H.serifedExceptBottomRight,\
 smcpH.serifless,smcpH.topLeftSerifed,smcpH.topLeftBottomRightSerifed,\
 smcpH.serifed,smcpH.serifedBGR,smcpH.tailedSerifless,\
 smcpH.tailedTopLeftSerifed,smcpH.tailedSerifed,smcpH.tailedSerifedBGR,\
-smcpH.serifedExceptBottomRight'
+smcpH.serifedExceptBottomRight,P.closedSerifless,P.closedMotionSerifed,\
+P.closedSerifed,P.openSerifless,P.openMotionSerifed,P.openSerifed,\
+smcpP.closedSerifless,smcpP.closedMotionSerifed,smcpP.closedSerifed,\
+smcpP.openSerifless,smcpP.openMotionSerifed,smcpP.openSerifed'
 npm run build -- ttf-unhinted::RefA
 ```
 
