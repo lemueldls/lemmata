@@ -8,7 +8,7 @@
 use std::path::{Path, PathBuf};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
-use lemmata_build::texture::Side;
+use lemmata_build::texture::Form;
 use read_fonts::TableProvider;
 use read_fonts::types::GlyphId;
 
@@ -112,7 +112,7 @@ fn texture_healing_fires_in_context() {
 
         GlyphId::new(u32::try_from(index + 1).expect("glyph id"))
     };
-    let form = |letter: char, side: Side| -> GlyphId {
+    let form = |letter: char, form: Form| -> GlyphId {
         let glyph = glyphs
             .iter()
             .find(|glyph| glyph.unicodes.contains(&u32::from(letter)))
@@ -120,41 +120,43 @@ fn texture_healing_fires_in_context() {
 
         form_id(
             &glyphs,
-            &lemmata_build::texture::form_name(&glyph.name, side),
+            &lemmata_build::texture::form_name(&glyph.name, form),
         )
     };
 
-    // A giver before a taker cedes toward it, and a taker between two givers
-    // reaches both ways, which is the pass that only fires once the others have
-    // run.
+    // A giver before a taker gives up the side facing it, and the taker
+    // extends into what it gave up.
+    assert_eq!(
+        run("im"),
+        vec![form('i', Form::ShrR), form('m', Form::ExtL)],
+        "im should heal"
+    );
+    // A giver after a taker gives up the other side, and the taker extends
+    // toward it.
+    assert_eq!(
+        run("mi"),
+        vec![form('m', Form::ExtR), form('i', Form::ShrL)],
+        "mi should heal"
+    );
+    // A giver between two takers gives up both sides, and the taker between
+    // two givers extends both.
     assert_eq!(
         run("imi"),
         vec![
-            form('i', Side::Left),
-            form('m', Side::Both),
-            form('i', Side::Right)
+            form('i', Form::ShrR),
+            form('m', Form::ExtLR),
+            form('i', Form::ShrL)
         ],
         "imi should heal"
     );
-    // A giver with a taker on each side has room on both, so it widens and both
-    // gaps close by the same amount. Ceding one side instead would close one gap
-    // by exactly what it opened on the other, which is worse than leaving it.
     assert_eq!(
         run("mim"),
-        vec![base('m'), form('i', Side::Both), base('m')],
-        "a giver between two takers widens, and the takers stay put"
-    );
-    // The giver moves away, which opens a gap on that side, and the taker
-    // reaches into it. Both ends of the pair end up moved.
-    assert_eq!(
-        run("im"),
-        vec![form('i', Side::Left), form('m', Side::Left)],
-        "a pair heals both ways"
-    );
-    assert_eq!(
-        run("mi"),
-        vec![form('m', Side::Right), form('i', Side::Right)],
-        "and heals it the other way round"
+        vec![
+            form('m', Form::ExtR),
+            form('i', Form::ShrLR),
+            form('m', Form::ExtL)
+        ],
+        "mim should heal"
     );
 
     // Two givers have nothing to trade, so nothing should move. This is the
@@ -183,12 +185,12 @@ fn texture_healing_fires_in_context() {
     };
     assert_eq!(
         run(".m"),
-        vec![mark('.'), form('m', Side::Left)],
+        vec![mark('.'), form('m', Form::ExtL)],
         "a taker reaches toward the mark before it"
     );
     assert_eq!(
         run("m."),
-        vec![form('m', Side::Right), mark('.')],
+        vec![form('m', Form::ExtR), mark('.')],
         "and toward the one after it"
     );
 }

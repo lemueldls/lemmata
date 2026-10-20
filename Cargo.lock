@@ -757,16 +757,13 @@ name = "lemmata-web"
 version = "0.1.0"
 dependencies = [
  "harfrust",
- "kurbo",
  "lemmata-build",
  "lemmata-capture",
- "lemmata-oracle",
  "lemmata-plan",
  "lemmata-source",
  "read-fonts",
  "serde_json",
  "sha2",
- "skrifa",
  "wasm-bindgen",
 ]
 

@@ -186,8 +186,8 @@ onBeforeUnmount(() => removeEventListener("resize", draw));
       </li>
       <li>
         <b>02 / the swap</b>
-        <code>TXTR</code> watches the neighbours. The narrow letter gives up a
-        sidebearing and the wide letter takes room from it.
+        <code>TXTR</code> watches the neighbours. The narrow letter pulls the
+        edge it shares in, and the wide letter extends into what it gave up.
       </li>
       <li>
         <b>03 / the grid</b>

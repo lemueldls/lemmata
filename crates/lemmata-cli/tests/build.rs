@@ -590,7 +590,7 @@ fn widened_forms_keep_the_dot_round() {
 
     let mut checked = 0usize;
     for letter in ['i', 'j'] {
-        let Some((index, role)) = roles
+        let Some((index, _role)) = roles
             .iter()
             .find(|(index, _)| {
                 glyphs[*index]
@@ -603,10 +603,10 @@ fn widened_forms_keep_the_dot_round() {
             continue;
         };
         let glyph = &glyphs[index];
-        let forms = lemmata_build::texture::forms(glyph, role, glyph.advance);
+        let forms = lemmata_build::texture::forms(glyph, glyph.advance);
         let Some((_, widened)) = forms
             .iter()
-            .find(|(side, _)| *side == lemmata_build::texture::Side::Both)
+            .find(|(form, _)| *form == lemmata_build::texture::Form::ExtLR)
         else {
             continue;
         };
@@ -982,34 +982,43 @@ fn texture_forms_move_within_the_cell() {
 
     let mut healed = 0usize;
     for (index, role) in lemmata_build::texture::classify(&glyphs) {
+        if role == lemmata_build::texture::Role::Stationary {
+            continue;
+        }
         let base = &glyphs[index];
         let base_id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
-        for (side, contours) in lemmata_build::texture::forms(base, role, base.advance) {
-            let name = lemmata_build::texture::form_name(&base.name, side);
-            let form = id(&name);
+        let (base_min, _, base_max, _) =
+            lemmata_build::font::ink(&base.contours).expect("the base has ink");
+        for (form, contours) in lemmata_build::texture::forms(base, base.advance) {
+            let name = lemmata_build::texture::form_name(&base.name, form);
+            let id = id(&name);
             // The advance is the whole trick: the drawing moves and the cell
             // does not, so the monospace grid is untouched.
             assert_eq!(
-                advance(form),
+                advance(id),
                 advance(base_id),
                 "{name} must not change the advance"
             );
             let (x_min, _, x_max, _) =
                 lemmata_build::font::ink(&contours).unwrap_or_else(|| panic!("{name} has ink"));
-            let (base_min, _, base_max, _) =
-                lemmata_build::font::ink(&base.contours).expect("the base has ink");
-            match side {
-                lemmata_build::texture::Side::Left => assert!(
-                    x_min < base_min && x_max <= base_max,
-                    "{name} should move left: {x_min}..{x_max} against {base_min}..{base_max}"
+            // A dot is moved but never scaled, so the rightmost point of a
+            // glyph whose dot is its rightmost ink does not move. What the
+            // form does is change the drawing's width: the extension grows it
+            // and the shrink narrows it.
+            let width = x_max - x_min;
+            let base_width = base_max - base_min;
+            match form {
+                lemmata_build::texture::Form::ExtL
+                | lemmata_build::texture::Form::ExtR
+                | lemmata_build::texture::Form::ExtLR => assert!(
+                    width > base_width,
+                    "{name} should be wider: {x_min}..{x_max} against {base_min}..{base_max}"
                 ),
-                lemmata_build::texture::Side::Right => assert!(
-                    x_min >= base_min && x_max > base_max,
-                    "{name} should move right: {x_min}..{x_max} against {base_min}..{base_max}"
-                ),
-                lemmata_build::texture::Side::Both => assert!(
-                    x_min < base_min && x_max > base_max,
-                    "{name} should reach both ways: {x_min}..{x_max} against {base_min}..{base_max}"
+                lemmata_build::texture::Form::ShrL
+                | lemmata_build::texture::Form::ShrR
+                | lemmata_build::texture::Form::ShrLR => assert!(
+                    width < base_width,
+                    "{name} should be narrower: {x_min}..{x_max} against {base_min}..{base_max}"
                 ),
             }
             healed += 1;

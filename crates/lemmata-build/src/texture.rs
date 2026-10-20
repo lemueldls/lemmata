@@ -1,4 +1,4 @@
-//! Texture healing, for `calt`.
+//! Texture healing, for `TXTR`.
 //!
 //! r[impl build.texture]
 //!
@@ -9,71 +9,104 @@
 //! drawing moves inside the cell, so the grid is untouched and the text still
 //! lines up.
 //!
-//! Every form here is a transform of one drawing, and a transform cannot draw.
-//! A stem widened is a stem thickened, and a dot caught in the scale is an
-//! ellipse, which is why one is left out. Drawn forms are the glyph source's to
-//! give: the parameters that place ink in a cell are already the build's, and
-//! what is missing is the half that turns them back into outlines. Until that
-//! exists this is the compromise, and it is a good one only where a letter is
-//! close to filling its cell to begin with.
+//! The resource is the empty space, so a narrow letter is a *giver* and a wide
+//! one a *taker*. The form names are the drawing's edge: a giver shrinks on the
+//! side it faces the taker, and the taker extends into what the giver gives up.
+//! A giver between two takers shrinks both sides, and a taker between two givers
+//! extends both.
 //!
-//! The resource is the empty space, not the ink, so the narrow letters are the
-//! givers and the wide ones are the takers. That is the reverse of what the two
-//! names suggest while the ink is what you have in mind.
+//! Six forms per letter, which is upstream's set: `ExtL`, `ExtR`, `ExtLR`,
+//! `ShrL`, `ShrR`, `ShrLR`. Every letter carries all six, and the rules choose
+//! by role and by what the neighbours have become. Upstream draws them by
+//! re-running the definition with `advanceScale` at `1 ± 1/12`; until that is
+//! wired into both front ends this derives the form by scaling the captured
+//! outline, which is exact for a straight stem and approximate for a shape
+//! whose ink depends on the frame.
 //!
-//! Two roles, both measured rather than listed. A glyph gives space when its
-//! ink leaves much of the cell empty, and takes space when its ink nearly fills
-//! it. The forms are the same drawing shifted, and the pair is what makes room:
-//! the giver moves toward the taker and the taker moves toward the giver, which
-//! closes the gap between them without moving anything else.
-//!
-//! A glyph with room on both sides is the case that needs a second look. A
-//! giver between two takers moved toward one of them closes one gap by what it
-//! opens on the other, which leaves the pair no more even than it found it, so
-//! it takes both sides and widens instead. The wider form is the only one that
-//! grows: every other form keeps the drawing's size and changes only where in
-//! the cell it sits.
+//! A dot is the exception a scale gets wrong. It is small and it sits above the
+//! drawing's middle, so it is moved with the form and never scaled: the `i` and
+//! the `j` keep a round dot.
 
 use crate::font::GlyphData;
 
-/// How far a form moves, as a fraction of the advance.
+/// How far a form reaches, as a fraction of the advance.
 ///
-/// Monaspace tunes this per pair against drawn alternates. A derivation has one
-/// number, and a sixteenth of the cell is enough to be seen without the ink
-/// reaching the edge.
-const SHIFT: f64 = 1.0 / 16.0;
+/// Upstream uses `1/12` for both the extension and the shrink.
+pub const SHIFT: f64 = 1.0 / 12.0;
 
 /// The letters are split into fours by how much of the cell they leave empty.
 /// The first quarter gives space and the last quarter takes it.
 const PARTS: usize = 4;
 
-/// Which side of its cell a form moves toward.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Side {
-    Left,
-    Right,
-    Both,
+/// One of the six forms a letter carries.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Form {
+    /// Extend the left edge.
+    ExtL,
+    /// Extend the right edge.
+    ExtR,
+    /// Extend both edges.
+    ExtLR,
+    /// Pull the left edge in.
+    ShrL,
+    /// Pull the right edge in.
+    ShrR,
+    /// Pull both edges in.
+    ShrLR,
 }
 
-impl Side {
+impl Form {
     /// The suffix a form carries.
     #[must_use]
     pub const fn suffix(self) -> &'static str {
         match self {
-            Self::Left => "left",
-            Self::Right => "right",
-            Self::Both => "both",
+            Self::ExtL => "extL",
+            Self::ExtR => "extR",
+            Self::ExtLR => "extLR",
+            Self::ShrL => "shrL",
+            Self::ShrR => "shrR",
+            Self::ShrLR => "shrLR",
+        }
+    }
+
+    /// How much the drawing scales along x.
+    const fn scale(self) -> f64 {
+        match self {
+            Self::ExtL | Self::ExtR | Self::ExtLR => 1.0 + SHIFT,
+            Self::ShrL | Self::ShrR | Self::ShrLR => 1.0 - SHIFT,
+        }
+    }
+
+    /// How far the drawing moves, as a fraction of the advance.
+    ///
+    /// The edge the form names takes the extra room, so the drawing moves away
+    /// from it: a left form moves left by half the added width.
+    const fn shift(self) -> f64 {
+        match self {
+            Self::ExtL | Self::ShrR => -0.5 * SHIFT,
+            Self::ExtR | Self::ShrL => 0.5 * SHIFT,
+            Self::ExtLR | Self::ShrLR => 0.0,
         }
     }
 }
 
+/// Every form, in the order the rules name them.
+pub const FORMS: &[Form] = &[
+    Form::ExtL,
+    Form::ExtR,
+    Form::ExtLR,
+    Form::ShrL,
+    Form::ShrR,
+    Form::ShrLR,
+];
+
 /// What a glyph does in a pair.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
-    /// A letter with room to spare, which cedes it to the neighbour.
+    /// A letter with room to spare, which gives it to the neighbour.
     Gives,
-    /// A glyph whose ink nearly fills the cell, which takes what a neighbour
-    /// cedes.
+    /// A letter whose ink nearly fills the cell, which takes what a neighbour
+    /// gives.
     Takes,
     /// A mark with room to spare that stays where it is. A period that moved
     /// would stop reading as a period, so it lets the letter beside it move
@@ -81,31 +114,10 @@ pub enum Role {
     Stationary,
 }
 
-impl Role {
-    /// The forms a glyph of this role carries.
-    #[must_use]
-    pub const fn forms(self) -> &'static [Side] {
-        match self {
-            // A taker can reach out both ways at once, which is what a glyph
-            // between two givers needs.
-            Self::Takes => &[Side::Left, Side::Right, Side::Both],
-            // A giver with a taker on one side cedes that side. With a taker on
-            // both it has room on both, and ceding one would close one gap by
-            // exactly what it opened on the other, which is worse than leaving
-            // it alone. So it takes both sides at once and both gaps close by
-            // the same amount.
-            Self::Gives => &[Side::Left, Side::Right, Side::Both],
-            // A stationary glyph has no forms at all: it is a context, not a
-            // participant.
-            Self::Stationary => &[],
-        }
-    }
-}
-
 /// The name a form carries.
 #[must_use]
-pub fn form_name(base: &str, side: Side) -> String {
-    format!("{base}.{}", side.suffix())
+pub fn form_name(base: &str, form: Form) -> String {
+    format!("{base}.{}", form.suffix())
 }
 
 /// The share of the cell the glyph's ink leaves empty.
@@ -140,14 +152,7 @@ fn is_mark(glyph: &GlyphData) -> bool {
 /// `glyphs` and the role.
 ///
 /// A rank rather than a threshold, because what counts as narrow is a property
-/// of the font. This one fills its cells more evenly than the design texture
-/// healing was invented for, so an absolute cut either misses the narrow
-/// letters or takes in half the alphabet.
-///
-/// The emptiest quarter give space, and the fullest quarter take it. A mark in
-/// the giving quarter stands still instead: it has the room, but it is the
-/// letter beside it that should move. Monaspace chooses its set by hand; a rank
-/// is what a derivation has.
+/// of the font. The emptiest quarter give space and the fullest quarter take it.
 #[must_use]
 pub fn classify(glyphs: &[GlyphData]) -> Vec<(usize, Role)> {
     let mut ranked: Vec<(f64, usize)> = glyphs
@@ -166,12 +171,8 @@ pub fn classify(glyphs: &[GlyphData]) -> Vec<(usize, Role)> {
     let mut roles = Vec::new();
     for (rank, (value, index)) in ranked.iter().enumerate() {
         let role = if rank < cut {
-            if is_letter(&glyphs[*index]) {
-                narrowest = narrowest.min(*value);
-                Role::Gives
-            } else {
-                Role::Stationary
-            }
+            narrowest = narrowest.min(*value);
+            Role::Gives
         } else if rank + cut >= ranked.len() {
             Role::Takes
         } else {
@@ -181,9 +182,7 @@ pub fn classify(glyphs: &[GlyphData]) -> Vec<(usize, Role)> {
     }
 
     // A mark that leaves more room than the narrowest giving letter has to
-    // spare, but must not spend it itself. Ranking the marks alongside the
-    // letters instead would widen the quarters and take in letters that are
-    // neither narrow nor wide, which is worse than leaving them out.
+    // spare, but must not spend it itself.
     for (index, glyph) in glyphs.iter().enumerate() {
         if is_letter(glyph) || !is_mark(glyph) {
             continue;
@@ -196,68 +195,32 @@ pub fn classify(glyphs: &[GlyphData]) -> Vec<(usize, Role)> {
     roles
 }
 
-/// The forms a glyph carries, in the order `Side::forms` names them.
+/// The six forms a glyph carries, translated by its advance.
 #[must_use]
-pub fn forms(
-    glyph: &GlyphData,
-    role: Role,
-    advance: u16,
-) -> Vec<(Side, Vec<Vec<lemmata_geom::QuadifyPoint>>)> {
+pub fn forms(glyph: &GlyphData, advance: u16) -> Vec<(Form, Vec<Vec<lemmata_geom::QuadifyPoint>>)> {
     let shift = f64::from(advance) * SHIFT;
-    role.forms()
+
+    FORMS
         .iter()
-        .map(|side| {
-            let contours = match side {
-                // A form that moves is the drawing translated, which is what
-                // keeps the letterform and the cell both unchanged.
-                Side::Left => moved(glyph, -shift),
-                Side::Right => moved(glyph, shift),
-                // A form that takes both sides has to grow, so it is scaled
-                // about its own centre until it reaches `shift` further out on
-                // each side.
-                Side::Both => widened(glyph, shift),
-            };
-            (*side, contours)
+        .map(|form| {
+            let contours = formed(glyph, form.scale(), form.shift() * shift);
+            (*form, contours)
         })
         .collect()
 }
 
-/// The glyph's contours translated along x.
-fn moved(glyph: &GlyphData, dx: f64) -> Vec<Vec<lemmata_geom::QuadifyPoint>> {
-    glyph
-        .contours
-        .iter()
-        .map(|contour| {
-            contour
-                .iter()
-                .map(|point| lemmata_geom::QuadifyPoint {
-                    x: point.x + dx,
-                    ..*point
-                })
-                .collect()
-        })
-        .collect()
-}
-
-/// The glyph's contours widened about their centre until each side reaches
-/// `shift` further out.
+/// The glyph's contours scaled along x about their centre, then moved by `dx`.
 ///
 /// A small contour riding above the rest is a dot, and a dot scaled about the
 /// drawing's centre comes out an ellipse: the `i` and the `j` would grow ovals.
-/// It is left exactly where it is instead. The stem under it widens about the
-/// same centre, so a dot that sat over the stem still does, and it is still
-/// round.
+/// It is moved with the drawing and never scaled, so it stays round and over
+/// the stem it belongs to.
 #[allow(clippy::suboptimal_flops)]
-fn widened(glyph: &GlyphData, shift: f64) -> Vec<Vec<lemmata_geom::QuadifyPoint>> {
+fn formed(glyph: &GlyphData, scale: f64, dx: f64) -> Vec<Vec<lemmata_geom::QuadifyPoint>> {
     let Some((x_min, y_min, x_max, y_max)) = glyph.bounding_box() else {
         return glyph.contours.clone();
     };
-    let width = f64::from(x_max - x_min);
-    if width <= 0.0 {
-        return glyph.contours.clone();
-    }
     let centre = f64::midpoint(f64::from(x_min), f64::from(x_max));
-    let scale = (width + 2.0 * shift) / width;
     let middle = f64::midpoint(f64::from(y_min), f64::from(y_max));
     let largest = glyph
         .contours
@@ -271,16 +234,16 @@ fn widened(glyph: &GlyphData, shift: f64) -> Vec<Vec<lemmata_geom::QuadifyPoint>
         .map(|contour| {
             // A dot is small beside the drawing and sits above its middle. Both
             // halves matter: a small contour low down is a serif or a tail, and
-            // those are part of what widens.
+            // those are part of what scales.
             let dot =
                 extent(contour) * 4.0 < largest && contour.iter().all(|point| point.y > middle);
             contour
                 .iter()
                 .map(|point| lemmata_geom::QuadifyPoint {
                     x: if dot {
-                        point.x
+                        point.x + dx
                     } else {
-                        centre + (point.x - centre) * scale
+                        centre + (point.x - centre) * scale + dx
                     },
                     ..*point
                 })
@@ -308,11 +271,14 @@ fn extent(contour: &[lemmata_geom::QuadifyPoint]) -> f64 {
 pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
     let mut derived = Vec::new();
     for (index, role) in classify(glyphs) {
+        if role == Role::Stationary {
+            continue;
+        }
         let glyph = &glyphs[index];
-        for (side, contours) in forms(glyph, role, glyph.advance) {
+        for (form, contours) in forms(glyph, glyph.advance) {
             let code = first_code + u32::try_from(derived.len()).unwrap_or(0);
             derived.push(GlyphData {
-                name: form_name(&glyph.name, side),
+                name: form_name(&glyph.name, form),
                 unicodes: vec![code],
                 advance: glyph.advance,
                 contours,

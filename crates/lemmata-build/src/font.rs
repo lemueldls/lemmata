@@ -166,13 +166,15 @@ pub fn derived(glyphs: &[GlyphData], metrics: &Metrics) -> Vec<GlyphData> {
     derived
 }
 
-/// The `calt` feature: texture healing's passes, in the order they have to run.
+/// The `TXTR` feature: texture healing's passes, in the order they have to run.
 ///
-/// Each pass names what it changes and what it changes it in front of, and a
-/// later pass sees what an earlier one left: the centre pass only fires between
-/// two givers that the first two passes have already moved apart.
+/// A giver shrinks first, on the side facing a taker, and the taker then
+/// extends into what it gave up. That order is what makes the chain fire from
+/// the base glyphs: the shrink is the seed, and the extension matches the form
+/// the shrink left behind. A taker between two shrunk givers extends both sides
+/// in one pass, which is why it runs before the one-sided extensions.
 fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
-    use crate::texture::{Role, Side, form_name};
+    use crate::texture::{Form, Role, form_name};
 
     let id = |name: &str| -> Option<GlyphId16> {
         let index = glyphs.iter().position(|glyph| glyph.name == name)?;
@@ -200,96 +202,89 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
             .filter_map(|index| id(&glyphs[*index].name))
             .collect()
     };
-    let shifted = |indices: &[usize], side: Side| -> Vec<(GlyphId16, GlyphId16)> {
+    let shifted = |indices: &[usize], form: Form| -> Vec<(GlyphId16, GlyphId16)> {
         indices
             .iter()
             .filter_map(|index| {
                 let name = &glyphs[*index].name;
-                Some((id(name)?, id(&form_name(name, side))?))
+                Some((id(name)?, id(&form_name(name, form))?))
+            })
+            .collect()
+    };
+    let forms_of = |indices: &[usize], forms: &[Form]| -> Vec<GlyphId16> {
+        indices
+            .iter()
+            .flat_map(|index| {
+                let name = &glyphs[*index].name;
+                forms
+                    .iter()
+                    .filter_map(move |form| id(&form_name(name, *form)))
             })
             .collect()
     };
 
-    let givers_left: Vec<GlyphId16> = shifted(&givers, Side::Left)
-        .into_iter()
-        .map(|(_, to)| to)
-        .collect();
-    let givers_right: Vec<GlyphId16> = shifted(&givers, Side::Right)
-        .into_iter()
-        .map(|(_, to)| to)
-        .collect();
-    let wide = ids(&takers);
+    let takers_base = ids(&takers);
+    let shrunk = forms_of(&givers, &[Form::ShrR, Form::ShrLR]);
+    let shrunk_left = forms_of(&givers, &[Form::ShrL, Form::ShrLR]);
     let mut passes = vec![
-        // A giver with a taker on each side has room on both, so it takes both
-        // at once and widens. Moving it one way would close one gap by exactly
-        // what it opened on the other, which is no better than leaving it. This
-        // runs first because the passes below look for the base form, and a
-        // giver this one widened is no longer it.
+        // A giver with a taker on each side gives up both sides at once.
         lemmata_layout::Rule {
-            backtrack: vec![wide.clone()],
+            backtrack: vec![takers_base.clone()],
             input: ids(&givers),
-            lookahead: vec![wide.clone()],
-            apply: shifted(&givers, Side::Both),
+            lookahead: vec![takers_base.clone()],
+            apply: shifted(&givers, Form::ShrLR),
         },
-        // A giver before a taker cedes toward it.
+        // A giver before a taker gives up the side facing it.
         lemmata_layout::Rule {
             backtrack: Vec::new(),
             input: ids(&givers),
-            lookahead: vec![wide.clone()],
-            apply: shifted(&givers, Side::Left),
+            lookahead: vec![takers_base.clone()],
+            apply: shifted(&givers, Form::ShrR),
         },
-        // A giver after a taker cedes toward it.
+        // A giver after a taker gives up the other side.
         lemmata_layout::Rule {
-            backtrack: vec![wide.clone()],
+            backtrack: vec![takers_base],
             input: ids(&givers),
             lookahead: Vec::new(),
-            apply: shifted(&givers, Side::Right),
+            apply: shifted(&givers, Form::ShrL),
         },
-        // A taker between two givers takes both sides. This runs after the two
-        // passes above, so what it looks for is the forms they left behind.
+        // A taker between two givers that have both shrunk extends both sides.
         lemmata_layout::Rule {
-            backtrack: vec![givers_left.clone()],
-            input: wide.clone(),
-            lookahead: vec![givers_right.clone()],
-            apply: shifted(&takers, Side::Both),
+            backtrack: vec![shrunk.clone()],
+            input: ids(&takers),
+            lookahead: vec![shrunk_left.clone()],
+            apply: shifted(&takers, Form::ExtLR),
+        },
+        // A taker after a shrunk giver extends into the gap on its left.
+        lemmata_layout::Rule {
+            backtrack: vec![shrunk],
+            input: ids(&takers),
+            lookahead: Vec::new(),
+            apply: shifted(&takers, Form::ExtL),
+        },
+        // A taker before a shrunk giver extends the other way.
+        lemmata_layout::Rule {
+            backtrack: Vec::new(),
+            input: ids(&takers),
+            lookahead: vec![shrunk_left],
+            apply: shifted(&takers, Form::ExtR),
         },
     ];
 
-    // A giver that has already moved left opened a gap on its right, so the
-    // taker after it can reach into that gap. The same the other way round.
-    // These run after the centre pass, and a taker it turned into `.both` is no
-    // longer in the input coverage, so the two cannot fight.
-    if !givers_left.is_empty() {
-        passes.push(lemmata_layout::Rule {
-            backtrack: vec![givers_left],
-            input: wide.clone(),
-            lookahead: Vec::new(),
-            apply: shifted(&takers, Side::Left),
-        });
-    }
-    if !givers_right.is_empty() {
-        passes.push(lemmata_layout::Rule {
-            backtrack: Vec::new(),
-            input: wide.clone(),
-            lookahead: vec![givers_right],
-            apply: shifted(&takers, Side::Right),
-        });
-    }
-
-    // A mark beside a taker does not move itself, so the taker moves toward it.
+    // A mark beside a taker does not move itself, so the taker extends toward it.
     let marks = ids(&stationary);
     if !marks.is_empty() {
         passes.push(lemmata_layout::Rule {
             backtrack: vec![marks.clone()],
-            input: wide.clone(),
+            input: ids(&takers),
             lookahead: Vec::new(),
-            apply: shifted(&takers, Side::Left),
+            apply: shifted(&takers, Form::ExtL),
         });
         passes.push(lemmata_layout::Rule {
             backtrack: Vec::new(),
-            input: wide,
+            input: ids(&takers),
             lookahead: vec![marks],
-            apply: shifted(&takers, Side::Right),
+            apply: shifted(&takers, Form::ExtR),
         });
     }
 
