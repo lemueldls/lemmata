@@ -179,7 +179,12 @@ currency/frenchFrancSign.topLeftSerifed,F.serifed,FBar.serifed,\
 smcpF.serifed,currency/frenchFrancSign.serifed,F.serifedCapped,\
 FBar.serifedCapped,smcpF.serifedCapped,mathbb/F,I.straight,I.serifless,\
 I.serifed,I.shortSerifed,ILonga.straight,ILonga.serifless,\
-ILonga.serifed,ILonga.shortSerifed,smcpI,mathbb/I'
+ILonga.serifed,ILonga.shortSerifed,smcpI,mathbb/I,D.standardSerifless,\
+D.standardUnilateralSerifed,D.standardBilateralSerifed,\
+D.moreRoundedSerifless,D.moreRoundedUnilateralSerifed,\
+D.moreRoundedBilateralSerifed,smcpD.moreRoundedSerifless,\
+smcpD.moreRoundedUnilateralSerifed,smcpD.moreRoundedBilateralSerifed,\
+Eth,smcpEth,mathbb/D'
 npm run build -- ttf-unhinted::RefA
 ```
 

@@ -2184,3 +2184,30 @@ pub fn bb_bar_center(
             .geometry(kurbo::Affine::IDENTITY),
     ]
 }
+
+/// `flatside.rd`: the right side of a ring, from top to bottom.
+#[must_use]
+pub fn flatside_rd(kit: &Kit, side: &FlatSide) -> Vec<Item> {
+    let FlatSide {
+        x,
+        d,
+        u,
+        ada,
+        adb,
+        ox,
+        af,
+    } = side;
+    if u - d > ada + adb {
+        vec![
+            kit.knot(KnotType::Left, x - ox, u - adb, af.clone()),
+            kit.knot(KnotType::Right, x - ox, d + ada, af.clone()),
+        ]
+    } else {
+        vec![kit.knot(
+            KnotType::G4,
+            x - ox,
+            ysmooth_mid_r(*u, *d, Some(*ada), Some(*adb), *ada, *adb),
+            af.clone(),
+        )]
+    }
+}

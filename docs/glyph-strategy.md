@@ -175,6 +175,16 @@ three serif settings, plus `ILonga`, `smcpI` and `mathbb/I`. Eight captured
 glyphs, 46 knots, exact. It needed `VBar.m`, the centered `HSerif` and
 `VSerif.ml`, and `BBBarCenter`.
 
+`letter/latin/upper-d.ptl` (126 lines) added the first closed arc.
+`DArcShapeT` draws the bowl either rounded or flat-sided, and `D`, `smcpD`,
+`Eth`, `smcpEth` and `mathbb/D` build on it. Nine captured glyphs, 178 knots,
+exact. It needed `flatside.rd`.
+
+The flat-sided branch caught a mistake the knots alone would not: `flatside.rd`
+had been written with `pair`, which emits two control knots, where upstream
+writes a `flat` and a `curl`. The arc came out two knots long and the drift was
+zero, because every knot it did emit sat where it belonged.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
