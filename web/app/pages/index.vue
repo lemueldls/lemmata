@@ -26,7 +26,7 @@ const TICKER = [
   "one file",
   "texture healing",
   "math table",
-  "eleven variants",
+  "115 ported drawings",
   "offline after load",
 ];
 
@@ -43,7 +43,7 @@ const FEATURES = [
   },
   {
     name: "variants",
-    note: "eleven spellings of a in this outline set, chosen from the file.",
+    note: "115 ported drawings, previewed in the registry before a plan picks one.",
     state: "ready" as const,
   },
   {
@@ -98,66 +98,71 @@ const readings = computed(() => {
 
 <template>
   <section class="hero" data-key-section>
-    <div class="hero__grid" aria-hidden="true" />
+    <div class="wrap hero__frame">
+      <GridGuide :top="false" :bottom="false" />
 
-    <div class="wrap hero__inner">
-      <div class="hero__main">
-        <p class="eyebrow">
-          <b>+</b> specimen 001 <i>/</i> live from the font
-        </p>
+      <div class="hero__inner">
+        <div class="hero__main">
+          <p class="eyebrow">
+            <b>+</b> specimen 001 <i>/</i> live from the font
+          </p>
 
-        <h1 class="hero__word">lemmata</h1>
+          <h1 class="hero__word">lemmata</h1>
 
-        <div class="hero__rule">
-          <span>one plan</span>
-          <i />
-          <span>one file</span>
-        </div>
-
-        <p class="hero__lede">
-          A typeface factory in a browser tab. Set the metrics, choose the
-          drawings, build the file. No account, no queue, no upload.
-        </p>
-
-        <div class="hero__actions">
-          <NuxtLink class="btn btn--accent" to="/generate/">
-            open configurator <span>→</span>
-          </NuxtLink>
-          <a class="btn btn--ghost" href="#samples">browse samples</a>
-        </div>
-
-        <p class="hero__notes">
-          <span>no account</span>
-          <span>no queue</span>
-          <span>offline after load</span>
-        </p>
-      </div>
-
-      <aside class="readout" aria-label="Readings from the font">
-        <div class="readout__bar">
-          <span class="dot" />
-          live readings
-          <span>+</span>
-        </div>
-
-        <dl class="readout__rows">
-          <div v-for="[name, value] in readings" :key="name">
-            <dt>{{ name }}</dt>
-            <dd>{{ value }}</dd>
+          <div class="hero__rule">
+            <span>one plan</span>
+            <i />
+            <span>one file</span>
           </div>
-        </dl>
 
-        <div class="readout__cmd">
-          <span><span class="prompt">$</span> lemmata build --plan plan.json</span>
-          <span class="out">→ {{ font.byteLength.toLocaleString() }} bytes / {{ Math.round(font.elapsed) }} ms</span>
+          <p class="hero__lede">
+            A typeface factory in a browser tab. Set the metrics, choose the
+            drawings, build the file. No account, no queue, no upload.
+          </p>
+
+          <div class="hero__actions">
+            <NuxtLink class="btn btn--accent" to="/generate/">
+              open configurator <span>→</span>
+            </NuxtLink>
+            <a class="btn btn--ghost" href="#samples">browse samples</a>
+          </div>
+
+          <p class="hero__notes">
+            <span>no account</span>
+            <span>no queue</span>
+            <span>offline after load</span>
+          </p>
         </div>
-      </aside>
+
+        <aside class="readout" aria-label="Readings from the font">
+          <div class="readout__bar">
+            <span class="dot" />
+            live readings
+            <span>+</span>
+          </div>
+
+          <dl class="readout__rows">
+            <div v-for="[name, value] in readings" :key="name">
+              <dt>{{ name }}</dt>
+              <dd>{{ value }}</dd>
+            </div>
+          </dl>
+
+          <div class="readout__cmd">
+            <span><span class="prompt">$</span> lemmata build --plan plan.json</span>
+            <span class="out">→ {{ font.byteLength.toLocaleString() }} bytes / {{ Math.round(font.elapsed) }} ms</span>
+          </div>
+        </aside>
+      </div>
     </div>
   </section>
 
   <div class="ticker" aria-hidden="true">
-    <div class="wrap ticker__track">
-      <span v-for="item in TICKER" :key="item">{{ item }} <i>+</i></span>
+    <div class="wrap ticker__frame">
+      <GridGuide :top="false" :bottom="false" />
+      <div class="ticker__track">
+        <span v-for="item in TICKER" :key="item">{{ item }} <i>+</i></span>
+      </div>
     </div>
   </div>
 
@@ -246,7 +251,7 @@ const readings = computed(() => {
     <SampleMosaic />
   </PlusPlate>
 
-  <PlusPlate id="healing" index="04" label="texture healing" meta="calt / before and after">
+  <PlusPlate id="healing" index="04" label="texture healing" meta="TXTR / before and after">
     <div class="section-intro">
       <div>
         <p class="eyebrow"><b>+</b> the bend</p>
@@ -318,7 +323,7 @@ const readings = computed(() => {
         <div class="cta__cmd" aria-label="What the configurator edits">
           <div><span>plan</span><span>7 keys</span></div>
           <div><span>outline set</span><span>72 glyphs</span></div>
-          <div><span>variants</span><span>11 spellings</span></div>
+          <div><span>registry</span><span>115 drawings</span></div>
           <div><span>build</span><span>in the tab</span></div>
           <div><span>output</span><span>ttf / woff2</span></div>
         </div>

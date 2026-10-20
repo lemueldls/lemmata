@@ -510,7 +510,14 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
         known.insert(name);
     }
 
-    lemmata_build::font::build(&glyphs, &metrics, &Names::default(), &plan.variants)
+    // The ligature targets are not letters the capture holds, so they are
+    // added from the fixture. A glyph the capture already has keeps its own
+    // outline.
+    // The ligature glyphs and rules are part of the font source, so the build
+    // crate carries them for both front ends.
+    let rules = lemmata_build::ligatures::add(&mut glyphs);
+
+    lemmata_build::font::build_with(&glyphs, &metrics, &Names::default(), &plan.variants, rules)
 }
 
 /// The same build, for the page.

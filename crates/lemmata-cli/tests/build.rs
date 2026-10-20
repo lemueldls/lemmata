@@ -962,7 +962,7 @@ fn texture_forms_move_within_the_cell() {
         .map(|record| record.feature_tag())
         .collect();
     assert!(
-        tags.contains(&Tag::new(b"calt")),
+        tags.contains(&Tag::new(b"TXTR")),
         "the features are {tags:?}"
     );
 

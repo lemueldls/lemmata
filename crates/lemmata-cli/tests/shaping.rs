@@ -75,10 +75,21 @@ fn texture_healing_fires_in_context() {
         let mut buffer = harfrust::Buffer::new();
         buffer.push_str(text);
         buffer.guess_segment_properties();
-        // `calt` is on by default, which is the case that matters: an editor
-        // does not ask for it.
-        harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::default())
-            .expect("shape the run");
+        // `TXTR` is a custom feature, so a renderer only heals when it is
+        // asked to. That is upstream's arrangement and the reason the tag is
+        // separate from `calt`.
+        let features = [harfrust::Feature {
+            tag: harfrust::Tag::new(b"TXTR"),
+            value: 1,
+            start: 0,
+            end: u32::MAX,
+        }];
+        harfrust::shape(
+            &shaper,
+            &mut buffer,
+            harfrust::ShapeOptions::default().features(&features),
+        )
+        .expect("shape the run");
 
         buffer
             .glyph_infos()

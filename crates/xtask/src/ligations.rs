@@ -15,6 +15,7 @@ use read_fonts::tables::gsub::{SubstitutionLookup, SubstitutionSubtables};
 use read_fonts::tables::layout::LookupList;
 use read_fonts::types::{GlyphId16, Tag};
 use read_fonts::{FontRef, TableProvider};
+use skrifa::MetadataProvider;
 
 /// One contextual rule, as glyph names.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -78,27 +79,6 @@ pub fn read(path: &str) -> Result<Vec<Ligature>, String> {
         .feature(feature_list.offset_data())
         .map_err(|error| format!("{error}"))?;
 
-    if std::env::var_os("LEMMATA_LIGATIONS_DEBUG").is_some() {
-        for record in feature_list.feature_records() {
-            eprintln!("feature {}", record.feature_tag());
-        }
-        for (index, lookup) in lookups.lookups().iter().enumerate() {
-            if let Ok(lookup) = lookup {
-                eprintln!("lookup {index}: type {}", lookup.lookup_type());
-            }
-        }
-    }
-    if std::env::var_os("LEMMATA_LIGATIONS_DEBUG").is_some() {
-        for index in feature.lookup_list_indices() {
-            let index = usize::from(index.get());
-            let kind = lookups
-                .lookups()
-                .get(index)
-                .map(|lookup| lookup.lookup_type())
-                .unwrap_or(u16::MAX);
-            eprintln!("calt lookup {index}: type {kind}");
-        }
-    }
     let mut found = Vec::new();
     let mut seen = BTreeSet::new();
     for index in feature.lookup_list_indices() {
@@ -308,7 +288,7 @@ fn shape(
     reader: &Reader<'_>,
     text: &str,
     calt: bool,
-) -> Vec<String> {
+) -> (Vec<String>, Vec<i32>) {
     let mut buffer = harfrust::Buffer::new();
     buffer.push_str(text);
     buffer.guess_segment_properties();
@@ -326,31 +306,25 @@ fn shape(
             end: u32::MAX,
         },
     ];
-    if std::env::var_os("LEMMATA_LIGATIONS_DEFAULT").is_some() {
-        harfrust::shape(shaper, &mut buffer, harfrust::ShapeOptions::default())
-            .expect("shape the run");
-    } else {
-        harfrust::shape(
-            shaper,
-            &mut buffer,
-            harfrust::ShapeOptions::default().features(&features),
-        )
-        .expect("shape the run");
-    }
+    harfrust::shape(
+        shaper,
+        &mut buffer,
+        harfrust::ShapeOptions::default().features(&features),
+    )
+    .expect("shape the run");
 
-    if std::env::var_os("LEMMATA_LIGATIONS_DEBUG").is_some() && text == "->" && calt {
-        for (info, position) in buffer.glyph_infos().iter().zip(buffer.glyph_positions()) {
-            eprintln!(
-                "  gid {} advance {} offset {}",
-                info.glyph_id, position.x_advance, position.x_offset
-            );
-        }
-    }
-    buffer
-        .glyph_infos()
-        .iter()
-        .map(|info| reader.name(GlyphId16::new(u16::try_from(info.glyph_id).unwrap_or(0))))
-        .collect()
+    (
+        buffer
+            .glyph_infos()
+            .iter()
+            .map(|info| reader.name(GlyphId16::new(u16::try_from(info.glyph_id).unwrap_or(0))))
+            .collect(),
+        buffer
+            .glyph_positions()
+            .iter()
+            .map(|position| position.x_advance)
+            .collect(),
+    )
 }
 
 /// Extracts the ligatures by shaping the samples the ligation set names.
@@ -370,16 +344,10 @@ pub fn read_samples(font_path: &str, parameters: &str) -> Result<Vec<Ligature>, 
     };
 
     let samples = samples(parameters);
-    if std::env::var_os("LEMMATA_LIGATIONS_DEBUG").is_some() {
-        eprintln!("samples: {}", samples.len());
-    }
     let mut found = Vec::new();
     for text in samples {
-        let plain = shape(&shaper, &reader, &text, false);
-        let joined = shape(&shaper, &reader, &text, true);
-        if std::env::var_os("LEMMATA_LIGATIONS_DEBUG").is_some() && text == "->" {
-            eprintln!("-> plain {plain:?} joined {joined:?}");
-        }
+        let (plain, _) = shape(&shaper, &reader, &text, false);
+        let (joined, _) = shape(&shaper, &reader, &text, true);
         if plain == joined {
             continue;
         }
@@ -579,6 +547,9 @@ pub fn run(font: &str, out: &str, parameters: Option<&str>) -> Result<(), String
     if parameters == Some("--rules") {
         return run_rules(font, out);
     }
+    if parameters == Some("--fixture") {
+        return run_fixture(font, out, std::env::args().nth(5).as_deref());
+    }
     let ligatures = match parameters {
         Some(path) => {
             let text = std::fs::read_to_string(path)
@@ -606,6 +577,245 @@ pub fn run(font: &str, out: &str, parameters: Option<&str>) -> Result<(), String
         "ligations: {} ligatures over {} first components",
         ligatures.len(),
         first_components.len()
+    );
+
+    Ok(())
+}
+
+/// The rules the sample sequences ask for.
+///
+/// Shaping each sample with `calt` off and on gives, position by position, the
+/// glyph the font starts from and the joined form it becomes. That is the rule
+/// a shaper applied, and it does not depend on how the lookup was encoded.
+fn sample_rules(font_path: &str, parameters: &str) -> Result<Vec<Rule>, String> {
+    let bytes =
+        std::fs::read(font_path).map_err(|error| format!("reading {font_path}: {error}"))?;
+    let blob: harfrust::font::Blob = bytes.clone().into();
+    let font = harfrust::Font::new(blob, 0)
+        .ok_or_else(|| format!("{font_path}: the shaper cannot read the font"))?;
+    let shaper = harfrust::ShaperFont::new(&font);
+    let reader = Reader {
+        font: FontRef::new(&bytes).map_err(|error| format!("{font_path}: {error}"))?,
+    };
+
+    let mut rules = Vec::new();
+    for text in samples(parameters) {
+        let (plain, _) = shape(&shaper, &reader, &text, false);
+        let (joined, _) = shape(&shaper, &reader, &text, true);
+        if plain.len() != joined.len() {
+            continue;
+        }
+        for (index, (before, after)) in plain.iter().zip(&joined).enumerate() {
+            if before == after {
+                continue;
+            }
+            rules.push(Rule {
+                backtrack: plain[..index]
+                    .iter()
+                    .rev()
+                    .map(|name| vec![name.clone()])
+                    .collect(),
+                input: before.clone(),
+                lookahead: plain[index + 1..]
+                    .iter()
+                    .map(|name| vec![name.clone()])
+                    .collect(),
+                target: after.clone(),
+            });
+        }
+    }
+    // A longer context is the more specific rule, so it is tried first.
+    rules.sort_by(|a, b| {
+        let length = |rule: &Rule| rule.backtrack.len() + rule.lookahead.len();
+        length(b).cmp(&length(a)).then_with(|| a.cmp(b))
+    });
+    rules.dedup();
+
+    Ok(rules)
+}
+
+/// Writes the fixture, from the samples when a ligation set is given and from
+/// the `calt` lookups otherwise.
+///
+/// # Errors
+///
+/// Returns a message when the font cannot be read or the file cannot be written.
+pub fn run_fixture(font_path: &str, out: &str, parameters: Option<&str>) -> Result<(), String> {
+    let rules = match parameters {
+        Some(path) => {
+            let text = std::fs::read_to_string(path)
+                .map_err(|error| format!("reading {path}: {error}"))?;
+            sample_rules(font_path, &text)?
+        }
+        None => read_rules(font_path)?,
+    };
+
+    write_fixture(font_path, out, &rules)
+}
+
+/// A pen that records a glyph outline as the corner and control points the
+/// build's contours use.
+#[derive(Default)]
+struct QuadPen {
+    contours: Vec<Vec<lemmata_geom::QuadifyPoint>>,
+    current: Vec<lemmata_geom::QuadifyPoint>,
+}
+
+impl QuadPen {
+    fn flush(&mut self) {
+        if !self.current.is_empty() {
+            self.contours.push(std::mem::take(&mut self.current));
+        }
+    }
+}
+
+impl skrifa::outline::OutlinePen for QuadPen {
+    fn move_to(&mut self, x: f32, y: f32) {
+        self.flush();
+        self.current.push(lemmata_geom::QuadifyPoint {
+            kind: lemmata_geom::QuadifyKind::Corner,
+            x: f64::from(x),
+            y: f64::from(y),
+        });
+    }
+
+    fn line_to(&mut self, x: f32, y: f32) {
+        self.current.push(lemmata_geom::QuadifyPoint {
+            kind: lemmata_geom::QuadifyKind::Corner,
+            x: f64::from(x),
+            y: f64::from(y),
+        });
+    }
+
+    fn quad_to(&mut self, cx: f32, cy: f32, x: f32, y: f32) {
+        self.current.push(lemmata_geom::QuadifyPoint {
+            kind: lemmata_geom::QuadifyKind::Quadratic,
+            x: f64::from(cx),
+            y: f64::from(cy),
+        });
+        self.current.push(lemmata_geom::QuadifyPoint {
+            kind: lemmata_geom::QuadifyKind::Corner,
+            x: f64::from(x),
+            y: f64::from(y),
+        });
+    }
+
+    fn curve_to(&mut self, _: f32, _: f32, _: f32, _: f32, x: f32, y: f32) {
+        // A TrueType outline has no cubics. Ending the segment keeps a stray
+        // one from losing the rest of the contour.
+        self.line_to(x, y);
+    }
+
+    fn close(&mut self) {
+        self.flush();
+    }
+}
+
+/// Writes the rules and the joined glyphs as one fixture.
+///
+/// The fixture carries the outlines of every glyph the rules name, because the
+/// font that ships to the page is built from a capture and those glyphs are not
+/// letters it holds.
+///
+/// # Errors
+///
+/// Returns a message when the font cannot be read or the file cannot be written.
+fn write_fixture(font_path: &str, out: &str, rules: &[Rule]) -> Result<(), String> {
+    let bytes =
+        std::fs::read(font_path).map_err(|error| format!("reading {font_path}: {error}"))?;
+    let font =
+        skrifa::prelude::FontRef::new(&bytes).map_err(|error| format!("{font_path}: {error}"))?;
+    let read = read_fonts::FontRef::new(&bytes).map_err(|error| format!("{font_path}: {error}"))?;
+    let post = read
+        .post()
+        .map_err(|error| format!("{font_path}: {error}"))?;
+    let count = read
+        .maxp()
+        .map_err(|error| format!("{font_path}: {error}"))?
+        .num_glyphs();
+
+    // The rules name glyphs, so the names have to be turned back into ids to
+    // draw them.
+    let mut ids = std::collections::BTreeMap::new();
+    for id in 0..count {
+        let id = GlyphId16::new(id);
+        if let Some(name) = post.glyph_name(id) {
+            ids.insert(name.to_string(), skrifa::GlyphId::new(id.to_u32()));
+        }
+    }
+
+    let metrics = font.glyph_metrics(
+        skrifa::prelude::Size::unscaled(),
+        skrifa::prelude::LocationRef::default(),
+    );
+    let outlines = font.outline_glyphs();
+    let mut glyphs = serde_json::Map::new();
+    let mut missing = Vec::new();
+    let mut names: BTreeSet<String> = BTreeSet::new();
+    for rule in rules {
+        for position in &rule.backtrack {
+            names.extend(position.iter().cloned());
+        }
+        names.insert(rule.input.clone());
+        for position in &rule.lookahead {
+            names.extend(position.iter().cloned());
+        }
+        names.insert(rule.target.clone());
+    }
+    for name in &names {
+        let Some(id) = ids.get(name) else {
+            missing.push(name.clone());
+            continue;
+        };
+        let Some(glyph) = outlines.get(*id) else {
+            missing.push(name.clone());
+            continue;
+        };
+        let mut pen = QuadPen::default();
+        glyph
+            .draw(
+                skrifa::outline::DrawSettings::unhinted(
+                    skrifa::prelude::Size::unscaled(),
+                    skrifa::prelude::LocationRef::default(),
+                ),
+                &mut pen,
+            )
+            .map_err(|error| format!("{name}: {error}"))?;
+        pen.flush();
+        let advance = metrics.advance_width(*id).map_or(0.0, f64::from);
+        glyphs.insert(
+            name.clone(),
+            serde_json::json!({
+                "advance": advance,
+                "contours": pen.contours.iter().map(|contour| {
+                    contour.iter().map(|point| serde_json::json!({
+                        "x": point.x,
+                        "y": point.y,
+                        "quadratic": matches!(point.kind, lemmata_geom::QuadifyKind::Quadratic),
+                    })).collect::<Vec<_>>()
+                }).collect::<Vec<_>>(),
+            }),
+        );
+    }
+    if !missing.is_empty() {
+        return Err(format!("the font has no outline for {missing:?}"));
+    }
+    let json = serde_json::json!({
+        "rules": rules.iter().map(|rule| serde_json::json!({
+            "backtrack": rule.backtrack,
+            "input": rule.input,
+            "lookahead": rule.lookahead,
+            "target": rule.target,
+        })).collect::<Vec<_>>(),
+        "glyphs": glyphs,
+    });
+    std::fs::write(out, serde_json::to_string(&json).unwrap())
+        .map_err(|error| format!("writing {out}: {error}"))?;
+    eprintln!(
+        "ligations: {} rules, {} glyphs, {} bytes",
+        rules.len(),
+        names.len(),
+        std::fs::metadata(out).map_or(0, |meta| meta.len())
     );
 
     Ok(())

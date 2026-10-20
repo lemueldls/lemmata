@@ -294,7 +294,7 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
     }
 
     Some(lemmata_layout::Feature {
-        tag: Tag::new(b"calt"),
+        tag: Tag::new(b"TXTR"),
         scripts: vec![Tag::new(b"latn"), Tag::new(b"DFLT")],
         effect: lemmata_layout::Effect::Contextual(passes),
     })
@@ -306,7 +306,20 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
 /// alternates. A pair is found by name, the way the MATH table finds its derived
 /// glyphs, so the derivation and the substitution cannot come to name different
 /// glyphs.
-fn substitutions(glyphs: &[GlyphData]) -> Gsub {
+/// One ligature rule, by glyph name.
+///
+/// Each side is one entry per position, nearest first. The input is the glyph
+/// the rule substitutes and the target is what it becomes, so a rule says "this
+/// glyph, in this context, is drawn as that one".
+#[derive(Clone, Debug)]
+pub struct Ligature {
+    pub backtrack: Vec<Vec<String>>,
+    pub input: String,
+    pub lookahead: Vec<Vec<String>>,
+    pub target: String,
+}
+
+fn substitutions(glyphs: &[GlyphData], ligatures: &[Ligature]) -> Gsub {
     let id = |name: &str| -> Option<GlyphId16> {
         let index = glyphs.iter().position(|glyph| glyph.name == name)?;
         u16::try_from(index + 1).ok().map(GlyphId16::new)
@@ -366,8 +379,39 @@ fn substitutions(glyphs: &[GlyphData]) -> Gsub {
             effect: lemmata_layout::Effect::Alternate(alternates),
         },
     ];
+    // Texture healing is `TXTR`, which is upstream's tag for it. Ligatures own
+    // `calt`, so a caller can turn one off without the other.
     if let Some(healing) = texture(glyphs) {
         features.push(healing);
+    }
+    let mut contextual = Vec::new();
+    for ligature in ligatures {
+        let Some(input) = id(&ligature.input) else {
+            continue;
+        };
+        let Some(target) = id(&ligature.target) else {
+            continue;
+        };
+        let positions = |names: &[Vec<String>]| -> Vec<Vec<GlyphId16>> {
+            names
+                .iter()
+                .map(|position| position.iter().filter_map(|name| id(name)).collect())
+                .filter(|position: &Vec<GlyphId16>| !position.is_empty())
+                .collect()
+        };
+        contextual.push(lemmata_layout::Rule {
+            backtrack: positions(&ligature.backtrack),
+            input: vec![input],
+            lookahead: positions(&ligature.lookahead),
+            apply: vec![(input, target)],
+        });
+    }
+    if !contextual.is_empty() {
+        features.push(lemmata_layout::Feature {
+            tag: Tag::new(b"calt"),
+            scripts: vec![Tag::new(b"latn"), Tag::new(b"DFLT")],
+            effect: lemmata_layout::Effect::Contextual(contextual),
+        });
     }
 
     lemmata_layout::gsub(&features)
@@ -390,6 +434,26 @@ pub fn build(
     metrics: &Metrics,
     names: &Names,
     variants: &[(String, String)],
+) -> Result<Vec<u8>, String> {
+    build_with(glyphs, metrics, names, variants, &[])
+}
+
+/// Builds a TrueType font, with the ligature rules the caller carries.
+///
+/// The rules are resolved against the glyphs the build writes, so a rule that
+/// names a glyph the caller did not supply is dropped rather than pointing at
+/// nothing.
+///
+/// # Errors
+///
+/// Returns a message when a contour cannot be written or a table fails to
+/// compile.
+pub fn build_with(
+    glyphs: &[GlyphData],
+    metrics: &Metrics,
+    names: &Names,
+    variants: &[(String, String)],
+    ligatures: &[Ligature],
 ) -> Result<Vec<u8>, String> {
     // The derived size variants join the set first, before anything counts the
     // glyphs or indexes into them. Appending them later leaves them past
@@ -612,7 +676,7 @@ pub fn build(
     let name = build_name_table(names, metrics);
 
     let math = crate::math::table(metrics, &crate::math::MathProfile::default(), glyphs);
-    let gsub = substitutions(glyphs);
+    let gsub = substitutions(glyphs, ligatures);
 
     let bytes = FontBuilder::new()
         .add_table(&head)

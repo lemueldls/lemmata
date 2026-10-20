@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// The configurator: basics, variants, ligations, a playground and the plan as
-// text, with the build rail held beside them.
+// The configurator: basics, the glyph registry, ligations, a playground and the
+// plan as text, with the build rail held beside them.
 //
-// One plan lives on this page. A field, the variant grid and the text editor all
+// One plan lives on this page. A field, the registry and the text editor all
 // write the same object, so a build cannot read a different plan than the one a
 // reader sees.
 import {
@@ -30,6 +30,7 @@ const {
   elapsed,
   busy,
   run,
+  preview: previewFont,
 } = useBuild();
 
 const preview = ref("var(--built)");
@@ -42,6 +43,14 @@ const BASICS = [
   { key: "descender", label: "descender", unit: "units", step: 1 },
   { key: "weight", label: "weight", unit: "class", step: 100 },
   { key: "italicAngle", label: "italic angle", unit: "deg", step: 1 },
+];
+
+const SECTIONS = [
+  { id: "basics", index: "01", label: "basics" },
+  { id: "registry", index: "02", label: "registry" },
+  { id: "ligations", index: "03", label: "ligations" },
+  { id: "playground", index: "04", label: "playground" },
+  { id: "config-plan", index: "05", label: "plan" },
 ];
 
 const reading = computed<Reading | null>(() => {
@@ -103,19 +112,48 @@ function onAction(event: Event): void {
 
 let face: FontFace | null = null;
 
-watch(built, async (font) => {
-  if (!font) return;
+async function showFace(bytes: ArrayBuffer): Promise<void> {
   if (face) document.fonts.delete(face);
-  face = new FontFace("Lemmata Preview", font.buffer as ArrayBuffer);
+  face = new FontFace("Lemmata Preview", bytes);
   await face.load();
   document.fonts.add(face);
   preview.value = '"Lemmata Preview", var(--built)';
+}
+
+watch(built, async (font) => {
+  if (font) await showFace(font.buffer as ArrayBuffer);
+});
+
+// The letters a plan change has to reach for the specimen to move. A preview
+// recomputes only these, so it lands in a few milliseconds.
+const PREVIEW_TEXT =
+  "the quick brown fox jumps over the lazy dog 0123456789 ()[]{} <>=+-*/";
+
+let previewTimer: ReturnType<typeof setTimeout> | null = null;
+
+function schedulePreview(): void {
+  const source = capture.value;
+  if (!source) return;
+  if (previewTimer) clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    try {
+      const bytes = await previewFont(plan.value, source, PREVIEW_TEXT);
+      if (bytes.length) await showFace(bytes.buffer as ArrayBuffer);
+    } catch {
+      // A half-typed plan keeps the last good preview.
+    }
+  }, 120);
+}
+
+watch([plan, capture], () => {
+  if (mounted.value) schedulePreview();
 });
 
 onMounted(async () => {
   addEventListener("lemmata:action", onAction);
   await ensure();
   mounted.value = true;
+  schedulePreview();
 });
 
 onBeforeUnmount(() => {
@@ -131,8 +169,8 @@ onBeforeUnmount(() => {
         <p class="eyebrow"><b>+</b> configurator <i>/</i> 02</p>
         <h1 class="page-head__title">Build <em>a face.</em></h1>
         <p class="lede" style="margin-top: 18px">
-          The plan is the input. Seven keys set the frame, the variant grid picks
-          a drawing, and the build rail writes the file. Change anything and build
+          The plan is the input. Seven keys set the frame, the registry picks a
+          drawing, and the build rail writes the file. Change anything and build
           again.
         </p>
       </div>
@@ -169,10 +207,15 @@ onBeforeUnmount(() => {
           <kbd>b</kbd> builds / <kbd>d</kbd> downloads / <kbd>esc</kbd> leaves a
           field
         </p>
+        <nav class="config-index" aria-label="Configurator sections">
+          <a v-for="item in SECTIONS" :key="item.id" :href="`#${item.id}`">
+            <span>{{ item.index }}</span>{{ item.label }}
+          </a>
+        </nav>
       </aside>
 
       <div class="config-main">
-        <PlusPlate index="01" label="basics" meta="the frame">
+        <PlusPlate id="basics" index="01" label="basics" meta="the frame">
           <div class="section-intro section-intro--single">
             <div>
               <p class="eyebrow"><b>+</b> seven keys</p>
@@ -188,15 +231,14 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="fields">
-            <label v-for="field in BASICS" :key="field.key" class="field">
+            <div v-for="field in BASICS" :key="field.key" class="field">
               <span>{{ field.label }} <i>{{ field.unit }}</i></span>
-              <input
-                type="number"
+              <NumberControl
+                :model-value="value(field.key)"
                 :step="field.step"
-                :value="value(field.key)"
-                @input="set(field.key, Number(($event.target as HTMLInputElement).value))"
+                @update:model-value="(next) => set(field.key, next)"
               />
-            </label>
+            </div>
           </div>
 
           <div class="form-row">
@@ -215,25 +257,26 @@ onBeforeUnmount(() => {
           </div>
         </PlusPlate>
 
-        <PlusPlate index="02" label="variants" meta="the drawing">
+        <PlusPlate id="registry" index="02" label="registry" meta="ported drawings">
           <div class="section-intro section-intro--single">
             <div>
-              <p class="eyebrow"><b>+</b> character choice</p>
+              <p class="eyebrow"><b>+</b> the drawing</p>
               <h2 class="display" style="font-size: var(--step-3)">
-                Pick a spelling.
+                See the drawing first.
               </h2>
             </div>
             <p class="prose">
-              The picker lists what the outline set holds and writes the choice
-              into the plan. The chosen drawing lands on the group's own glyph, so
-              features that name letters keep working.
+              The registry lists every drawing the port builds. Choose a letter,
+              compare the shapes at size, and send one into the plan. Lower-case
+              a, b, d and p have a base in this outline set. The capitals are
+              previews until their base glyphs land.
             </p>
           </div>
 
-          <VariantPicker />
+          <GlyphRegistry />
         </PlusPlate>
 
-        <PlusPlate index="03" label="ligations" meta="sets / next">
+        <PlusPlate id="ligations" index="03" label="ligations" meta="sets / built">
           <div class="section-intro section-intro--single">
             <div>
               <p class="eyebrow"><b>+</b> sequences</p>
@@ -243,15 +286,15 @@ onBeforeUnmount(() => {
             </div>
             <p class="prose">
               A coding face is expected to name the arrows, comparisons, logic
-              marks and comment marks. The plan names them here. The lookups are
-              the next piece of the build.
+              marks and comment marks. The build has the chaining rules that
+              join them, so the rows draw in the font below.
             </p>
           </div>
 
-          <LigatureList />
+          <LigatureList :preview="preview" />
         </PlusPlate>
 
-        <PlusPlate index="04" label="playground" meta="edit / resize / compare">
+        <PlusPlate id="playground" index="04" label="playground" meta="edit / resize / compare">
           <div class="section-intro section-intro--single">
             <div>
               <p class="eyebrow"><b>+</b> try it</p>
@@ -269,7 +312,7 @@ onBeforeUnmount(() => {
           <PlaygroundPanel :preview="preview" />
         </PlusPlate>
 
-        <PlusPlate index="05" label="plan" meta="json / live">
+        <PlusPlate id="config-plan" index="05" label="plan" meta="json / live">
           <div class="section-intro section-intro--single">
             <div>
               <p class="eyebrow"><b>+</b> the object</p>

@@ -1,46 +1,57 @@
 <script setup lang="ts">
-// Texture healing, shown as two settings of the same word.
+// Texture healing as two aligned rows and one magnified pair.
 //
-// The change happens inside the cell, so the advance is identical on both
-// sides. The page says so with a width taken from the rendered line rather than
-// with a claim. The cell rule behind each word comes from that same width, so
-// the ink can be seen moving while the columns hold.
+// The rows share the same word, size and cell width, so the ink can be compared
+// without one drawing covering the other. The grid line under the word comes
+// from the font's own advance and the word has no tracking, so every cell
+// boundary lands on the advance the renderer uses.
 import { useLemmataFont } from "~/composables/font";
 
-const WORDS = ["millim", "mim", "mammal", "illicit", "vacuum"];
+const WORDS = ["calming", "balm", "overwhelm", "palmtop"];
 
 const font = useLemmataFont();
 const word = ref(WORDS[0] as string);
 const cell = ref("64px");
-const delta = ref("—");
-const wordEl = ref<HTMLElement | null>(null);
-const probe = ref<HTMLElement | null>(null);
+const detailCell = ref("64px");
+const line = ref<HTMLElement | null>(null);
+const detailLine = ref<HTMLElement | null>(null);
 
-function widthOf(element: HTMLElement): number {
-  const range = document.createRange();
-  range.selectNodeContents(element);
+const advance = computed(() => font.metrics?.advance ?? 500);
 
-  return range.getBoundingClientRect().width;
+const pair = computed(() => {
+  const text = word.value;
+  for (let index = 0; index < text.length - 1; index += 1) {
+    const here = text[index];
+    const next = text[index + 1];
+    if ((here === "l" && next === "m") || (here === "m" && next === "l")) {
+      return index;
+    }
+  }
+
+  return 0;
+});
+
+const pairText = computed(() => word.value.slice(pair.value, pair.value + 2));
+
+function measure(element: HTMLElement | null): string | null {
+  if (!element) return null;
+  const size = Number.parseFloat(getComputedStyle(element).fontSize);
+
+  return `${((advance.value / 1000) * size).toFixed(3)}px`;
 }
 
 function draw(): void {
-  const line = wordEl.value;
-  const hidden = probe.value;
-  if (!line || !hidden) return;
-
-  const size = getComputedStyle(line).fontSize;
-  hidden.style.fontSize = size;
-  const spans = hidden.querySelectorAll<HTMLElement>("span");
-  const off = spans[0];
-  const on = spans[1];
-  if (!off || !on) return;
-
-  const plain = widthOf(off);
-  cell.value = `${plain / Math.max(word.value.length, 1)}px`;
-  delta.value = `advance ${(widthOf(on) - plain).toFixed(2)} px`;
+  const main = measure(line.value);
+  const detail = measure(detailLine.value);
+  if (main) cell.value = main;
+  if (detail) detailCell.value = detail;
 }
 
-watch([() => font.ready, word], () => nextTick(draw));
+function choose(sample: string): void {
+  word.value = sample;
+}
+
+watch([() => font.ready, word, advance], () => nextTick(draw));
 
 onMounted(() => {
   addEventListener("resize", draw);
@@ -59,47 +70,124 @@ onBeforeUnmount(() => removeEventListener("resize", draw));
           :key="sample"
           type="button"
           :aria-pressed="word === sample"
-          @click="word = sample"
+          @click="choose(sample)"
         >
           {{ sample }}
         </button>
       </div>
-      <span class="heal__delta">{{ delta }} / cell {{ cell }}</span>
+      <span class="heal__delta">advance {{ advance }} units / cell {{ cell }}</span>
     </div>
 
-    <div class="heal__pair" :style="{ '--cell': cell }">
-      <div class="heal__side">
-        <header><span>calt 0</span><span>off</span></header>
-        <p ref="wordEl" class="heal__word" data-calt="off">{{ word }}</p>
-        <p class="note">
-          Each letter keeps the drawing it was given. The narrow letters leave
-          their cells empty.
-        </p>
+    <div class="heal__demo" :style="{ '--cell': cell, '--chars': word.length }">
+      <div class="heal__rows">
+        <div class="heal__ruler" aria-hidden="true">
+          <span v-for="(_, index) in word" :key="index">{{ index + 1 }}</span>
+        </div>
+
+        <div class="heal__row">
+          <div class="heal__row-head">
+            <span>texture off</span>
+            <span>the cell keeps its room</span>
+          </div>
+          <div class="heal__stage">
+            <i
+              class="heal__band heal__band--off"
+              :style="{ left: `calc(${pair} * var(--cell))` }"
+              aria-hidden="true"
+            />
+            <i
+              class="heal__band heal__band--off"
+              :style="{ left: `calc(${pair + 1} * var(--cell))` }"
+              aria-hidden="true"
+            />
+            <p ref="line" class="heal__word" data-txtr="off">{{ word }}</p>
+          </div>
+        </div>
+
+        <div class="heal__row">
+          <div class="heal__row-head">
+            <span>texture on</span>
+            <span>the ink moves, the advance does not</span>
+          </div>
+          <div class="heal__stage">
+            <i
+              class="heal__band heal__band--on"
+              :style="{ left: `calc(${pair} * var(--cell))` }"
+              aria-hidden="true"
+            />
+            <i
+              class="heal__band heal__band--on"
+              :style="{ left: `calc(${pair + 1} * var(--cell))` }"
+              aria-hidden="true"
+            />
+            <p class="heal__word" data-txtr="on">{{ word }}</p>
+          </div>
+        </div>
       </div>
-      <div class="heal__side heal__side--on">
-        <header><span>calt 1</span><span>on</span></header>
-        <p class="heal__word" data-calt="on">{{ word }}</p>
+
+      <aside class="heal__detail">
+        <div class="heal__detail-head">
+          <span>the pair</span>
+          <span>{{ pairText }}</span>
+        </div>
+
+        <div class="heal__pair-key" aria-hidden="true">
+          <span>{{ pairText[0] === "l" ? "l gives room" : "m takes room" }}</span>
+          <span>{{ pairText[1] === "m" ? "m takes room" : "l gives room" }}</span>
+        </div>
+
+        <div class="heal__pair">
+          <div class="heal__pair-cell">
+            <span>off</span>
+            <div
+              class="heal__stage heal__stage--detail"
+              :style="{ '--cell': detailCell, '--chars': 2 }"
+            >
+              <p
+                ref="detailLine"
+                class="heal__word heal__word--detail"
+                data-txtr="off"
+              >
+                {{ pairText }}
+              </p>
+            </div>
+          </div>
+
+          <div class="heal__pair-cell">
+            <span>on</span>
+            <div
+              class="heal__stage heal__stage--detail"
+              :style="{ '--cell': detailCell, '--chars': 2 }"
+            >
+              <p class="heal__word heal__word--detail" data-txtr="on">
+                {{ pairText }}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <p class="note">
-          The narrow letter cedes room and the wide one takes it. The advance
-          does not move.
+          The narrow letter gives its sidebearing to the wide one. The two cells
+          are the same width in both rows.
         </p>
-      </div>
+      </aside>
     </div>
 
-    <p ref="probe" class="heal__probe" aria-hidden="true">
-      <span data-calt="off">{{ word }}</span><span data-calt="on">{{ word }}</span>
+    <p class="heal__hint">
+      The rows share one cell grid. Compare the pair, or pick a word where the
+      two letters sit together.
     </p>
 
     <ol class="heal__steps">
       <li>
         <b>01 / the cell</b>
-        Every letter owns the same advance, so an <code>l</code> has more room than its ink
-        needs and an <code>m</code> has less than it wants.
+        Every letter owns the same advance, so an <code>l</code> has more room
+        than its ink needs and an <code>m</code> has less than it wants.
       </li>
       <li>
         <b>02 / the swap</b>
-        <code>calt</code> watches the neighbours. The narrow letter gives up a sidebearing
-        and the wide letter takes room from it.
+        <code>TXTR</code> watches the neighbours. The narrow letter gives up a
+        sidebearing and the wide letter takes room from it.
       </li>
       <li>
         <b>03 / the grid</b>

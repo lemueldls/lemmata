@@ -14,6 +14,7 @@ pub mod character;
 pub mod dotless;
 pub mod flac;
 pub mod font;
+pub mod ligatures;
 pub mod math;
 pub mod ssty;
 pub mod texture;

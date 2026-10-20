@@ -23,15 +23,16 @@ the lazy dog does not mind at all.`,
 const text = ref(TEXT);
 const line = ref(1.55);
 const calt = ref(true);
+const txtr = ref(true);
 const liga = ref(true);
 const zero = ref(true);
 const edit = ref<HTMLTextAreaElement | null>(null);
 
 const settings = computed(
   () =>
-    `"calt" ${calt.value ? 1 : 0}, "liga" ${liga.value ? 1 : 0}, "zero" ${
-      zero.value ? 1 : 0
-    }`,
+    `"calt" ${calt.value ? 1 : 0}, "TXTR" ${txtr.value ? 1 : 0}, "liga" ${
+      liga.value ? 1 : 0
+    }, "zero" ${zero.value ? 1 : 0}`,
 );
 
 function load(name: keyof typeof SAMPLES): void {
@@ -61,20 +62,27 @@ onBeforeUnmount(() => removeEventListener("keydown", focusEditor));
 <template>
   <div class="playground">
     <div class="playground__controls">
-      <label class="playground__control">
-        <span>size <b>{{ specimenSize }} px</b></span>
-        <input v-model.number="specimenSize" type="range" min="12" max="96" step="1" />
-      </label>
+      <RangeControl
+        v-model="specimenSize"
+        label="size"
+        unit="px"
+        :min="12"
+        :max="96"
+      />
 
-      <label class="playground__control">
-        <span>leading <b>{{ line.toFixed(2) }}</b></span>
-        <input v-model.number="line" type="range" min="1" max="2.2" step="0.05" />
-      </label>
+      <RangeControl
+        v-model="line"
+        label="leading"
+        :min="1"
+        :max="2.2"
+        :step="0.05"
+      />
 
       <div class="playground__control">
         <span>features</span>
         <div class="playground__toggles">
           <button type="button" :aria-pressed="calt" @click="calt = !calt">calt</button>
+          <button type="button" :aria-pressed="txtr" @click="txtr = !txtr">texture</button>
           <button type="button" :aria-pressed="liga" @click="liga = !liga">liga</button>
           <button type="button" :aria-pressed="zero" @click="zero = !zero">zero</button>
         </div>

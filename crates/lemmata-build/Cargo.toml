@@ -13,4 +13,5 @@ write-fonts.workspace = true
 kurbo.workspace = true
 lemmata-geom = { path = "../lemmata-geom" }
 lemmata-layout = { path = "../lemmata-layout" }
+serde_json = "1"
 ttf2woff2.workspace = true
