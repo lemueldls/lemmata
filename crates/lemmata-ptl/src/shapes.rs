@@ -420,15 +420,7 @@ pub fn arch(
     );
     let italic_adj = boole(do_adj) * boole_pn(at_bot) * params.correction_o_mid_x * args.sw;
     let overshoot = boole_pn(at_bot) * args.o;
-    // A zero heading is no heading: upstream's interpolator emits no normal for
-    // it, and attaching `(0, 0)` would claim one.
-    let af = if heading == Vec2::ZERO {
-        if args.lhs {
-            kit.widths_lhs(Some(args.sw))
-        } else {
-            kit.widths_rhs(Some(args.sw))
-        }
-    } else if args.lhs {
+    let af = if args.lhs {
         kit.widths_lhs_heading(Some(args.sw), heading)
     } else {
         kit.widths_rhs_heading(Some(args.sw), heading)
@@ -493,15 +485,7 @@ pub fn center_at(kit: &Kit, args: &CenterAtArgs, params: &ArchParams) -> Item {
     );
     let italic_adj = boole(do_adj) * boole_pn(args.at_bot) * params.correction_o_mid_x * args.sw;
     let overshoot = boole_pn(args.at_bot) * args.o;
-    // A zero heading is no heading: upstream's interpolator emits no normal for
-    // it, and attaching `(0, 0)` would claim one.
-    let af = if heading == Vec2::ZERO {
-        if args.lhs {
-            kit.widths_lhs(Some(args.sw))
-        } else {
-            kit.widths_rhs(Some(args.sw))
-        }
-    } else if args.lhs {
+    let af = if args.lhs {
         kit.widths_lhs_heading(Some(args.sw), heading)
     } else {
         kit.widths_rhs_heading(Some(args.sw), heading)
