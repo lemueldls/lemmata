@@ -256,6 +256,18 @@ horizontal serif: `serifless`, `serifed` and `hookyBottom`, across `dotlessi`,
 The hooks, tails, decompressed and phonetic forms need `CurlyTail`, `DiagTail`
 or `HalfRingDescender`.
 
+`upper-m.ptl` and `lower-m.ptl` are the two `m`s. The capital is complete for
+`M` and `smcpM`: two side bars, two middle diagonals and an optional middle
+stem, across sixteen suffixes, 28 captured glyphs, 448 knots, exact. It also
+settled the amended-`flat` question: the width amendment belongs on the knot,
+not in a separate `Af` item before it, and once placed there the bars agreed.
+
+The lower-case file is a hundred-entry table across five bodies. The arches body
+is ported with the serifless and serifed settings: `m`, two captured glyphs, 10
+bi-knots, exact. Its shoulders are closed spiro outlines, so the bi-knot walk
+sees only the stem and the box check carries the shoulders. The other bodies,
+the tails and the turned forms are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

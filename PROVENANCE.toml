@@ -32,6 +32,10 @@ ours = "crates/lemmata-glyphs/src/letter/latin/lower_il.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-il.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_m.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-m.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/lower_n.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-n.ptl"
 
@@ -66,6 +70,10 @@ upstream = "packages/font-glyphs/src/letter/latin/upper-i.ptl"
 [[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/upper_l.rs"
 upstream = "packages/font-glyphs/src/letter/latin/upper-l.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/upper_m.rs"
+upstream = "packages/font-glyphs/src/letter/latin/upper-m.ptl"
 
 [[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/upper_n.rs"

@@ -30,7 +30,6 @@ const {
   elapsed,
   busy,
   run,
-  preview: previewFont,
 } = useBuild();
 
 const preview = ref("var(--built)");
@@ -104,48 +103,19 @@ function onAction(event: Event): void {
 
 let face: FontFace | null = null;
 
-async function showFace(bytes: ArrayBuffer): Promise<void> {
+watch(built, async (font) => {
+  if (!font) return;
   if (face) document.fonts.delete(face);
-  face = new FontFace("Lemmata Preview", bytes);
+  face = new FontFace("Lemmata Preview", font.buffer as ArrayBuffer);
   await face.load();
   document.fonts.add(face);
   preview.value = '"Lemmata Preview", var(--built)';
-}
-
-watch(built, async (font) => {
-  if (font) await showFace(font.buffer as ArrayBuffer);
-});
-
-// The letters a plan change has to reach for the specimen to move. A preview
-// recomputes only these, so it lands in a few milliseconds.
-const PREVIEW_TEXT =
-  "the quick brown fox jumps over the lazy dog 0123456789 ()[]{} <>=+-*/";
-
-let previewTimer: ReturnType<typeof setTimeout> | null = null;
-
-function schedulePreview(): void {
-  const source = capture.value;
-  if (!source) return;
-  if (previewTimer) clearTimeout(previewTimer);
-  previewTimer = setTimeout(async () => {
-    try {
-      const bytes = await previewFont(plan.value, source, PREVIEW_TEXT);
-      if (bytes.length) await showFace(bytes.buffer as ArrayBuffer);
-    } catch {
-      // A half-typed plan keeps the last good preview.
-    }
-  }, 120);
-}
-
-watch([plan, capture], () => {
-  if (mounted.value) schedulePreview();
 });
 
 onMounted(async () => {
   addEventListener("lemmata:action", onAction);
   await ensure();
   mounted.value = true;
-  schedulePreview();
 });
 
 onBeforeUnmount(() => {

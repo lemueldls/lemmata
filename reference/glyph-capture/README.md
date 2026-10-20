@@ -296,7 +296,25 @@ smcpN.asymmetricMotionSerifed,smcpN.asymmetricSerifed,\
 dotlessi.serifless,dotlessi.serifed,dotlessi.hookyBottom,\
 dotlessiCap.serifless,dotlessiCap.serifed,dotlessiCap.hookyBottom,\
 l.serifless,l.serifed,l.hookyBottom,cyrl/palochka.serifless,\
-cyrl/palochka.serifed,cyrl/palochka.hookyBottom'
+cyrl/palochka.serifed,cyrl/palochka.hookyBottom,M.hangingSerifless,\
+M.hangingMotionSerifed,M.hangingSmallCyrl,M.hangingSerifed,\
+M.flatBottomSerifless,M.flatBottomMotionSerifed,M.flatBottomSmallCyrl,\
+M.flatBottomSerifed,M.slantedSidesHangingSerifless,\
+M.slantedSidesHangingMotionSerifed,M.slantedSidesHangingSmallCyrl,\
+M.slantedSidesHangingSerifed,M.slantedSidesFlatBottomSerifless,\
+M.slantedSidesFlatBottomMotionSerifed,M.slantedSidesFlatBottomSmallCyrl,\
+M.slantedSidesFlatBottomSerifed,M.grekCapitalSan,M.grekSmallSan,\
+smcpM.hangingSerifless,smcpM.hangingMotionSerifed,\
+smcpM.hangingSmallCyrl,smcpM.hangingSerifed,smcpM.flatBottomSerifless,\
+smcpM.flatBottomMotionSerifed,smcpM.flatBottomSmallCyrl,\
+smcpM.flatBottomSerifed,smcpM.slantedSidesHangingSerifless,\
+smcpM.slantedSidesHangingMotionSerifed,\
+smcpM.slantedSidesHangingSmallCyrl,smcpM.slantedSidesHangingSerifed,\
+smcpM.slantedSidesFlatBottomSerifless,\
+smcpM.slantedSidesFlatBottomMotionSerifed,\
+smcpM.slantedSidesFlatBottomSmallCyrl,\
+smcpM.slantedSidesFlatBottomSerifed,smcpM.grekCapitalSan,\
+smcpM.grekSmallSan,m.serifless,m.serifed'
 npm run build -- ttf-unhinted::RefA
 ```
 
