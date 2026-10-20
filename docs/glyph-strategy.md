@@ -249,6 +249,13 @@ symmetric or asymmetric body. The slab setting follows `para.slab`, so the port
 now carries it: `Para` and `Metrics` gained `refJut` and the serif frame gained
 `enough_space_for_full_serifs`. Twelve captured glyphs, 128 knots, exact.
 
+`letter/latin/lower-il.ptl` is one table for `i` and `l`. Three of its
+thirty-two variants are ported, the ones that need only the stem and the
+horizontal serif: `serifless`, `serifed` and `hookyBottom`, across `dotlessi`,
+`dotlessiCap`, `l` and `cyrl/palochka`. Nine captured glyphs, 36 knots, exact.
+The hooks, tails, decompressed and phonetic forms need `CurlyTail`, `DiagTail`
+or `HalfRingDescender`.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

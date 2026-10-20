@@ -14,14 +14,25 @@ use lemmata_ptl::shapes::Design;
 use lemmata_ptl::spiro_kit::Kit;
 
 use crate::letter::latin::{
-    lower_a, lower_b, lower_d, lower_h, lower_n, lower_p, upper_b, upper_d, upper_e, upper_f,
-    upper_h, upper_i, upper_l, upper_n, upper_p, upper_q,
+    lower_a, lower_b, lower_d, lower_h, lower_il, lower_n, lower_p, upper_b, upper_d, upper_e,
+    upper_f, upper_h, upper_i, upper_l, upper_n, upper_p, upper_q,
 };
 
 /// Every glyph the ported definitions build, by name.
 #[must_use]
 pub fn build(metrics: &Metrics, design: &Design) -> Vec<(String, Geometry)> {
-    let df = DivFrame::new(metrics.clone(), Some(1.0), None, None);
+    build_at(metrics, design, 1.0)
+}
+
+/// Every glyph the ported definitions build, at a frame scale.
+///
+/// The scale is `DivFrame`'s advance scale: `1.0` is the glyph as the font draws
+/// it, `1 + 1/12` is upstream's extension form and `1 - 1/12` its shrink. A
+/// texture form is a glyph re-drawn in that frame, not a transformed outline,
+/// which is why a dot stays round.
+#[must_use]
+pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, Geometry)> {
+    let df = DivFrame::new(metrics.clone(), Some(scale), None, None);
     let kit = Kit::new(
         metrics.stroke,
         design.superness,
@@ -58,6 +69,15 @@ pub fn build(metrics: &Metrics, design: &Design) -> Vec<(String, Geometry)> {
     );
     out.extend(
         lower_h::LowerH {
+            df: &df,
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_il::LowerIl {
             df: &df,
             metrics,
             kit: &kit,

@@ -292,7 +292,11 @@ N.standardSerifed,N.asymmetric,N.asymmetricSerifless,\
 N.asymmetricMotionSerifed,N.asymmetricSerifed,smcpN.standard,\
 smcpN.standardSerifless,smcpN.standardMotionSerifed,\
 smcpN.standardSerifed,smcpN.asymmetric,smcpN.asymmetricSerifless,\
-smcpN.asymmetricMotionSerifed,smcpN.asymmetricSerifed'
+smcpN.asymmetricMotionSerifed,smcpN.asymmetricSerifed,\
+dotlessi.serifless,dotlessi.serifed,dotlessi.hookyBottom,\
+dotlessiCap.serifless,dotlessiCap.serifed,dotlessiCap.hookyBottom,\
+l.serifless,l.serifed,l.hookyBottom,cyrl/palochka.serifless,\
+cyrl/palochka.serifed,cyrl/palochka.hookyBottom'
 npm run build -- ttf-unhinted::RefA
 ```
 
