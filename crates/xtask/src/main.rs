@@ -3,6 +3,7 @@
 //! Run through `cargo xtask <command>`.
 
 mod expand;
+mod ligations;
 mod parity;
 mod port_status;
 mod requirements;
@@ -44,6 +45,19 @@ fn main() -> ExitCode {
                 }
             }
         }
+        Some("ligations") => {
+            let (Some(font), Some(out)) = (std::env::args().nth(2), std::env::args().nth(3)) else {
+                eprintln!("usage: cargo xtask ligations <font> <out.json> [ligation-set.toml]");
+                return ExitCode::FAILURE;
+            };
+            match ligations::run(&font, &out, std::env::args().nth(4).as_deref()) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(message) => {
+                    eprintln!("lemmata: {message}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         Some("port-status") => {
             // An incomplete port is the normal state, not a failure.
             port_status::run();
@@ -51,7 +65,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         _ => {
-            eprintln!("usage: cargo xtask <expand|requirements|port-status>");
+            eprintln!("usage: cargo xtask <expand|ligations|requirements|port-status>");
             ExitCode::FAILURE
         }
     }

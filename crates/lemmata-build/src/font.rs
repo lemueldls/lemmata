@@ -226,21 +226,21 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
         // runs first because the passes below look for the base form, and a
         // giver this one widened is no longer it.
         lemmata_layout::Rule {
-            backtrack: wide.clone(),
+            backtrack: vec![wide.clone()],
             input: ids(&givers),
-            lookahead: wide.clone(),
+            lookahead: vec![wide.clone()],
             apply: shifted(&givers, Side::Both),
         },
         // A giver before a taker cedes toward it.
         lemmata_layout::Rule {
             backtrack: Vec::new(),
             input: ids(&givers),
-            lookahead: wide.clone(),
+            lookahead: vec![wide.clone()],
             apply: shifted(&givers, Side::Left),
         },
         // A giver after a taker cedes toward it.
         lemmata_layout::Rule {
-            backtrack: wide.clone(),
+            backtrack: vec![wide.clone()],
             input: ids(&givers),
             lookahead: Vec::new(),
             apply: shifted(&givers, Side::Right),
@@ -248,9 +248,9 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
         // A taker between two givers takes both sides. This runs after the two
         // passes above, so what it looks for is the forms they left behind.
         lemmata_layout::Rule {
-            backtrack: givers_left.clone(),
+            backtrack: vec![givers_left.clone()],
             input: wide.clone(),
-            lookahead: givers_right.clone(),
+            lookahead: vec![givers_right.clone()],
             apply: shifted(&takers, Side::Both),
         },
     ];
@@ -261,7 +261,7 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
     // longer in the input coverage, so the two cannot fight.
     if !givers_left.is_empty() {
         passes.push(lemmata_layout::Rule {
-            backtrack: givers_left,
+            backtrack: vec![givers_left],
             input: wide.clone(),
             lookahead: Vec::new(),
             apply: shifted(&takers, Side::Left),
@@ -271,7 +271,7 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
         passes.push(lemmata_layout::Rule {
             backtrack: Vec::new(),
             input: wide.clone(),
-            lookahead: givers_right,
+            lookahead: vec![givers_right],
             apply: shifted(&takers, Side::Right),
         });
     }
@@ -280,7 +280,7 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
     let marks = ids(&stationary);
     if !marks.is_empty() {
         passes.push(lemmata_layout::Rule {
-            backtrack: marks.clone(),
+            backtrack: vec![marks.clone()],
             input: wide.clone(),
             lookahead: Vec::new(),
             apply: shifted(&takers, Side::Left),
@@ -288,7 +288,7 @@ fn texture(glyphs: &[GlyphData]) -> Option<lemmata_layout::Feature> {
         passes.push(lemmata_layout::Rule {
             backtrack: Vec::new(),
             input: wide,
-            lookahead: marks,
+            lookahead: vec![marks],
             apply: shifted(&takers, Side::Right),
         });
     }

@@ -11,8 +11,8 @@
 //! which is what a form that borrows space from the glyph beside it needs.
 
 use write_fonts::tables::gsub::{
-    AlternateSet, AlternateSubstFormat1, Gsub, SingleSubst, SubstitutionChainContext,
-    SubstitutionLookup,
+    AlternateSet, AlternateSubstFormat1, Gsub, Ligature, LigatureSet, LigatureSubstFormat1,
+    SingleSubst, SubstitutionChainContext, SubstitutionLookup,
 };
 use write_fonts::tables::layout::{
     ChainedSequenceContext, ChainedSequenceContextFormat3, CoverageTable, Feature as FeatureTable,
@@ -32,9 +32,13 @@ const NO_REQUIRED_FEATURE: u16 = 0xFFFF;
 /// about one side is written.
 #[derive(Clone, Debug, Default)]
 pub struct Rule {
-    pub backtrack: Vec<GlyphId16>,
+    /// The glyphs before the input, nearest first. Each entry is one position
+    /// and names every glyph that fits it.
+    pub backtrack: Vec<Vec<GlyphId16>>,
+    /// The glyphs the input position accepts.
     pub input: Vec<GlyphId16>,
-    pub lookahead: Vec<GlyphId16>,
+    /// The glyphs after the input, nearest first, one entry per position.
+    pub lookahead: Vec<Vec<GlyphId16>>,
     pub apply: Vec<(GlyphId16, GlyphId16)>,
 }
 
@@ -54,6 +58,12 @@ pub enum Effect {
     /// A sequence of rules, applied in order, so a later rule sees what an
     /// earlier one left behind.
     Contextual(Vec<Rule>),
+    /// A ligature: when the components appear in order, replace them with the
+    /// target.
+    ///
+    /// Each entry is the whole sequence and the glyph it becomes. The first
+    /// component is the one the coverage names.
+    Ligature(Vec<(Vec<GlyphId16>, GlyphId16)>),
 }
 
 /// One feature: a tag, the scripts it is registered under, and what it does.
@@ -114,6 +124,49 @@ fn alternates(entries: &[(GlyphId16, Vec<GlyphId16>)]) -> SubstitutionLookup {
     ))
 }
 
+/// A ligature-substitution lookup.
+///
+/// A ligature set holds every sequence that starts with the same glyph, and the
+/// specification orders that set by preference, so the longest sequence comes
+/// first: a shaper tries the entries in order and the shorter one would
+/// otherwise win.
+fn ligatures(entries: &[(Vec<GlyphId16>, GlyphId16)]) -> Option<SubstitutionLookup> {
+    let mut entries: Vec<&(Vec<GlyphId16>, GlyphId16)> = entries
+        .iter()
+        .filter(|(components, _)| !components.is_empty())
+        .collect();
+    if entries.is_empty() {
+        return None;
+    }
+    entries.sort_by(|(a, _), (b, _)| {
+        b.len()
+            .cmp(&a.len())
+            .then_with(|| a.as_slice().cmp(b.as_slice()))
+    });
+
+    // Group by the covering glyph, preserving the preference order within a
+    // group. The sets are emitted in coverage order, which is sorted.
+    let mut groups: Vec<(GlyphId16, Vec<Ligature>)> = Vec::new();
+    for (components, target) in entries {
+        let first = components[0];
+        let ligature = Ligature::new(*target, components[1..].to_vec());
+        match groups.iter_mut().find(|(glyph, _)| *glyph == first) {
+            Some((_, ligatures)) => ligatures.push(ligature),
+            None => groups.push((first, vec![ligature])),
+        }
+    }
+    groups.sort_by_key(|(glyph, _)| *glyph);
+    let (covered, sets): (Vec<GlyphId16>, Vec<LigatureSet>) = groups
+        .into_iter()
+        .map(|(glyph, ligatures)| (glyph, LigatureSet::new(ligatures)))
+        .unzip();
+
+    Some(SubstitutionLookup::Ligature(Lookup::new(
+        LookupFlag::empty(),
+        vec![LigatureSubstFormat1::new(coverage(covered), sets)],
+    )))
+}
+
 /// Builds a GSUB carrying `features`.
 ///
 /// A feature with nothing to do is skipped: a lookup with an empty coverage is
@@ -138,6 +191,13 @@ pub fn gsub(features: &[Feature]) -> Gsub {
                 }
                 indices.push(push(&mut lookups, alternates(entries)));
             }
+            Effect::Ligature(entries) => {
+                if let Some(lookup) = ligatures(entries) {
+                    indices.push(push(&mut lookups, lookup));
+                } else {
+                    continue;
+                }
+            }
             Effect::Contextual(rules) => {
                 for rule in rules {
                     if rule.input.is_empty() || rule.apply.is_empty() {
@@ -153,17 +213,17 @@ pub fn gsub(features: &[Feature]) -> Gsub {
                     // never match: the table is well formed and the shaper
                     // finds nothing to apply.
                     let context = ChainedSequenceContextFormat3 {
-                        backtrack_coverages: if rule.backtrack.is_empty() {
-                            Vec::new()
-                        } else {
-                            vec![coverage(rule.backtrack.clone()).into()]
-                        },
+                        backtrack_coverages: rule
+                            .backtrack
+                            .iter()
+                            .map(|position| coverage(position.clone()).into())
+                            .collect(),
                         input_coverages: vec![coverage(rule.input.clone()).into()],
-                        lookahead_coverages: if rule.lookahead.is_empty() {
-                            Vec::new()
-                        } else {
-                            vec![coverage(rule.lookahead.clone()).into()]
-                        },
+                        lookahead_coverages: rule
+                            .lookahead
+                            .iter()
+                            .map(|position| coverage(position.clone()).into())
+                            .collect(),
                         seq_lookup_records: vec![SequenceLookupRecord::new(0, applied)],
                     };
                     // The newtype has no constructor, so it is filled through

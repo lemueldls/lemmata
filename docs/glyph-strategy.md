@@ -285,3 +285,11 @@ The registry is the seam between the definitions and the site. `lemmata_glyphs::
 `lemmata-web` derives the metrics from the plan through `lemmata_ptl::param` and the four parameter files, builds the registry, and swaps a glyph's contours for the capture's when the name is in both. Everything else keeps the capture. The built font is still byte-identical to the recorded parity pair for the default plan, which is the test: 376 glyphs in the registry, 269 of them in the capture, 7539 knots, zero deviation, and the same font bytes the fingerprint records.
 
 What that buys today is the `a` family, which is what the page's fixture holds. A visitor who changes the plan's weight, width or slope now moves those outlines, and the variant picker moves the drawing it selects. The other glyphs stay as drawn until they are ported.
+
+## Ligatures are contextual alternates
+
+A reference build with `inherits = "default-calt"` settles what a ligature is in this source: not one glyph replacing a sequence, but each character replaced by a joined form that meets its neighbour. `->` shapes to two glyphs at full advance, not one glyph. The GSUB lookups are chaining contextual rules applying single substitutions, which is why the first extraction attempt found `.join-r` intermediates and no type-4 entries.
+
+`lemmata_layout` now carries both shapes: `Effect::Contextual` with one coverage per position, which is what the ligation rules need, and `Effect::Ligature` for a type-4 lookup a future definition may prefer. `Rule`'s backtrack and lookahead are per position rather than one flattened coverage, so a two-character context is expressible.
+
+`cargo xtask ligations <font> <out.json> --rules` walks the `calt` feature and reports every rule by glyph name, with the glyph set they reference: 229 rules over 161 glyphs for the reference build. The remaining work is the fixture: dump those glyphs, embed the rules, and add them to the build's `calt` alongside texture healing.

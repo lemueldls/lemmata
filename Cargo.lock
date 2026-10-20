@@ -663,7 +663,9 @@ dependencies = [
 name = "xtask"
 version = "0.1.0"
 dependencies = [
+ "harfrust",
  "lemmata-ptl-front",
+ "read-fonts",
  "serde_json",
  "sha2",
 ]
