@@ -2094,3 +2094,93 @@ pub fn ef_v_jut_length(
 
     (jut_top, jut_bot, jut_mid)
 }
+
+/// `VBar.m`: a vertical bar centred on `x`.
+#[must_use]
+pub fn vbar_m(kit: &Kit, metrics: &Metrics, x: f64, y_down: f64, y_up: f64, sw: f64) -> Dispiro {
+    vbar(kit, metrics, x, y_down, y_up, sw)
+}
+
+/// `HSerif.mt`: a horizontal serif centred on `x` at the top.
+#[must_use]
+pub fn hserif_mt(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    length: f64,
+    sw: Option<f64>,
+) -> Dispiro {
+    let sw = sw.unwrap_or(metrics.stroke);
+    let shift = sw * metrics.serif_shift_x;
+    let items = vec![
+        Item::Af(kit.widths_lhs(Some(sw))),
+        kit.knot(KnotType::Left, x + length - shift, y, Vec::new()),
+        kit.knot(KnotType::Right, x - length - shift, y, Vec::new()),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `HSerif.mb`: a horizontal serif centred on `x` at the bottom.
+#[must_use]
+pub fn hserif_mb(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    length: f64,
+    sw: Option<f64>,
+) -> Dispiro {
+    let sw = sw.unwrap_or(metrics.stroke);
+    let shift = sw * metrics.serif_shift_x;
+    let items = vec![
+        Item::Af(kit.widths_rhs(Some(sw))),
+        kit.knot(KnotType::Left, x + length + shift, y, Vec::new()),
+        kit.knot(KnotType::Right, x - length + shift, y, Vec::new()),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `VSerif.ml`: a centered vertical serif with its ink on the right.
+#[must_use]
+pub fn vserif_ml(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    length: f64,
+    sw: Option<f64>,
+) -> Dispiro {
+    let width = sw.unwrap_or(metrics.v_jut_stroke);
+    let heading = upward(metrics.hv_contrast);
+    let items = vec![
+        Item::Af(kit.widths_rhs(Some(width))),
+        kit.knot(KnotType::Left, x, y - length, kit.heading(heading)),
+        kit.knot(KnotType::Right, x, y + length, kit.heading(heading)),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `BBBarCenter`: a centered blackboard bar.
+#[must_use]
+pub fn bb_bar_center(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y_bot: f64,
+    y_top: f64,
+    bbs: f64,
+    bbd: f64,
+) -> Vec<Geometry> {
+    vec![
+        vbar_m(kit, metrics, x - bbd / 2.0, y_bot, y_top, bbs).geometry(kurbo::Affine::IDENTITY),
+        vbar_m(kit, metrics, x + bbd / 2.0, y_bot, y_top, bbs).geometry(kurbo::Affine::IDENTITY),
+        hbar_t(kit, metrics, x - bbd / 2.0, x + bbd / 2.0, y_top, Some(bbs))
+            .geometry(kurbo::Affine::IDENTITY),
+        hbar_b(kit, metrics, x - bbd / 2.0, x + bbd / 2.0, y_bot, Some(bbs))
+            .geometry(kurbo::Affine::IDENTITY),
+    ]
+}

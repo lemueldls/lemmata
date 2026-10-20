@@ -170,6 +170,11 @@ compares the tag, and the port's `Geometry::Tagged` carries none, so ejecting
 would also drop the tagged foot serif. The French franc sign builds the shape
 without the crossbar instead, which is exact.
 
+`letter/latin/upper-i.ptl` (109 lines) came next: one stem at cap height with
+three serif settings, plus `ILonga`, `smcpI` and `mathbb/I`. Eight captured
+glyphs, 46 knots, exact. It needed `VBar.m`, the centered `HSerif` and
+`VSerif.ml`, and `BBBarCenter`.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
