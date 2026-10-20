@@ -233,6 +233,11 @@ knots, exact. It needed `OShape` as a di-spiro beside the outline, and
 the two barred forms and the two blackboard ones, nine captured glyphs, 268
 knots, exact. The Cyrillic, Polish, numeral and horn forms are not ported.
 
+`letter/latin/upper-h.ptl` is two stems and a crossbar with seven serif grades
+and an optional tail: `H` and `smcpH`, thirteen captured glyphs, 156 knots,
+exact. It added `Design::h_bar_pos`. The turned and half forms, the hooks and
+the descenders are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

@@ -277,7 +277,13 @@ n.earlessRoundedTailedMotionSerifed,n.earlessRoundedTailedSerifed,\
 Q.straight,Q.crossing,Q.detachedTailed,Q.detachedBendTailed,\
 smcpQ.straight,smcpQ.crossing,smcpQ.detachedTailed,\
 smcpQ.detachedBendTailed,O,smcpO,OSlash,oSlash,OBar,oBar,mathbb/O,\
-mathbb/o'
+mathbb/o,H.serifless,H.topLeftSerifed,H.topLeftBottomRightSerifed,\
+H.serifed,H.serifedBGR,H.tailedSerifless,H.tailedTopLeftSerifed,\
+H.tailedSerifed,H.tailedSerifedBGR,H.serifedExceptBottomRight,\
+smcpH.serifless,smcpH.topLeftSerifed,smcpH.topLeftBottomRightSerifed,\
+smcpH.serifed,smcpH.serifedBGR,smcpH.tailedSerifless,\
+smcpH.tailedTopLeftSerifed,smcpH.tailedSerifed,smcpH.tailedSerifedBGR,\
+smcpH.serifedExceptBottomRight'
 npm run build -- ttf-unhinted::RefA
 ```
 

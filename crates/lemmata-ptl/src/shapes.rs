@@ -40,6 +40,7 @@ pub struct Design {
     pub a_bar_pos: f64,
     pub a_bar_stroke_adj: f64,
     pub upper_e_bar_pos: f64,
+    pub h_bar_pos: f64,
 }
 
 impl Default for Design {
@@ -49,6 +50,7 @@ impl Default for Design {
             a_bar_pos: 0.5304,
             a_bar_stroke_adj: -0.075,
             upper_e_bar_pos: 0.52,
+            h_bar_pos: 0.525,
         }
     }
 }
