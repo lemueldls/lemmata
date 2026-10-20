@@ -40,6 +40,8 @@ pub struct SerifFrame {
     pub side_jut: f64,
     /// How far an inner one does.
     pub side_jut_in: f64,
+    /// Whether the space between the bars can carry a full serif.
+    pub enough_space_for_full_serifs: bool,
 }
 
 impl SerifFrame {
@@ -61,8 +63,6 @@ impl SerifFrame {
         let ink = sw_ref * metrics.hv_contrast;
         let co_ink = (metrics.stroke - sw_ref) * metrics.hv_contrast;
         let gap = (right - left - h_split * ink) / (h_split - 1.0);
-        let jut_fs = metrics.mid_jut_side - 0.5 * co_ink;
-        let jut_fc = metrics.mid_jut_center - 0.5 * co_ink;
         let jut = (metrics.jut - 0.5 * co_ink).min(mix(
             0.5 * ink,
             metrics.jut,
@@ -75,9 +75,7 @@ impl SerifFrame {
             shapes::jut_in(metrics, left, right, jut, sw_ref, h_split)
         };
         let side_jut_in = jut_in - 0.5 * ink;
-        let _ = jut_fs;
-        let _ = jut_fc;
-        let _ = gap;
+        let enough_space_for_full_serifs = 0.5 * ink + 0.375 * gap > metrics.ref_jut;
 
         Self {
             top,
@@ -92,6 +90,7 @@ impl SerifFrame {
             jut_in,
             side_jut,
             side_jut_in,
+            enough_space_for_full_serifs,
         }
     }
 

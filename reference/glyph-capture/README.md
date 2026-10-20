@@ -286,7 +286,13 @@ smcpH.tailedTopLeftSerifed,smcpH.tailedSerifed,smcpH.tailedSerifedBGR,\
 smcpH.serifedExceptBottomRight,P.closedSerifless,P.closedMotionSerifed,\
 P.closedSerifed,P.openSerifless,P.openMotionSerifed,P.openSerifed,\
 smcpP.closedSerifless,smcpP.closedMotionSerifed,smcpP.closedSerifed,\
-smcpP.openSerifless,smcpP.openMotionSerifed,smcpP.openSerifed'
+smcpP.openSerifless,smcpP.openMotionSerifed,smcpP.openSerifed,\
+N.standard,N.standardSerifless,N.standardMotionSerifed,\
+N.standardSerifed,N.asymmetric,N.asymmetricSerifless,\
+N.asymmetricMotionSerifed,N.asymmetricSerifed,smcpN.standard,\
+smcpN.standardSerifless,smcpN.standardMotionSerifed,\
+smcpN.standardSerifed,smcpN.asymmetric,smcpN.asymmetricSerifless,\
+smcpN.asymmetricMotionSerifed,smcpN.asymmetricSerifed'
 npm run build -- ttf-unhinted::RefA
 ```
 

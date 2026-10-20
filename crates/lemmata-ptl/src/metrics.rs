@@ -79,6 +79,8 @@ pub struct Para {
     pub ess_ratio_question: Option<f64>,
     pub shoulder_fine_min: f64,
     pub ref_stroke: f64,
+    /// The reference jut a full serif is measured against.
+    pub ref_jut: f64,
     pub canonical_stroke_width_min: f64,
     pub canonical_stroke_width_max: f64,
     pub leading: f64,
@@ -208,6 +210,8 @@ pub struct Metrics {
     pub tiny: f64,
     /// Carried from the plan so shape code can call `stroke_width_blend`.
     pub ref_stroke: f64,
+    /// The reference jut a full serif is measured against.
+    pub ref_jut: f64,
     pub canonical_stroke_width_min: f64,
     pub canonical_stroke_width_max: f64,
 }
@@ -356,6 +360,7 @@ impl Para {
             ess_ratio_question: get("essRatioQuestion"),
             shoulder_fine_min: require(&get, "shoulderFineMin")?,
             ref_stroke: require(&get, "refStroke")?,
+            ref_jut: require(&get, "refJut")?,
             canonical_stroke_width_min: require(&get, "canonicalStrokeWidthMin")?,
             canonical_stroke_width_max: require(&get, "canonicalStrokeWidthMax")?,
             leading: require(&get, "leading")?,
@@ -582,6 +587,7 @@ impl Metrics {
             geometry_stroke: weight.advice_stroke(4.0, 1.0, 1.0),
             very_far: upm * 16.0,
             ref_stroke: para.ref_stroke,
+            ref_jut: para.ref_jut,
             canonical_stroke_width_min: para.canonical_stroke_width_min,
             canonical_stroke_width_max: para.canonical_stroke_width_max,
             tiny: 1.0 / 128.0,

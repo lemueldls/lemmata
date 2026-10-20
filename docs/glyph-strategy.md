@@ -244,6 +244,11 @@ captured glyphs, 248 knots, exact. The open forms cut a gap in the stem with a
 `difference`. The Greek rho, the hook, the stroke variants and the ruble sign
 are not ported.
 
+`letter/latin/upper-n.ptl` is two straight strands joined by a diagonal, in a
+symmetric or asymmetric body. The slab setting follows `para.slab`, so the port
+now carries it: `Para` and `Metrics` gained `refJut` and the serif frame gained
+`enough_space_for_full_serifs`. Twelve captured glyphs, 128 knots, exact.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
