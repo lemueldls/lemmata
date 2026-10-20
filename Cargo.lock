@@ -659,6 +659,7 @@ dependencies = [
 name = "xtask"
 version = "0.1.0"
 dependencies = [
+ "lemmata-ptl-front",
  "serde_json",
  "sha2",
 ]
