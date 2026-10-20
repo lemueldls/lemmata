@@ -94,6 +94,11 @@ impl Glyph {
         }
     }
 
+    /// `includeGlyph` at an explicit shift, which is how a mark is placed.
+    pub fn include_glyph_at(&mut self, other: &Self, shift: Vec2) {
+        self.include_glyph_impl(other, shift);
+    }
+
     fn include_glyph_impl(&mut self, other: &Self, shift: Vec2) {
         // A named glyph becomes a reference upstream, which resolves to the same
         // translated geometry. The port places it directly.
@@ -133,6 +138,52 @@ impl Glyph {
 #[must_use]
 pub fn eject_tagged(geometry: &Geometry, tag: &str) -> Geometry {
     filter_tag(geometry, tag)
+}
+
+// `mark_shift` would be const if iterator methods were.
+#[allow(clippy::missing_const_for_fn)]
+/// `combineMarks`: the translation that lands a mark on a base.
+///
+/// The first anchor class the two share decides it: the base's anchor minus the
+/// mark's. `None` when they share none, which upstream leaves where it is.
+#[must_use]
+pub fn mark_shift(base: &Glyph, mark: &Glyph) -> Option<Vec2> {
+    for (name, mark_anchor) in &mark.mark_anchors {
+        if let Some((_, base_anchor)) = base.base_anchors.iter().find(|(other, _)| other == name) {
+            return Some(*base_anchor - *mark_anchor);
+        }
+    }
+
+    None
+}
+
+/// A base with its marks placed on it.
+///
+/// This is the placement half of an accented composition: the base is included,
+/// then each mark at the shift its anchors name. Which parts a composition has,
+/// and which mark replaces which, is the definition's business and lives in the
+/// glyph source.
+#[derive(Clone, Debug)]
+pub struct Composite {
+    pub base: Glyph,
+    pub marks: Vec<Glyph>,
+}
+
+impl Composite {
+    #[must_use]
+    pub const fn new(base: Glyph, marks: Vec<Glyph>) -> Self {
+        Self { base, marks }
+    }
+}
+
+impl Component for Composite {
+    fn apply_to_glyph(&self, glyph: &mut Glyph, copy_anchors: bool, copy_width: bool) {
+        glyph.include_glyph(&self.base, copy_anchors, copy_width);
+        for mark in &self.marks {
+            let shift = mark_shift(glyph, mark).unwrap_or_default();
+            glyph.include_glyph_at(mark, shift);
+        }
+    }
 }
 
 /// `combineWith`.
@@ -305,5 +356,59 @@ pub const fn difference(operands: Vec<Geometry>) -> Geometry {
     Geometry::Boolean {
         op: BinaryOp::Difference,
         operands,
+    }
+}
+
+#[cfg(test)]
+mod compose_tests {
+    use kurbo::Vec2;
+
+    use super::{Composite, Glyph, mark_shift};
+
+    fn anchored(base: &[(&str, Vec2)], mark: &[(&str, Vec2)]) -> (Glyph, Glyph) {
+        let mut a = Glyph::new();
+        a.base_anchors = base.iter().map(|(k, v)| ((*k).to_string(), *v)).collect();
+        let mut b = Glyph::new();
+        b.mark_anchors = mark.iter().map(|(k, v)| ((*k).to_string(), *v)).collect();
+
+        (a, b)
+    }
+
+    #[test]
+    fn a_shared_anchor_names_the_shift() {
+        let (base, mark) = anchored(
+            &[("above", Vec2::new(100.0, 500.0))],
+            &[("above", Vec2::new(100.0, 700.0))],
+        );
+        assert_eq!(mark_shift(&base, &mark), Some(Vec2::new(0.0, -200.0)));
+    }
+
+    #[test]
+    fn no_shared_anchor_leaves_the_mark_alone() {
+        let (base, mark) = anchored(
+            &[("below", Vec2::new(0.0, 0.0))],
+            &[("above", Vec2::new(0.0, 700.0))],
+        );
+        assert_eq!(mark_shift(&base, &mark), None);
+    }
+
+    #[test]
+    fn a_composite_places_each_mark() {
+        let (base, mark) = anchored(
+            &[("above", Vec2::new(250.0, 520.0))],
+            &[("above", Vec2::new(250.0, 700.0))],
+        );
+        let composite = Composite::new(base, vec![mark]);
+        let mut glyph = Glyph::new();
+        glyph.include(&composite, true, true);
+
+        let lemmata_geom::Geometry::Combine(parts) = &glyph.geometry else {
+            panic!("a composite is a combine");
+        };
+        assert_eq!(parts.len(), 2);
+        let lemmata_geom::Geometry::Transformed { tf, .. } = &parts[1] else {
+            panic!("the mark is placed by a transform");
+        };
+        assert_eq!(tf.as_coeffs()[5], -180.0);
     }
 }
