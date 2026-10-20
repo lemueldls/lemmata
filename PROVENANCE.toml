@@ -23,6 +23,10 @@ upstream = "packages/font-glyphs/src/letter/latin/lower-b.ptl"
 ours = "crates/lemmata-glyphs/src/letter/latin/lower_d.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-d.ptl"
 
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/upper_f.rs"
+upstream = "packages/font-glyphs/src/letter/latin/upper-f.ptl"
+
 # The runtime the definitions are written against. Not glyphs, but they came
 # from upstream the same way, and a port would build on them.
 [[layer]]

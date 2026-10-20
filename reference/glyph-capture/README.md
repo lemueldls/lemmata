@@ -172,7 +172,12 @@ dHookTop.toothlessRoundedBottomSerifed,d.toothlessRoundedSerifed,\
 dCaron/base.toothlessRoundedSerifed,dStroke.toothlessRoundedSerifed,\
 latn/de.toothlessRoundedSerifed,dCurlyTail.toothedSerifless,\
 dCurlyTail.toothedTopSerifed,cyrl/djeKomi.toothlessRoundedSerifless,\
-cyrl/djeKomi.toothlessRoundedTopSerifed,mathbb/d'
+cyrl/djeKomi.toothlessRoundedTopSerifed,mathbb/d,F.serifless,\
+FBar.serifless,smcpF.serifless,currency/frenchFrancSign.serifless,\
+F.topLeftSerifed,FBar.topLeftSerifed,smcpF.topLeftSerifed,\
+currency/frenchFrancSign.topLeftSerifed,F.serifed,FBar.serifed,\
+smcpF.serifed,currency/frenchFrancSign.serifed,F.serifedCapped,\
+FBar.serifedCapped,smcpF.serifedCapped,mathbb/F'
 npm run build -- ttf-unhinted::RefA
 ```
 

@@ -39,6 +39,7 @@ pub struct Design {
     pub superness: f64,
     pub a_bar_pos: f64,
     pub a_bar_stroke_adj: f64,
+    pub upper_e_bar_pos: f64,
 }
 
 impl Default for Design {
@@ -47,6 +48,7 @@ impl Default for Design {
             superness: 2.275,
             a_bar_pos: 0.5304,
             a_bar_stroke_adj: -0.075,
+            upper_e_bar_pos: 0.52,
         }
     }
 }
@@ -2004,4 +2006,91 @@ pub fn bb_bar_right(
         hbar_t(kit, metrics, x, x - bbd, y_top, Some(bbs)).geometry(kurbo::Affine::IDENTITY),
         hbar_b(kit, metrics, x, x - bbd, y_bot, Some(bbs)).geometry(kurbo::Affine::IDENTITY),
     ]
+}
+
+/// `Rect`: an axis-aligned closed outline.
+#[must_use]
+pub fn rect(kit: &Kit, u: f64, d: f64, l: f64, r: f64) -> crate::spiro_kit::SpiroOutline {
+    kit.spiro_outline(vec![
+        kit.knot(KnotType::Corner, l, d, Vec::new()),
+        kit.knot(KnotType::Corner, l, u, Vec::new()),
+        kit.knot(KnotType::Corner, r, u, Vec::new()),
+        kit.knot(KnotType::Corner, r, d, Vec::new()),
+    ])
+}
+
+/// `VSerif.mr`: a centered vertical serif at `x`, `length` each way.
+#[must_use]
+pub fn vserif_mr(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    length: f64,
+    sw: Option<f64>,
+) -> Dispiro {
+    let width = sw.unwrap_or(metrics.v_jut_stroke);
+    let heading = upward(metrics.hv_contrast);
+    let items = vec![
+        Item::Af(kit.widths_lhs(Some(width))),
+        kit.knot(KnotType::Left, x, y - length, kit.heading(heading)),
+        kit.knot(KnotType::Right, x, y + length, kit.heading(heading)),
+    ];
+
+    kit.dispiro(items)
+}
+
+/// `EFMidBarShrinkK`: how far the crossbar's right end is pulled in.
+#[must_use]
+pub fn ef_mid_bar_shrink_k(
+    df: &crate::letter_model::DivFrame,
+    serif_rt: bool,
+    sw_ref: Option<f64>,
+) -> f64 {
+    let sw_ref = sw_ref.unwrap_or(df.mvs);
+    1.0 + ((0.15 * (df.width - 2.0 * df.sb)).max(0.5 * sw_ref)
+        + if serif_rt { 0.25 } else { 0.0 } * sw_ref)
+        / df.sb
+}
+
+/// `EFMidBarPosY`: where the crossbar sits.
+#[must_use]
+pub fn ef_mid_bar_pos_y(top: f64, bot: f64, py_bar: Option<f64>, design: &Design) -> f64 {
+    mix(bot, top, py_bar.unwrap_or(design.upper_e_bar_pos))
+}
+
+/// `EFVJutLength`: the three jut lengths around the crossbar.
+// The signature is upstream's: the height, the bar's fraction, the stroke and
+// the two overrides.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn ef_v_jut_length(
+    metrics: &Metrics,
+    design: &Design,
+    top: f64,
+    bot: f64,
+    py_bar: Option<f64>,
+    stroke: Option<f64>,
+    jut_top: Option<f64>,
+    jut_bot: Option<f64>,
+) -> (f64, f64, f64) {
+    let height = top - bot;
+    let bar_pos = ef_mid_bar_pos_y(height, 0.0, py_bar, design);
+    let stroke = stroke.unwrap_or(metrics.stroke);
+    let jut_top = jut_top.unwrap_or_else(|| {
+        metrics
+            .v_jut
+            .min(mix(stroke, height - (bar_pos + stroke / 2.0), 0.5))
+    });
+    let jut_bot =
+        jut_bot.unwrap_or_else(|| metrics.v_jut.min(mix(stroke, bar_pos - stroke / 2.0, 0.5)));
+    let co_top = (height - (bar_pos - stroke / 2.0)) - jut_top;
+    let co_bot = (bar_pos + stroke / 2.0) - jut_bot;
+    let jut_mid = mix(
+        stroke / 2.0,
+        metrics.v_jut.min(co_top).min(co_bot) - stroke / 2.0,
+        0.5,
+    );
+
+    (jut_top, jut_bot, jut_mid)
 }

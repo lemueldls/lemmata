@@ -129,6 +129,12 @@ impl Glyph {
     // is not modelled.
 }
 
+/// `ejectTagged`: drop the geometry carrying a tag, keeping the rest.
+#[must_use]
+pub fn eject_tagged(geometry: &Geometry, tag: &str) -> Geometry {
+    filter_tag(geometry, tag)
+}
+
 /// `combineWith`.
 #[must_use]
 pub fn combine_with(geometry: Geometry, other: Geometry) -> Geometry {

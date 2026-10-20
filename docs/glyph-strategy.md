@@ -157,6 +157,19 @@ One mistake the gate caught: `RightwardTailedBar` reads the build's
 the same tail. The port had used the frame and was 1.4 units out on
 `dCaron/base.tailedSerifless`.
 
+## The first capital
+
+`letter/latin/upper-f.ptl` (107 lines) is the first capital letter. It draws one
+shape at two heights and overlays it three ways: `F`, `smcpF`, `FBar` and
+`currency/frenchFrancSign`, sixteen captured glyphs, 184 knots, worst deviation
+0.
+
+It needed `VSerif.mr`, `Rect` and the `EF` crossbar helpers, all small. One
+thing it did not need was tag ejection. `eject-contour 'crossBar'` upstream
+compares the tag, and the port's `Geometry::Tagged` carries none, so ejecting
+would also drop the tagged foot serif. The French franc sign builds the shape
+without the crossbar instead, which is exact.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
