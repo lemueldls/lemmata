@@ -18,12 +18,10 @@
 use std::fs;
 
 use lemmata_geom::{BiKnot, Geometry};
-use lemmata_glyphs::letter::latin::lower_a::{
-    HOOK_HALF, HOOK_SLAB_INWARD, HOOK_SLAB_NONE, LowerA, SingleStoreyBar, SingleStoreyBody,
-};
+use lemmata_glyphs::letter::latin::lower_a::LowerA;
 use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::shapes::Design;
-use lemmata_ptl::spiro_kit::{Dispiro, Kit};
+use lemmata_ptl::spiro_kit::Kit;
 use serde_json::Value;
 
 use lemmata_capture::{dump_path, metrics_from_capture};
@@ -33,148 +31,6 @@ const TOLERANCE: f64 = 1e-6;
 /// The outline passes through overlap resolution, which the two boolean
 /// engines do not agree on exactly.
 const BOX_TOLERANCE: f64 = 1.0;
-
-/// A double-storey body, one of the seven the variant table selects.
-#[derive(Clone, Copy)]
-enum DoubleBody {
-    Serifless,
-    Serifed,
-    Tailed,
-    FlatBottomSerifless,
-    FlatBottomSerifed,
-    ToothlessCorner,
-    ToothlessRounded,
-}
-
-impl DoubleBody {
-    fn build(self, body: &LowerA, hook: i32) -> Vec<Dispiro> {
-        match self {
-            Self::Serifless => body.serifless(hook, None),
-            Self::Serifed => body.serifed(hook, None),
-            Self::Tailed => body.tailed(hook, None),
-            Self::FlatBottomSerifless => body.flat_bottom_serifless(hook, None),
-            Self::FlatBottomSerifed => body.flat_bottom_serifed(hook, None),
-            Self::ToothlessCorner => body.toothless_corner(hook, None),
-            Self::ToothlessRounded => body.toothless_rounded(hook, None),
-        }
-    }
-}
-
-/// The double-storey suffixes, in `DoubleStoreyConfig`'s order.
-const DOUBLE: &[(&str, DoubleBody)] = &[
-    ("doubleStoreySerifless", DoubleBody::Serifless),
-    ("doubleStoreySerifed", DoubleBody::Serifed),
-    ("doubleStoreyTailed", DoubleBody::Tailed),
-    (
-        "doubleStoreyFlatBottomSerifless",
-        DoubleBody::FlatBottomSerifless,
-    ),
-    (
-        "doubleStoreyFlatBottomSerifed",
-        DoubleBody::FlatBottomSerifed,
-    ),
-    ("doubleStoreyToothlessCorner", DoubleBody::ToothlessCorner),
-    ("doubleStoreyToothlessRounded", DoubleBody::ToothlessRounded),
-];
-
-/// The single-storey suffixes and the body and bar each selects.
-const SINGLE: &[(&str, SingleStoreyBody, SingleStoreyBar)] = &[
-    (
-        "singleStoreySerifless",
-        SingleStoreyBody::FullBar,
-        SingleStoreyBar::Serifless,
-    ),
-    (
-        "singleStoreyTopCutSerifless",
-        SingleStoreyBody::TopCut,
-        SingleStoreyBar::Serifless,
-    ),
-    (
-        "singleStoreyFlatTopSerifless",
-        SingleStoreyBody::FlatTop,
-        SingleStoreyBar::Serifless,
-    ),
-    (
-        "singleStoreyEarlessCornerSerifless",
-        SingleStoreyBody::EarlessCorner,
-        SingleStoreyBar::Serifless,
-    ),
-    (
-        "singleStoreyEarlessRoundedSerifless",
-        SingleStoreyBody::EarlessRounded,
-        SingleStoreyBar::Serifless,
-    ),
-    (
-        "singleStoreySerifed",
-        SingleStoreyBody::FullBar,
-        SingleStoreyBar::BottomSerifed,
-    ),
-    (
-        "singleStoreyTopCutSerifed",
-        SingleStoreyBody::TopCut,
-        SingleStoreyBar::BottomSerifed,
-    ),
-    (
-        "singleStoreyFlatTopSerifed",
-        SingleStoreyBody::FlatTop,
-        SingleStoreyBar::BottomSerifed,
-    ),
-    (
-        "singleStoreyEarlessCornerSerifed",
-        SingleStoreyBody::EarlessCorner,
-        SingleStoreyBar::BottomSerifed,
-    ),
-    (
-        "singleStoreyEarlessRoundedSerifed",
-        SingleStoreyBody::EarlessRounded,
-        SingleStoreyBar::BottomSerifed,
-    ),
-    (
-        "singleStoreyDoubleSerifed",
-        SingleStoreyBody::FullBar,
-        SingleStoreyBar::DoubleSerifed,
-    ),
-    (
-        "singleStoreyFlatTopDoubleSerifed",
-        SingleStoreyBody::FlatTop,
-        SingleStoreyBar::DoubleSerifed,
-    ),
-    (
-        "singleStoreyTailed",
-        SingleStoreyBody::FullBar,
-        SingleStoreyBar::Tailed,
-    ),
-    (
-        "singleStoreyTopCutTailed",
-        SingleStoreyBody::TopCut,
-        SingleStoreyBar::Tailed,
-    ),
-    (
-        "singleStoreyFlatTopTailed",
-        SingleStoreyBody::FlatTop,
-        SingleStoreyBar::Tailed,
-    ),
-    (
-        "singleStoreyEarlessCornerTailed",
-        SingleStoreyBody::EarlessCorner,
-        SingleStoreyBar::Tailed,
-    ),
-    (
-        "singleStoreyEarlessRoundedTailed",
-        SingleStoreyBody::EarlessRounded,
-        SingleStoreyBar::Tailed,
-    ),
-    (
-        "singleStoreyTailedSerifed",
-        SingleStoreyBody::FullBar,
-        SingleStoreyBar::TailedSerifed,
-    ),
-    (
-        "singleStoreyFlatTopTailedSerifed",
-        SingleStoreyBody::FlatTop,
-        SingleStoreyBar::TailedSerifed,
-    ),
-];
 
 /// A di-spiro node's knots, lifted out of whichever tree holds them so both
 /// sides can be compared the same way.
@@ -220,23 +76,6 @@ fn entry<'a>(entries: &'a [Value], name: &str) -> &'a Value {
         .unwrap_or_else(|| panic!("{name} is not in the capture"))
 }
 
-fn single_storey(
-    body: &LowerA,
-    kind: SingleStoreyBody,
-    top: f64,
-    bar: SingleStoreyBar,
-    ada: Option<f64>,
-    adb: Option<f64>,
-) -> Vec<Geometry> {
-    match kind {
-        SingleStoreyBody::FullBar => body.full_bar_body(top, bar, None, ada, adb),
-        SingleStoreyBody::TopCut => body.top_cut_body(top, bar, None, ada, adb),
-        SingleStoreyBody::FlatTop => body.flat_top_body(top, bar, None, ada, adb),
-        SingleStoreyBody::EarlessCorner => body.earless_corner_body(top, bar, None, ada, adb),
-        SingleStoreyBody::EarlessRounded => body.earless_rounded_body(top, bar, None, ada, adb),
-    }
-}
-
 #[test]
 fn lower_a_matches_capture() {
     let Some(metrics) = metrics_from_capture() else {
@@ -279,58 +118,7 @@ fn lower_a_matches_capture() {
         design: &design,
     };
 
-    // A case is the glyph's name and the geometry its body builds. Wrapping the
-    // operands in a combine mirrors how the definition unions them, so the walk
-    // reaches them in the capture's order.
-    let combine = |operands: Vec<Geometry>| Geometry::Combine(operands);
-    let from_dispiros = |dispiros: Vec<Dispiro>| {
-        combine(
-            dispiros
-                .iter()
-                .map(|dispiro| dispiro.geometry(kurbo::Affine::IDENTITY))
-                .collect(),
-        )
-    };
-
-    let mut cases: Vec<(String, Geometry)> = Vec::new();
-    for (suffix, kind) in DOUBLE {
-        cases.push((
-            format!("a.{suffix}"),
-            from_dispiros(kind.build(&body, HOOK_SLAB_NONE)),
-        ));
-        cases.push((
-            format!("aHalf.{suffix}"),
-            from_dispiros(kind.build(&body, HOOK_HALF)),
-        ));
-        cases.push((
-            format!(
-                "a.doubleStoreyHookInwardSerifed{}",
-                &suffix["doubleStorey".len()..]
-            ),
-            from_dispiros(kind.build(&body, HOOK_SLAB_INWARD)),
-        ));
-    }
-    cases.push((
-        "a.crossing".to_string(),
-        combine(vec![body.crossing_body(metrics.xh)]),
-    ));
-    for (suffix, kind, bar) in SINGLE {
-        cases.push((
-            format!("a.{suffix}"),
-            combine(single_storey(&body, *kind, metrics.xh, *bar, None, None)),
-        ));
-        cases.push((
-            format!("aCap.{suffix}"),
-            combine(single_storey(
-                &body,
-                *kind,
-                metrics.cap,
-                *bar,
-                Some(metrics.arch_depth_a),
-                Some(metrics.arch_depth_b),
-            )),
-        ));
-    }
+    let cases = body.glyphs();
 
     let mut worst = (0.0_f64, "none".to_string());
     let mut knot_count = 0usize;
