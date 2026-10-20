@@ -661,24 +661,6 @@ kbd {
   margin-top: 28px;
 }
 
-.hero__notes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  margin-top: 22px;
-  color: var(--faint);
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.hero__notes span + span::before {
-  margin-right: 10px;
-  color: var(--line-strong);
-  content: "+";
-}
-
 /* Readout panel -------------------------------------------------------- */
 
 .readout {
@@ -1011,13 +993,17 @@ kbd {
 .pipeline__step:not(:last-child)::after {
   position: absolute;
   top: 50%;
-  right: -10px;
+  right: -4px;
   z-index: 2;
+  padding: 0 2px;
+  background: var(--bg);
   color: var(--line-strong);
   content: "+";
   font-family: var(--mono);
   font-size: 11px;
-  transform: translateY(-50%);
+  line-height: 1;
+  transform: translate(50%, -50%);
+  pointer-events: none;
 }
 
 .pipeline__num {
@@ -3892,11 +3878,6 @@ math {
     font-size: clamp(4.2rem, 21vw, 9rem);
   }
 
-  .hero__notes span + span::before {
-    content: "";
-    margin-right: 0;
-  }
-
   .pipeline {
     grid-template-columns: 1fr;
   }
@@ -3904,8 +3885,8 @@ math {
   .pipeline__step:not(:last-child)::after {
     top: auto;
     right: 50%;
-    bottom: -9px;
-    transform: translateX(50%);
+    bottom: -4px;
+    transform: translate(50%, 50%);
   }
 
   .matrix__row {

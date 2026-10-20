@@ -35,6 +35,7 @@ const {
 
 const preview = ref("var(--built)");
 const mounted = ref(false);
+const siteFont = useLemmataFont();
 
 const BASICS = [
   { key: "capHeight", label: "cap height", unit: "units", step: 1 },
@@ -177,12 +178,15 @@ onBeforeUnmount(() => {
 
       <div class="page-head__side">
         <p class="mono-note">
-          the outline set in this page holds 72 glyphs. a build takes a moment,
-          and the file is written in the tab.
+          the font this page is set in draws {{ siteFont.metrics?.drawn ?? "—" }}
+          glyphs. a build takes a moment, and the file is written in the tab.
         </p>
         <dl class="page-head__facts">
           <div><dt>plan</dt><dd>json / 7 keys</dd></div>
-          <div><dt>outline set</dt><dd>72 glyphs</dd></div>
+          <div>
+            <dt>glyphs drawn</dt>
+            <dd>{{ siteFont.metrics?.drawn ?? "—" }}</dd>
+          </div>
           <div><dt>spacing</dt><dd>{{ spacing }}</dd></div>
           <div><dt>output</dt><dd>ttf</dd></div>
         </dl>

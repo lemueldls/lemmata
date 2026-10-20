@@ -19,8 +19,8 @@ const readings = computed(() => [
         <div>
           <p class="site-foot__word">lemmata</p>
           <p class="site-foot__note">
-            A typeface factory for the browser. One plan goes in, a font comes out,
-            and the page never needs an account.
+            A typeface factory for the browser. One plan goes in and a font comes
+            out.
           </p>
         </div>
 
@@ -48,14 +48,12 @@ const readings = computed(() => [
           <ul>
             <li>Glyph source: Iosevka 34.9.0, OFL</li>
             <li>Everything else: MIT OR Apache-2.0</li>
-            <li>No upload. No account.</li>
           </ul>
         </div>
       </div>
 
       <div class="site-foot__bottom">
         <span><i>+</i> Lemmata 2026</span>
-        <span>Built from the font, not a screenshot</span>
         <span>Every sample set in the face it describes</span>
       </div>
     </div>

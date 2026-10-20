@@ -117,7 +117,7 @@ const readings = computed(() => {
 
           <p class="hero__lede">
             A typeface factory in a browser tab. Set the metrics, choose the
-            drawings, build the file. No account, no queue, no upload.
+            drawings, build the file.
           </p>
 
           <div class="hero__actions">
@@ -126,12 +126,6 @@ const readings = computed(() => {
             </NuxtLink>
             <a class="btn btn--ghost" href="#samples">browse samples</a>
           </div>
-
-          <p class="hero__notes">
-            <span>no account</span>
-            <span>no queue</span>
-            <span>offline after load</span>
-          </p>
         </div>
 
         <aside class="readout" aria-label="Readings from the font">
@@ -322,7 +316,7 @@ const readings = computed(() => {
 
         <div class="cta__cmd" aria-label="What the configurator edits">
           <div><span>plan</span><span>7 keys</span></div>
-          <div><span>outline set</span><span>72 glyphs</span></div>
+          <div><span>glyphs drawn</span><span>{{ font.metrics?.drawn ?? "—" }}</span></div>
           <div><span>registry</span><span>the ported set</span></div>
           <div><span>build</span><span>in the tab</span></div>
           <div><span>output</span><span>ttf / woff2</span></div>

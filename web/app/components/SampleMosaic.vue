@@ -37,7 +37,7 @@ def root(f, a, b, eps):
     lang: "shellscript",
     source: `$ lemmata build --plan plan.json
 wrote lemmata.ttf
-127 glyphs / 18104 bytes / 41 ms
+ready to install
 $ open lemmata.ttf`,
   },
   {
@@ -87,16 +87,6 @@ descender   -215`,
     source: `a typeface is a set of decisions.
 the page is where they show, line
 after line, at the size you chose.`,
-  },
-  {
-    kind: "metrics",
-    category: "data",
-    lang: null,
-    source: `glyphs      127
-characters  59
-units/em    1000
-advance     500
-math        yes`,
   },
   {
     kind: "lean",

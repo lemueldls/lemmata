@@ -2,9 +2,8 @@
 // The equation bench: one editable MathML field, the whole corpus beside it,
 // and the constructs the table is there to serve.
 //
-// The MathML is edited as text and set by the browser. There is no upload and no
-// render step on another machine, so the equation on screen is the equation in
-// the field.
+// The MathML is edited as text and set by the browser. The result stays in this
+// page, so the equation on screen is the equation in the field.
 import corpus from "../../../corpus/equations.mathml?raw";
 import { specimenSize } from "~/composables/hotkeys";
 
