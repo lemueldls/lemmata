@@ -267,9 +267,9 @@ onBeforeUnmount(() => {
             </div>
             <p class="prose">
               The registry lists every drawing the port builds. Choose a letter,
-              compare the shapes at size, and send one into the plan. Lower-case
-              a, b, d and p have a base in this outline set. The capitals are
-              previews until their base glyphs land.
+              compare the shapes at size, and send one into the plan. A letter
+              appears here once its definition is ported, so the rail grows with
+              the port rather than waiting for it.
             </p>
           </div>
 

@@ -26,7 +26,7 @@ const TICKER = [
   "one file",
   "texture healing",
   "math table",
-  "115 ported drawings",
+  "the ported drawings",
   "offline after load",
 ];
 
@@ -43,7 +43,7 @@ const FEATURES = [
   },
   {
     name: "variants",
-    note: "115 ported drawings, previewed in the registry before a plan picks one.",
+    note: "The ported drawings, previewed in the registry before a plan picks one.",
     state: "ready" as const,
   },
   {
@@ -323,7 +323,7 @@ const readings = computed(() => {
         <div class="cta__cmd" aria-label="What the configurator edits">
           <div><span>plan</span><span>7 keys</span></div>
           <div><span>outline set</span><span>72 glyphs</span></div>
-          <div><span>registry</span><span>115 drawings</span></div>
+          <div><span>registry</span><span>the ported set</span></div>
           <div><span>build</span><span>in the tab</span></div>
           <div><span>output</span><span>ttf / woff2</span></div>
         </div>

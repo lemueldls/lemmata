@@ -24,15 +24,12 @@ const text = ref(TEXT);
 const line = ref(1.55);
 const calt = ref(true);
 const txtr = ref(true);
-const liga = ref(true);
 const zero = ref(true);
 const edit = ref<HTMLTextAreaElement | null>(null);
 
 const settings = computed(
   () =>
-    `"calt" ${calt.value ? 1 : 0}, "TXTR" ${txtr.value ? 1 : 0}, "liga" ${
-      liga.value ? 1 : 0
-    }, "zero" ${zero.value ? 1 : 0}`,
+    `"calt" ${calt.value ? 1 : 0}, "TXTR" ${txtr.value ? 1 : 0}, "zero" ${zero.value ? 1 : 0}`,
 );
 
 function load(name: keyof typeof SAMPLES): void {
@@ -83,7 +80,6 @@ onBeforeUnmount(() => removeEventListener("keydown", focusEditor));
         <div class="playground__toggles">
           <button type="button" :aria-pressed="calt" @click="calt = !calt">calt</button>
           <button type="button" :aria-pressed="txtr" @click="txtr = !txtr">texture</button>
-          <button type="button" :aria-pressed="liga" @click="liga = !liga">liga</button>
           <button type="button" :aria-pressed="zero" @click="zero = !zero">zero</button>
         </div>
       </div>
