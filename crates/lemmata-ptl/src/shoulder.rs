@@ -5,12 +5,17 @@
 //! into a di-spiro and `mask` into a closed spiro outline, which is what the
 //! boolean shapes cut against.
 
+// The arithmetic mirrors upstream's expression order and stays clear of fused
+// multiply-add, which would round differently from JavaScript.
+#![allow(clippy::suboptimal_flops)]
+
 use lemmata_geom::KnotType;
 
 use crate::control::{Item, UserControlKnot};
 use crate::metrics::Metrics;
 use crate::shapes::{self, ArchArgs, ArchParams, Design};
 use crate::spiro_kit::{Dispiro, Kit, SpiroOutline};
+use crate::util::mix;
 
 /// The shoulder's dimensions.
 #[derive(Clone, Copy, Debug)]
@@ -45,9 +50,8 @@ impl NShoulder {
     /// The knots, which `shape` and `mask` sink differently.
     #[must_use]
     pub fn items(&self, kit: &Kit, metrics: &Metrics, design: &Design, mask: bool) -> Vec<Item> {
-        let hsw = |value: f64| value * metrics.hv_contrast;
         let flat_y = self.flat_y(metrics);
-        let left_x = self.left - hsw(self.fine);
+        let left_x = self.left - self.fine * metrics.hv_contrast;
         let before = UserControlKnot {
             ty: KnotType::Right,
             x: left_x,
@@ -116,4 +120,137 @@ impl NShoulder {
     pub fn mask(&self, kit: &Kit, metrics: &Metrics, design: &Design) -> SpiroOutline {
         kit.spiro_outline(self.items(kit, metrics, design, true))
     }
+}
+
+/// `nShoulder.earlessCorner`: the shoulder cut at the top with a corner at
+/// `rise`, or rounded away when the rise is zero.
+#[must_use]
+pub fn n_shoulder_earless_corner(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    shoulder: &NShoulder,
+    rise: f64,
+) -> Dispiro {
+    let across = UserControlKnot {
+        ty: KnotType::Left,
+        x: shoulder.right,
+        y: (shoulder.top - shoulder.adb).max(shoulder.bottom + metrics.tiny),
+        af: Vec::new(),
+    };
+    let mut items = vec![Item::Af(kit.widths_rhs(Some(shoulder.stroke)))];
+    if rise == 0.0 {
+        items.push(kit.knot(
+            KnotType::Left,
+            shoulder.left + metrics.tiny,
+            shoulder.top,
+            kit.heading(shapes::rightward()),
+        ));
+        items.push(kit.knot(
+            KnotType::Right,
+            mix(shoulder.left, shoulder.right, 0.5) - metrics.correction_o_mid_x * shoulder.stroke,
+            shoulder.top,
+            Vec::new(),
+        ));
+        items.push(kit.archv(None, None));
+    } else {
+        let corner = UserControlKnot {
+            ty: KnotType::G4,
+            x: shoulder.left,
+            y: shoulder.top - rise,
+            af: Vec::new(),
+        };
+        items.push(kit.knot(corner.ty, corner.x, corner.y, Vec::new()));
+        items.extend(shapes::arch(
+            kit,
+            &ArchArgs {
+                y: shoulder.top,
+                p: None,
+                sw: shoulder.stroke,
+                compact: false,
+                o: metrics.o,
+                angle_pre: None,
+                angle_post: None,
+                blend_pre: Some(false),
+                blend_post: None,
+                sw_before: Some(shoulder.stroke),
+                sw_after: Some(shoulder.stroke),
+                lhs: false,
+            },
+            &corner,
+            &across,
+            &NShoulder::params(metrics, design),
+        ));
+    }
+    items.push(kit.knot(across.ty, across.x, across.y, Vec::new()));
+    items.push(kit.knot(
+        KnotType::Right,
+        shoulder.right,
+        shoulder.bottom,
+        kit.heading(shapes::downward(metrics.hv_contrast)),
+    ));
+
+    kit.dispiro(items)
+}
+
+/// `nShoulder.earlessRounded`: the shoulder with its left side rounded into the
+/// bar at `left_y0`.
+#[must_use]
+pub fn n_shoulder_earless_rounded(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    shoulder: &NShoulder,
+) -> Dispiro {
+    let flat_y = (shoulder.top - shoulder.ada).max(shoulder.left_y0 + metrics.tiny);
+    let before = UserControlKnot {
+        ty: KnotType::Right,
+        x: shoulder.left,
+        y: flat_y,
+        af: Vec::new(),
+    };
+    let across = UserControlKnot {
+        ty: KnotType::Left,
+        x: shoulder.right,
+        y: (shoulder.top - shoulder.adb).max(shoulder.bottom + metrics.tiny),
+        af: Vec::new(),
+    };
+    let mut items = vec![
+        kit.knot(
+            KnotType::Left,
+            shoulder.left,
+            shoulder.left_y0,
+            kit.widths_rhs_heading(Some(shoulder.stroke), shapes::upward(metrics.hv_contrast)),
+        ),
+        kit.knot(KnotType::Right, before.x, before.y, Vec::new()),
+    ];
+    items.extend(shapes::arch(
+        kit,
+        &ArchArgs {
+            y: shoulder.top,
+            p: None,
+            sw: shoulder.stroke,
+            compact: false,
+            o: metrics.o,
+            angle_pre: None,
+            angle_post: None,
+            blend_pre: None,
+            blend_post: None,
+            sw_before: Some(shoulder.stroke),
+            sw_after: Some(shoulder.stroke),
+            lhs: false,
+        },
+        &before,
+        &across,
+        &NShoulder::params(metrics, design),
+    ));
+    items.push(kit.knot(across.ty, across.x, across.y, Vec::new()));
+    items.push(kit.knot(
+        KnotType::Right,
+        shoulder.right,
+        shoulder.bottom,
+        kit.heading(shapes::downward(metrics.hv_contrast)),
+    ));
+
+    kit.dispiro(items)
 }
