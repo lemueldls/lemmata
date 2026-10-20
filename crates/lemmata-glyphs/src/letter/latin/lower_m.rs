@@ -202,10 +202,8 @@ impl LowerM<'_> {
                 Vec::new(),
             ),
             self.kit.arcvh(Some(8), None),
-            self.kit.pair(
-                lemmata_ptl::spiro_kit::Family::G2,
-                lemmata_ptl::spiro_kit::Direction::Right,
-                lemmata_ptl::spiro_kit::Position::Mid,
+            self.kit.knot(
+                KnotType::G2,
                 mix(right_inner, left_inner, 0.5),
                 (shoulder.top - metrics.o) - stroke,
                 Vec::new(),
@@ -244,10 +242,8 @@ impl LowerM<'_> {
                 Vec::new(),
             ),
             self.kit.arcvh(Some(8), None),
-            self.kit.pair(
-                lemmata_ptl::spiro_kit::Family::G2,
-                lemmata_ptl::spiro_kit::Direction::Right,
-                lemmata_ptl::spiro_kit::Position::Mid,
+            self.kit.knot(
+                KnotType::G2,
                 mix(shoulder.left, shoulder.right, 0.5),
                 shoulder.top - metrics.o,
                 Vec::new(),
@@ -442,7 +438,7 @@ impl LowerM<'_> {
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
         items.extend(self.arch_after(top, &before, &after, sw));
-        items.push(self.kit.knot(after.ty, after.x, after.y, after.af.clone()));
+        items.push(self.kit.knot(after.ty, after.x, after.y, after.af));
         items.push(self.kit.knot(
             KnotType::Right,
             self.right_sb(),
@@ -497,7 +493,7 @@ impl LowerM<'_> {
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
         items.extend(self.arch_after(top, &before, &after, sw));
-        items.push(self.kit.knot(after.ty, after.x, after.y, after.af.clone()));
+        items.push(self.kit.knot(after.ty, after.x, after.y, after.af));
         items.push(self.kit.knot(
             end_ty,
             x,
@@ -543,7 +539,7 @@ impl LowerM<'_> {
             self.kit.knot(before.ty, before.x, before.y, Vec::new()),
         ];
         items.extend(self.arch_after(top, &before, &after, sw));
-        items.push(self.kit.knot(after.ty, after.x, after.y, after.af.clone()));
+        items.push(self.kit.knot(after.ty, after.x, after.y, after.af));
         items.push(self.kit.knot(
             KnotType::Right,
             self.right_sb(),
@@ -611,10 +607,8 @@ impl LowerM<'_> {
                 Vec::new(),
             ),
             self.kit.arcvh(Some(8), None),
-            self.kit.pair(
-                lemmata_ptl::spiro_kit::Family::G2,
-                lemmata_ptl::spiro_kit::Direction::Right,
-                lemmata_ptl::spiro_kit::Position::Mid,
+            self.kit.knot(
+                KnotType::G2,
                 mix(left_inner, right_inner, 0.5),
                 (shoulder.top - metrics.o) - stroke,
                 Vec::new(),
@@ -654,10 +648,8 @@ impl LowerM<'_> {
                 Vec::new(),
             ),
             self.kit.arcvh(Some(8), None),
-            self.kit.pair(
-                lemmata_ptl::spiro_kit::Family::G2,
-                lemmata_ptl::spiro_kit::Direction::Right,
-                lemmata_ptl::spiro_kit::Position::Mid,
+            self.kit.knot(
+                KnotType::G2,
                 mix(shoulder.right, shoulder.left, 0.5),
                 shoulder.top - metrics.o,
                 Vec::new(),

@@ -31,6 +31,34 @@ struct OurNode {
     knots: Vec<BiKnot>,
 }
 
+/// Pre-order walk collecting the spiro nodes of a geometry tree.
+///
+/// The shoulders are `spiro-outline` shapes, and the capture keeps them as
+/// `Spiro` nodes. Their knots are the ones that decide the arch, so they are
+/// compared like the di-spiro's.
+fn collect_spiro<'a>(geometry: &'a Geometry, out: &mut Vec<&'a Geometry>) {
+    match geometry {
+        Geometry::Spiro { .. } => out.push(geometry),
+        Geometry::Combine(parts) => {
+            for part in parts {
+                collect_spiro(part, out);
+            }
+        }
+        Geometry::Boolean { operands, .. } => {
+            for operand in operands {
+                collect_spiro(operand, out);
+            }
+        }
+        Geometry::Transformed { geom, .. }
+        | Geometry::RemoveHoles { geom, .. }
+        | Geometry::Simplify { geom, .. }
+        | Geometry::Stroke { geom, .. }
+        | Geometry::Tagged(geom)
+        | Geometry::Radical(geom) => collect_spiro(geom, out),
+        _ => {}
+    }
+}
+
 fn node_of(geometry: &Geometry) -> OurNode {
     let Geometry::DiSpiro {
         contrast,
@@ -176,6 +204,51 @@ fn lower_m_matches_capture() {
                         knot.x, knot.y
                     ),
                 }
+            }
+        }
+
+        let mut captured_spiros = Vec::new();
+        collect_spiro(&glyph.geometry, &mut captured_spiros);
+        let mut our_spiros = Vec::new();
+        collect_spiro(ours, &mut our_spiros);
+        assert_eq!(
+            captured_spiros.len(),
+            our_spiros.len(),
+            "{name}: spiro count"
+        );
+        for (index, (node, expected)) in our_spiros.iter().zip(&captured_spiros).enumerate() {
+            let Geometry::Spiro { closed, knots, .. } = node else {
+                unreachable!();
+            };
+            let Geometry::Spiro {
+                closed: expected_closed,
+                knots: expected_knots,
+                ..
+            } = expected
+            else {
+                unreachable!();
+            };
+            assert_eq!(closed, expected_closed, "{name} spiro {index}: closed");
+            assert_eq!(
+                knots.len(),
+                expected_knots.len(),
+                "{name} spiro {index}: knot count"
+            );
+            for (knot, expected_knot) in knots.iter().zip(expected_knots) {
+                assert_eq!(
+                    knot.ty, expected_knot.ty,
+                    "{name} spiro {index}: knot type at ({}, {})",
+                    knot.x, knot.y
+                );
+                let deviation = (knot.x - expected_knot.x)
+                    .abs()
+                    .max((knot.y - expected_knot.y).abs());
+                assert!(
+                    deviation <= TOLERANCE,
+                    "{name} spiro {index}: knot at ({}, {}) is off by {deviation}",
+                    knot.x,
+                    knot.y
+                );
             }
         }
 

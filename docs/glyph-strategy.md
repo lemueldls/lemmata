@@ -264,10 +264,11 @@ not in a separate `Af` item before it, and once placed there the bars agreed.
 
 The lower-case file is a hundred-entry table across five bodies. All five are
 ported, with both leg heights, both terminals and all five serif settings.
-Forty of them are in the capture, 612 knots, exact: the plan selects the arches
-and flat-top variants and leaves the three earless ones unbuilt, so those are
-drawn but ungated. The arches shoulders are closed spiro outlines, so the
-bi-knot walk sees the stem and the box check carries the shoulders.
+Forty of them are in the capture, 612 di-spiro knots, exact. The arches
+shoulders are closed spiro outlines, so the test walks the `Spiro` nodes as well
+and compares their knots one for one. The plan selects the arches and flat-top
+variants and leaves the three earless ones unbuilt, so those are drawn but
+ungated.
 `mCrossedTail`, the Cyrillic forms and the turned family are not ported.
 
 Two things the layer did not have and the port needed:
