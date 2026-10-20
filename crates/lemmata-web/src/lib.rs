@@ -10,7 +10,7 @@
 //! reaches the drawing for the letters that are ported and the tables for the
 //! rest. [`ported`] is the seam: one name to one set of contours.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use lemmata_build::font::{GlyphData, Names};
 use lemmata_geom::{Geometry, QuadifyPoint};
@@ -86,6 +86,100 @@ pub fn ported(plan: &lemmata_plan::Plan) -> BTreeMap<String, Vec<Vec<QuadifyPoin
         .collect()
 }
 
+/// The group a glyph belongs to when the group is a single character.
+///
+/// The registry also builds derived glyphs (`aCap`, `bSlash`, `mathbb/b`) and
+/// small capitals. A plan chooses a letter, so those are not groups the page
+/// offers.
+fn primary_group(name: &str) -> Option<&str> {
+    let (group, suffix) = name.split_once('.')?;
+    if group.chars().count() != 1 {
+        return None;
+    }
+    if suffix.is_empty() || !suffix.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+
+    Some(group)
+}
+
+/// Every name the registry builds, sorted, one per line.
+///
+/// The page groups these by letter. The list carries no geometry, so it is
+/// cheap to read on first paint.
+#[must_use]
+#[wasm_bindgen]
+pub fn registry_names() -> String {
+    let Some(metrics) = port_metrics(&lemmata_plan::Plan::default()) else {
+        return String::new();
+    };
+    let mut names: Vec<String> = lemmata_glyphs::registry::build(&metrics, &Design::default())
+        .into_iter()
+        .map(|(name, _)| name)
+        .collect();
+    names.sort();
+    names.dedup();
+
+    names.join("\n")
+}
+
+/// A font with one private-use codepoint for every primary registry variant.
+///
+/// The codepoints start at `U+E000` and follow the sorted names `registry_names`
+/// returns, filtered to the single-character groups. The page uses the same
+/// order, so it can show the drawings without building a font per click.
+///
+/// # Errors
+///
+/// Returns a message when the plan or the parameter data cannot be read, or when
+/// the font does not assemble.
+pub fn registry_font(plan: &str) -> Result<Vec<u8>, String> {
+    let plan = lemmata_plan::from_json(plan)?;
+    let font_metrics = plan.to_font_metrics();
+    let metrics =
+        port_metrics(&plan).ok_or_else(|| "the parameter data did not load".to_string())?;
+    let mut entries: Vec<(String, Geometry)> =
+        lemmata_glyphs::registry::build(&metrics, &Design::default())
+            .into_iter()
+            .filter(|(name, _)| primary_group(name).is_some())
+            .collect();
+    entries.sort_by(|left, right| left.0.cmp(&right.0));
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let advance = metrics.width.clamp(0.0, f64::from(u16::MAX)).round() as u16;
+
+    let glyphs: Vec<GlyphData> = entries
+        .into_iter()
+        .enumerate()
+        .map(|(index, (name, geometry))| {
+            let codepoint = 0xE000 + u32::try_from(index).unwrap_or(0);
+
+            GlyphData {
+                name,
+                unicodes: vec![codepoint],
+                advance,
+                contours: Geometry::Simplify {
+                    gizmo: kurbo::Affine::IDENTITY,
+                    geom: Box::new(geometry),
+                }
+                .to_contours(),
+            }
+        })
+        .collect();
+
+    lemmata_build::font::build(&glyphs, &font_metrics, &Names::default(), &[])
+}
+
+/// The registry font, for the page.
+///
+/// # Errors
+///
+/// Returns the message from [`registry_font`] as a JavaScript string.
+#[wasm_bindgen]
+pub fn registry_specimen(plan: &str) -> Result<Vec<u8>, JsValue> {
+    registry_font(plan).map_err(|message| JsValue::from_str(&message))
+}
+
 /// Rounds a captured advance to the units the font table stores.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn advance_to_u16(advance: f64) -> u16 {
@@ -107,7 +201,7 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
     let metrics = plan.to_font_metrics();
     let captured = lemmata_capture::load(capture)?;
     let ported = ported(&plan);
-    let glyphs: Vec<GlyphData> = captured
+    let mut glyphs: Vec<GlyphData> = captured
         .iter()
         .map(|glyph| GlyphData {
             name: glyph.name.clone(),
@@ -119,6 +213,34 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
                 .unwrap_or_else(|| lemmata_capture::contours(glyph)),
         })
         .collect();
+
+    // A plan choice can name a drawing the capture never held. Add that one
+    // glyph before the choice is applied, so the default build stays the same
+    // and a selected variant still reaches the font.
+    let mut known: BTreeSet<String> = glyphs.iter().map(|glyph| glyph.name.clone()).collect();
+    for (group, variant) in &plan.variants {
+        let name = lemmata_build::character::variant_name(group, variant);
+        if known.contains(&name) {
+            continue;
+        }
+        let Some(contours) = ported.get(&name) else {
+            continue;
+        };
+        let Some(advance) = glyphs
+            .iter()
+            .find(|glyph| glyph.name == *group)
+            .map(|glyph| glyph.advance)
+        else {
+            continue;
+        };
+        glyphs.push(GlyphData {
+            name: name.clone(),
+            unicodes: Vec::new(),
+            advance,
+            contours: contours.clone(),
+        });
+        known.insert(name);
+    }
 
     lemmata_build::font::build(&glyphs, &metrics, &Names::default(), &plan.variants)
 }

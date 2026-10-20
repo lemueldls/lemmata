@@ -2271,3 +2271,54 @@ pub fn jut_in(
 
     jut.min(0.5 * ink + (metrics.stroke * metrics.tan_slope).max(0.375 * gap))
 }
+
+/// `VerticalHook.r`: the same hook with its ink on the right of `x`.
+// The signature is upstream's: the stem, the two depths, the stroke and the
+// extension.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn vertical_hook_r(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    x_depth: f64,
+    y_depth: f64,
+    sw: f64,
+    y_extension: f64,
+) -> Dispiro {
+    vertical_hook_m(
+        kit,
+        metrics,
+        x - 0.5 * sw * metrics.hv_contrast,
+        y,
+        x_depth,
+        y_depth,
+        sw,
+        y_extension,
+    )
+}
+
+/// `EngHook`: the hook under an eng.
+#[must_use]
+pub fn eng_hook(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y_start: f64,
+    y_end: f64,
+    sw: f64,
+) -> Dispiro {
+    let y = y_end + metrics.hook + 0.5 * sw;
+
+    vertical_hook_r(
+        kit,
+        metrics,
+        x,
+        y,
+        -metrics.hook_x,
+        metrics.hook,
+        sw,
+        0.0_f64.max(y_start - y),
+    )
+}

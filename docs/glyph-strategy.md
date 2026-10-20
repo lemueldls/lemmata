@@ -204,6 +204,13 @@ stem can carry sit and how far each form reaches, which is what `lower-e`,
 need. Twenty-one captured glyphs, 658 knots, exact; the `thorn` families and
 four of the `p` table's combinations are not selected by the plan.
 
+`letter/latin/lower-h.ptl` (175 lines) followed, with `nShoulder` in
+`lemmata_ptl::shoulder` as its one new shape: a flat side, an arch and a flat
+across, which `h`, `n`, `m` and `b` share. `h`, `hStroke`, `hHookTop`, `heng`,
+`hengStroke`, `hengHookTop` and `mathbb/h`: twenty captured glyphs, 559 knots,
+exact. Two mistakes the knots caught: `Serifless` was still drawing the
+top-left serif, and the bottom serifs are `HSerif.mb` rather than `lb`.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

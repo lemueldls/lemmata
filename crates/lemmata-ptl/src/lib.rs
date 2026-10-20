@@ -37,6 +37,7 @@ pub mod metrics;
 pub mod param;
 pub mod serif;
 pub mod shapes;
+pub mod shoulder;
 pub mod spiro_kit;
 pub mod store;
 pub mod util;

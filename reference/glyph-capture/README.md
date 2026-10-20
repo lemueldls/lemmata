@@ -213,7 +213,21 @@ pStrokeBottom.earlessCornerSerifed,p.earlessRoundedSerifless,\
 pStrokeBottom.earlessRoundedSerifless,p.earlessRoundedMotionSerifed,\
 pStrokeBottom.earlessRoundedMotionSerifed,p.earlessRoundedBottomSerifed,\
 pStrokeBottom.earlessRoundedBottomSerifed,p.earlessRoundedSerifed,\
-pStrokeBottom.earlessRoundedSerifed,mathbb/p'
+pStrokeBottom.earlessRoundedSerifed,mathbb/p,h.straightSerifless,\
+hStroke.straightSerifless,hHookTop.straightSerifless,h.straightSerifed,\
+hStroke.straightSerifed,hHookTop.straightSerifed,\
+h.straightMotionSerifed,hStroke.straightMotionSerifed,\
+hHookTop.straightMotionSerifed,h.straightTopLeftSerifed,\
+hStroke.straightTopLeftSerifed,hHookTop.straightTopLeftSerifed,\
+h.tailedSerifless,hStroke.tailedSerifless,hHookTop.tailedSerifless,\
+h.tailedSerifed,hStroke.tailedSerifed,hHookTop.tailedSerifed,\
+h.tailedMotionSerifed,hStroke.tailedMotionSerifed,\
+hHookTop.tailedMotionSerifed,h.tailedTopLeftSerifed,\
+hStroke.tailedTopLeftSerifed,hHookTop.tailedTopLeftSerifed,\
+heng.serifless,hengStroke.serifless,hengHookTop.serifless,heng.serifed,\
+hengStroke.serifed,hengHookTop.serifed,heng.motionSerifed,\
+hengStroke.motionSerifed,hengHookTop.motionSerifed,heng.topLeftSerifed,\
+hengStroke.topLeftSerifed,hengHookTop.topLeftSerifed,mathbb/h'
 npm run build -- ttf-unhinted::RefA
 ```
 

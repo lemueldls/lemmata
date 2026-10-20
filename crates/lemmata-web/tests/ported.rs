@@ -10,6 +10,7 @@ use std::fs;
 
 use lemmata_capture::{contours, dump_path, load, metrics_from_capture};
 use lemmata_plan::Plan;
+use read_fonts::TableProvider;
 
 const BOX_TOLERANCE: f64 = 1.0;
 
@@ -104,4 +105,42 @@ fn the_build_succeeds_with_the_ported_glyphs() {
             .is_some(),
         "the font has no outlines"
     );
+}
+
+#[test]
+fn a_plan_can_choose_a_variant_the_capture_never_held() {
+    let Ok(capture) = fs::read(dump_path()) else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let names = lemmata_web::registry_names();
+    for name in [
+        "b.flatBottomSerifed",
+        "d.flatBottomSerifed",
+        "p.flatTopSerifed",
+    ] {
+        assert!(
+            names.lines().any(|candidate| candidate == name),
+            "{name} is not in the registry"
+        );
+    }
+
+    let plain = lemmata_web::build(&capture, "").expect("build");
+    let chosen = lemmata_web::build(&capture, r#"{"variants": {"b": "flat-bottom-serifed"}}"#)
+        .expect("build with a ported variant");
+    assert_ne!(plain, chosen, "the b variant did not reach the font");
+}
+
+#[test]
+fn the_registry_font_maps_the_variants() {
+    let bytes = lemmata_web::registry_font("").expect("registry font");
+    let font = read_fonts::FontRef::new(&bytes).expect("reopen");
+    let cmap = font.cmap().expect("cmap");
+    for codepoint in [0xE000_u32, 0xE001, 0xE002] {
+        assert!(
+            cmap.map_codepoint(codepoint).is_some(),
+            "U+{codepoint:04X} is not mapped"
+        );
+    }
+    eprintln!("registry font: {} bytes", bytes.len());
 }
