@@ -2422,3 +2422,43 @@ pub fn ext_line_center(
 
     kit.dispiro(items)
 }
+
+/// `Ring`: a closed circle through four midpoints.
+#[must_use]
+pub fn ring(
+    kit: &Kit,
+    metrics: &Metrics,
+    u: f64,
+    d: f64,
+    l: f64,
+    r: f64,
+) -> crate::spiro_kit::SpiroOutline {
+    let mx = mix(l, r, 0.5);
+    let my = mix(d, u, 0.5);
+    let items = vec![
+        kit.knot(KnotType::G4, mx, d, kit.heading(leftward())),
+        kit.archv(None, None),
+        kit.knot(KnotType::G4, l, my, Vec::new()),
+        kit.arcvh(None, None),
+        kit.knot(KnotType::G4, mx, u, kit.heading(rightward())),
+        kit.archv(None, None),
+        kit.knot(KnotType::G4, r, my, Vec::new()),
+        kit.arcvh(None, None),
+        kit.close(),
+    ];
+    let _ = metrics;
+
+    kit.spiro_outline(items)
+}
+
+/// `DotAt`: a filled dot of radius `r` at `(x, y)`.
+#[must_use]
+pub fn dot_at(
+    kit: &Kit,
+    metrics: &Metrics,
+    x: f64,
+    y: f64,
+    r: f64,
+) -> crate::spiro_kit::SpiroOutline {
+    ring(kit, metrics, y + r, y - r, x - r, x + r)
+}

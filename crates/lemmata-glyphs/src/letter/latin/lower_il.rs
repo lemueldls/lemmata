@@ -138,6 +138,30 @@ impl LowerIl<'_> {
         Geometry::Combine(parts)
     }
 
+    /// `i`: the dotless stem with `tittleAbove` placed on its `above` anchor.
+    ///
+    /// The dot is drawn at the middle and the accent's mid-height. The
+    /// composition's own shift is not this simple: the capture records the
+    /// composed dot under a translation of 5.25 units, not the full width that
+    /// `markMiddle = -Middle` suggests, so the mark's anchor convention has to
+    /// be read against a captured mark before this is wired in.
+    #[must_use]
+    pub fn dotted(&self) -> Geometry {
+        let metrics = self.metrics;
+        let x = self.middle();
+        let y = metrics.xh + metrics.accent_clearance + metrics.accent_height / 2.0;
+        let dot = shapes::dot_at(self.kit, metrics, x, y, metrics.dot_radius);
+
+        Geometry::Combine(vec![
+            self.shape(Body::Serifless, metrics.xh, 0.0),
+            Geometry::Spiro {
+                gizmo: kurbo::Affine::IDENTITY,
+                closed: dot.closed,
+                knots: dot.knots,
+            },
+        ])
+    }
+
     /// The four families, each at the height its table names.
     #[must_use]
     pub fn glyphs(&self) -> Vec<(String, Geometry)> {
