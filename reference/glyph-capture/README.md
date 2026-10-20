@@ -314,7 +314,8 @@ smcpM.slantedSidesFlatBottomSerifless,\
 smcpM.slantedSidesFlatBottomMotionSerifed,\
 smcpM.slantedSidesFlatBottomSmallCyrl,\
 smcpM.slantedSidesFlatBottomSerifed,smcpM.grekCapitalSan,\
-smcpM.grekSmallSan,m.serifless,m.serifed'
+smcpM.grekSmallSan,m.serifless,m.serifed,dotAbove.serifless,tittleAbove,\
+dotAbove.round,dotAbove.square'
 npm run build -- ttf-unhinted::RefA
 ```
 
