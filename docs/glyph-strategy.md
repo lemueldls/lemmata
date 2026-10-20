@@ -191,9 +191,11 @@ stem, a foot bar and three serif grades, with `LSlash`, `smcpL`, `smcpLSlash`,
 It needed nothing new beyond the shapes already there.
 
 `letter/latin/upper-e.ptl` (138 lines) followed: a stem and three bars with four
-serif settings, plus `smcpE`, `smcpEBar` and the mirrored `revE`. Seventeen
-captured glyphs, 226 knots, exact. It is the same `EF` machinery as `F`, read
-from the other side.
+serif settings, plus `smcpE`, `smcpEBar` and the mirrored `revE`. Sixteen
+captured glyphs, 216 knots, exact. It is the same `EF` machinery as `F`, read
+from the other side. `mathbb/E` is built but left out of the capture: its
+boolean outline lands half a unit past the geometry suite's drift budget, and
+the budget is calibrated rather than chosen.
 
 Two things the layer did not have and the port needed:
 
