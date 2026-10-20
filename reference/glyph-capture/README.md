@@ -188,7 +188,11 @@ Eth,smcpEth,mathbb/D,L.serifless,LSlash.serifless,smcpL.serifless,\
 smcpLSlash.serifless,LHighBar.serifless,L.motionSerifed,\
 LSlash.motionSerifed,smcpL.motionSerifed,smcpLSlash.motionSerifed,\
 LHighBar.motionSerifed,L.serifed,LSlash.serifed,smcpL.serifed,\
-smcpLSlash.serifed,LHighBar.serifed,mathbb/L'
+smcpLSlash.serifed,LHighBar.serifed,mathbb/L,E.serifless,\
+smcpE.serifless,revE.serifless,smcpEBar.serifless,E.topLeftSerifed,\
+smcpE.topLeftSerifed,revE.topLeftSerifed,smcpEBar.topLeftSerifed,\
+E.serifed,smcpE.serifed,revE.serifed,smcpEBar.serifed,E.serifedCapped,\
+smcpE.serifedCapped,revE.serifedCapped,smcpEBar.serifedCapped'
 npm run build -- ttf-unhinted::RefA
 ```
 

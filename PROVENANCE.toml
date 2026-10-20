@@ -28,6 +28,10 @@ ours = "crates/lemmata-glyphs/src/letter/latin/upper_d.rs"
 upstream = "packages/font-glyphs/src/letter/latin/upper-d.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/upper_e.rs"
+upstream = "packages/font-glyphs/src/letter/latin/upper-e.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/upper_f.rs"
 upstream = "packages/font-glyphs/src/letter/latin/upper-f.ptl"
 

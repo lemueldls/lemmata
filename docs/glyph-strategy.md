@@ -190,6 +190,11 @@ stem, a foot bar and three serif grades, with `LSlash`, `smcpL`, `smcpLSlash`,
 `LHighBar` and `mathbb/L` around it. Sixteen captured glyphs, 136 knots, exact.
 It needed nothing new beyond the shapes already there.
 
+`letter/latin/upper-e.ptl` (138 lines) followed: a stem and three bars with four
+serif settings, plus `smcpE`, `smcpEBar` and the mirrored `revE`. Seventeen
+captured glyphs, 226 knots, exact. It is the same `EF` machinery as `F`, read
+from the other side.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
