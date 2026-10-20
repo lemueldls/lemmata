@@ -217,6 +217,13 @@ bodies differ in the bar's position and in whether a gap interrupts the stem;
 needed `BowlXDepth`, the turn depth the two arcs share. `BHookLeft`, `BBar`, the
 currency signs, `latn/Beta` and the Cyrillic ve shapes are not ported.
 
+`letter/latin/lower-n.ptl` (403 lines) is the first file to use the shoulder's
+earless forms: four bodies, two terminals and four serif settings, twenty-four
+captured glyphs, 485 knots, exact. The `HTB` bodies, the Yat serifs and the
+hooks are not ported. Two defaults the capture settled: the shoulder's `leftY0`
+is `(top - ada) - TINY` rather than zero, and the eared body starts its shoulder
+one stroke in so it does not overlap the stem.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

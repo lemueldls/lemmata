@@ -257,7 +257,23 @@ BStroke.moreAsymmetricInterruptedSerifless,\
 B.moreAsymmetricInterruptedUnilateralSerifed,\
 BStroke.moreAsymmetricInterruptedUnilateralSerifed,\
 B.moreAsymmetricInterruptedBilateralSerifed,\
-BStroke.moreAsymmetricInterruptedBilateralSerifed'
+BStroke.moreAsymmetricInterruptedBilateralSerifed,n.straightSerifless,\
+n.straightTopLeftSerifed,n.straightMotionSerifed,n.straightSerifed,\
+n.tailedSerifless,n.tailedTopLeftSerifed,n.tailedMotionSerifed,\
+n.tailedSerifed,n.flatTopStraightSerifless,\
+n.flatTopStraightTopLeftSerifed,n.flatTopStraightMotionSerifed,\
+n.flatTopStraightSerifed,n.flatTopTailedSerifless,\
+n.flatTopTailedTopLeftSerifed,n.flatTopTailedMotionSerifed,\
+n.flatTopTailedSerifed,n.earlessCornerStraightSerifless,\
+n.earlessCornerStraightTopLeftSerifed,\
+n.earlessCornerStraightMotionSerifed,n.earlessCornerStraightSerifed,\
+n.earlessCornerTailedSerifless,n.earlessCornerTailedTopLeftSerifed,\
+n.earlessCornerTailedMotionSerifed,n.earlessCornerTailedSerifed,\
+n.earlessRoundedStraightSerifless,\
+n.earlessRoundedStraightTopLeftSerifed,\
+n.earlessRoundedStraightMotionSerifed,n.earlessRoundedStraightSerifed,\
+n.earlessRoundedTailedSerifless,n.earlessRoundedTailedTopLeftSerifed,\
+n.earlessRoundedTailedMotionSerifed,n.earlessRoundedTailedSerifed'
 npm run build -- ttf-unhinted::RefA
 ```
 

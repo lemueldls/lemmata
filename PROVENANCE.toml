@@ -28,6 +28,10 @@ ours = "crates/lemmata-glyphs/src/letter/latin/lower_h.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-h.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_n.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-n.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/lower_p.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-p.ptl"
 
