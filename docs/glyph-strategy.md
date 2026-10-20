@@ -224,6 +224,11 @@ hooks are not ported. Two defaults the capture settled: the shoulder's `leftY0`
 is `(top - ada) - TINY` rather than zero, and the eared body starts its shoulder
 one stroke in so it does not overlap the stem.
 
+`letter/latin/upper-q.ptl` added the first tailed ring: `OShape` with a straight,
+crossing or detached tail, for `Q` and `smcpQ`, eight captured glyphs, 244
+knots, exact. It needed `OShape` as a di-spiro beside the outline, and
+`DiagCor`/`ExtLineCenter`.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

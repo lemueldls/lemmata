@@ -273,7 +273,10 @@ n.earlessRoundedStraightSerifless,\
 n.earlessRoundedStraightTopLeftSerifed,\
 n.earlessRoundedStraightMotionSerifed,n.earlessRoundedStraightSerifed,\
 n.earlessRoundedTailedSerifless,n.earlessRoundedTailedTopLeftSerifed,\
-n.earlessRoundedTailedMotionSerifed,n.earlessRoundedTailedSerifed'
+n.earlessRoundedTailedMotionSerifed,n.earlessRoundedTailedSerifed,\
+Q.straight,Q.crossing,Q.detachedTailed,Q.detachedBendTailed,\
+smcpQ.straight,smcpQ.crossing,smcpQ.detachedTailed,\
+smcpQ.detachedBendTailed'
 npm run build -- ttf-unhinted::RefA
 ```
 

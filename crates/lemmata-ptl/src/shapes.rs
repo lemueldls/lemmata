@@ -1537,7 +1537,7 @@ const fn design_arch_params(metrics: &Metrics, design: &Design) -> ArchParams {
 // The signature is upstream's: the box, the width and the two arch depths.
 #[allow(clippy::too_many_arguments)]
 #[must_use]
-pub fn oshape_outline(
+pub fn oshape(
     kit: &Kit,
     metrics: &Metrics,
     design: &Design,
@@ -1548,7 +1548,26 @@ pub fn oshape_outline(
     width: Option<f64>,
     ada: Option<f64>,
     adb: Option<f64>,
-) -> crate::spiro_kit::SpiroOutline {
+) -> Dispiro {
+    kit.dispiro(oshape_items(
+        kit, metrics, design, u, d, l, r, width, ada, adb,
+    ))
+}
+
+/// The items both `OShape` and `OShapeOutline` sink.
+#[allow(clippy::too_many_arguments)]
+fn oshape_items(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    u: f64,
+    d: f64,
+    l: f64,
+    r: f64,
+    width: Option<f64>,
+    ada: Option<f64>,
+    adb: Option<f64>,
+) -> Vec<Item> {
     let width = width.unwrap_or(metrics.stroke);
     let ada = ada.unwrap_or(metrics.small_arch_depth_a);
     let adb = adb.unwrap_or(metrics.small_arch_depth_b);
@@ -1594,7 +1613,26 @@ pub fn oshape_outline(
     items.push(kit.arcvh(None, None));
     items.push(kit.close());
 
-    kit.spiro_outline(items)
+    items
+}
+
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn oshape_outline(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    u: f64,
+    d: f64,
+    l: f64,
+    r: f64,
+    width: Option<f64>,
+    ada: Option<f64>,
+    adb: Option<f64>,
+) -> crate::spiro_kit::SpiroOutline {
+    kit.spiro_outline(oshape_items(
+        kit, metrics, design, u, d, l, r, width, ada, adb,
+    ))
 }
 
 /// `OShapeOutline.NoOvershoot`: the ring's box pushed out by the overshoot.
@@ -2338,4 +2376,47 @@ pub fn bowl_x_depth(
     (1.25 * sw * metrics.hv_contrast).max(
         shrink * ((top - bottom) * 0.45).min((right - left + sw * metrics.hv_contrast) * 0.875),
     )
+}
+
+/// `DiagCor`: the correction a diagonal stroke needs at its crossing.
+#[must_use]
+pub fn diag_cor(dy: f64, dx: f64, dy_trim: Option<f64>, dx_trim: Option<f64>) -> f64 {
+    let ay = (dy.abs() - dy_trim.unwrap_or(0.0)).max(0.0);
+    let ax = (dx.abs() - dx_trim.unwrap_or(0.0)).max(0.0);
+
+    ay.hypot(ax) / ay
+}
+
+/// `ExtLineCenter`: a line through two points, extended by `k` at each end.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn ext_line_center(
+    kit: &Kit,
+    metrics: &Metrics,
+    x1: f64,
+    y1: f64,
+    x2: f64,
+    y2: f64,
+    sw: Option<f64>,
+    k: Option<f64>,
+) -> Dispiro {
+    let sw = sw.unwrap_or(metrics.stroke);
+    let k = k.unwrap_or(0.0);
+    let items = vec![
+        Item::Af(kit.widths_center(Some(sw))),
+        kit.knot(
+            KnotType::Corner,
+            mix(x1, x2, -k),
+            mix(y1, y2, -k),
+            Vec::new(),
+        ),
+        kit.knot(
+            KnotType::Corner,
+            mix(x1, x2, 1.0 + k),
+            mix(y1, y2, 1.0 + k),
+            Vec::new(),
+        ),
+    ];
+
+    kit.dispiro(items)
 }

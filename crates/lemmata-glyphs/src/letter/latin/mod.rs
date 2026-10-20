@@ -12,3 +12,4 @@ pub mod upper_e;
 pub mod upper_f;
 pub mod upper_i;
 pub mod upper_l;
+pub mod upper_q;
