@@ -5,3 +5,7 @@ packages:
   - harness/*
   - web
   - web/pkg
+
+allowBuilds:
+  esbuild: true
+  workerd: true

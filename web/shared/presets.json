@@ -1,0 +1,66 @@
+[
+  {
+    "id": "mono",
+    "label": "Mono",
+    "note": "One advance for every letter. The reference plan.",
+    "plan": {
+      "capHeight": 735,
+      "xHeight": 520,
+      "ascender": 965,
+      "descender": -215,
+      "italicAngle": 0,
+      "weight": 400,
+      "spacing": "normal"
+    }
+  },
+  {
+    "id": "quasi",
+    "label": "Quasi",
+    "note": "Narrow letters take less room. Wide letters take more.",
+    "plan": {
+      "capHeight": 735,
+      "xHeight": 520,
+      "ascender": 965,
+      "descender": -215,
+      "italicAngle": 0,
+      "weight": 400,
+      "spacing": "quasi-proportional"
+    }
+  },
+  {
+    "id": "compact",
+    "label": "Compact",
+    "note": "A shorter body on the monospace grid.",
+    "plan": {
+      "capHeight": 690,
+      "xHeight": 490,
+      "ascender": 930,
+      "descender": -190,
+      "typoAscender": 930,
+      "typoDescender": -250,
+      "winAscent": 930,
+      "winDescent": 250,
+      "italicAngle": 0,
+      "weight": 400,
+      "spacing": "normal"
+    }
+  },
+  {
+    "id": "display",
+    "label": "Display",
+    "note": "A taller body for headings.",
+    "plan": {
+      "capHeight": 760,
+      "xHeight": 545,
+      "ascender": 990,
+      "descender": -230,
+      "typoAscender": 990,
+      "typoDescender": -300,
+      "winAscent": 990,
+      "winDescent": 300,
+      "italicAngle": 0,
+      "weight": 400,
+      "spacing": "normal"
+    }
+  }
+]

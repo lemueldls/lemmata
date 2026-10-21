@@ -1,6 +1,6 @@
 # Dependency versions
 
-Pinned 17 October 2026. Update only together with a drift report.
+Pinned 21 October 2026. Update only together with a drift report.
 
 ## Release candidates (exact pins)
 
@@ -36,6 +36,7 @@ A candidate nothing depends on belongs in neither the manifest nor this table.
 | cargo-deny | latest at install time |
 | ots-sanitize | system binary, version recorded in CI |
 | wasm-pack | 0.15.0, with the wasm-bindgen 0.2.129 CLI cached |
+| wrangler | 4.151.3 |
 
 ## Upstream oracle
 

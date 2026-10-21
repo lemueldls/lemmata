@@ -6,9 +6,13 @@
   "scripts": {
     "font": "node scripts/font.mjs",
     "font:write": "node scripts/font.mjs --write",
+    "presets": "node scripts/presets.mjs",
+    "presets:write": "node scripts/presets.mjs --write",
     "build": "nuxt generate",
+    "build:workers": "NITRO_PRESET=cloudflare_module nuxt build",
     "dev": "nuxt dev",
-    "preview": "nuxt preview",
+    "preview": "pnpm build:workers && wrangler dev",
+    "deploy": "pnpm build:workers && wrangler deploy",
     "typecheck": "nuxt typecheck",
     "postinstall": "nuxt prepare"
   },
@@ -23,11 +27,7 @@
     "@nuxt/kit": "^4.6.2",
     "@types/node": "^26.6.5",
     "typescript": "^5.9.3",
-    "vue-tsc": "^3.3.13"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
+    "vue-tsc": "^3.3.13",
+    "wrangler": "^4.151.3"
   }
 }
