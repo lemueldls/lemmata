@@ -209,8 +209,13 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
         // The extender is the part a renderer repeats, so a band that still
         // curves shows every repeat as a step. Its own ink settles the bar:
         // the same width, from the same cut to the next, with straight sides.
+        // The bar's width is the stroke's cross-section, not the band's
+        // bounding box. A curved band is widest where its tangent is not
+        // vertical, and using that width made the bar heavier than the curve it
+        // joins. The midpoint is the straightest part of the band.
+        let middle = f64::midpoint(low, high);
         if let (Some((x_low, x_high)), Some((y_low, y_high))) = (
-            x_range(&pieces_of[EXTENDER].contours),
+            x_range(&slice_y(glyph, middle - 1.0, middle + 1.0)),
             y_range(&pieces_of[EXTENDER].contours),
         ) {
             pieces_of[EXTENDER].contours = vec![bar(x_low, x_high, y_low, y_high)];
