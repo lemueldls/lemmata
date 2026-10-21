@@ -187,7 +187,7 @@ pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
 #[must_use]
 pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
     let stroke = metrics.underline_thickness.unsigned_abs();
-    let (vert_ids, vert) = constructions(
+    let (vert_ids, mut vert) = constructions(
         glyphs,
         crate::variants::STRETCHY,
         Axis::Vertical,
@@ -203,6 +203,14 @@ pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
         crate::variants::variant_name,
         stroke,
     );
+    // A brace has a point in the middle, so no band of it can repeat. It gets
+    // the five-part construction instead: two bars either side of the point.
+    for (id, construction) in vert_ids.iter().zip(vert.iter_mut()) {
+        let base = usize::from(id.to_u16()) - 1;
+        if is_brace(&glyphs[base]) {
+            construction.glyph_assembly = brace_assembly(&glyphs[base], glyphs, stroke).into();
+        }
+    }
     let (horiz_ids, horiz) = constructions(
         glyphs,
         crate::variants::HORIZONTAL,
@@ -275,6 +283,48 @@ fn constructions(
     }
 
     (ids, constructions)
+}
+
+/// Whether a glyph is a brace, which needs the five-part assembly.
+fn is_brace(glyph: &GlyphData) -> bool {
+    glyph
+        .unicodes
+        .iter()
+        .any(|code| *code == 0x007B || *code == 0x007D)
+}
+
+/// The assembly recipe for a brace: lower hook, lower bar, point, upper bar,
+/// upper hook.
+///
+/// Both bars carry the extender flag, which is how a renderer grows a brace
+/// around its point instead of on one side of it. The reference math fonts
+/// write the same five parts.
+fn brace_assembly(base: &GlyphData, glyphs: &[GlyphData], stroke: u16) -> Option<GlyphAssembly> {
+    let last = crate::assembly::BRACE_PIECES.len() - 1;
+    let mut part_records = Vec::new();
+    for index in 0..crate::assembly::BRACE_PIECES.len() {
+        let name = crate::assembly::brace_piece_name(&base.name, index);
+        let position = glyphs.iter().position(|glyph| glyph.name == name)?;
+        let full = extent(&glyphs[position], Axis::Vertical)?;
+        let overlap = stroke.min(full / 2);
+        let part_flags = if crate::assembly::BRACE_EXTENDERS.contains(&index) {
+            PartFlags::EXTENDER_FLAG
+        } else {
+            PartFlags::empty()
+        };
+        part_records.push(GlyphPartRecord {
+            glyph_id: GlyphId16::new(u16::try_from(position + 1).ok()?),
+            start_connector_length: UfWord::new(if index == 0 { 0 } else { overlap }),
+            end_connector_length: UfWord::new(if index == last { 0 } else { overlap }),
+            full_advance: UfWord::new(full),
+            part_flags,
+        });
+    }
+
+    Some(GlyphAssembly {
+        italics_correction: value(0),
+        part_records,
+    })
 }
 
 /// The size a variant grew to: its height for a vertical construction, its

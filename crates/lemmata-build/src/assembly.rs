@@ -16,7 +16,7 @@
 //! brace's point. See `docs/math.md`.
 
 use kurbo::{Rect, Shape};
-use lemmata_geom::QuadifyPoint;
+use lemmata_geom::{QuadifyKind, QuadifyPoint};
 
 use crate::font::{GlyphData, glyph_path};
 
@@ -205,6 +205,16 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
         if pieces_of.iter().any(|piece| piece.contours.is_empty()) {
             continue;
         }
+
+        // The extender is the part a renderer repeats, so a band that still
+        // curves shows every repeat as a step. Its own ink settles the bar:
+        // the same width, from the same cut to the next, with straight sides.
+        if let (Some((x_low, x_high)), Some((y_low, y_high))) = (
+            x_range(&pieces_of[EXTENDER].contours),
+            y_range(&pieces_of[EXTENDER].contours),
+        ) {
+            pieces_of[EXTENDER].contours = vec![bar(x_low, x_high, y_low, y_high)];
+        }
         for piece in &mut pieces_of {
             let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
             piece.unicodes = vec![code];
@@ -268,6 +278,32 @@ fn grounded_x(contours: Vec<Vec<QuadifyPoint>>) -> Vec<Vec<QuadifyPoint>> {
                 .collect()
         })
         .collect()
+}
+
+/// A closed four-corner rectangle: the extender's straight replacement.
+fn bar(x_low: f64, x_high: f64, y_low: f64, y_high: f64) -> Vec<QuadifyPoint> {
+    vec![
+        QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: x_low,
+            y: y_low,
+        },
+        QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: x_high,
+            y: y_low,
+        },
+        QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: x_high,
+            y: y_high,
+        },
+        QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: x_low,
+            y: y_high,
+        },
+    ]
 }
 
 /// The vertical extent of a piece's ink.
@@ -374,6 +410,146 @@ pub fn derive_horizontal(glyphs: &[GlyphData], first_code: u32, overlap: u16) ->
         if pieces_of.iter().any(|piece| piece.contours.is_empty()) {
             continue;
         }
+        for piece in &mut pieces_of {
+            let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
+            piece.unicodes = vec![code];
+            pieces.push(piece.clone());
+        }
+    }
+
+    pieces
+}
+
+/// The pieces of a brace, bottom to top: the lower hook, the lower bar, the
+/// point, the upper bar and the upper hook.
+///
+/// A brace needs five parts rather than three because its point cannot repeat.
+/// Reference math fonts use the same shape: two extenders, one each side of the
+/// point, and the renderer repeats both.
+pub const BRACE_PIECES: [&str; 5] = ["b0", "b1", "b2", "b3", "b4"];
+
+/// Where the two repeatable bars sit in [`BRACE_PIECES`].
+pub const BRACE_EXTENDERS: [usize; 2] = [1, 3];
+
+/// The name a brace piece carries.
+#[must_use]
+pub fn brace_piece_name(base: &str, index: usize) -> String {
+    format!("{base}.{}", BRACE_PIECES[index])
+}
+
+/// The five pieces of every brace, encoded from `first_code` upward.
+///
+/// The point is cut out of the middle and the two bars are rectangles at the
+/// stem, so a repeat cannot scallop. The hooks keep their drawn curves.
+///
+/// Returns no pieces when the brace is too short for the cuts to leave any
+/// straight stem, which leaves the size variants as the only choice.
+#[must_use]
+pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphData> {
+    let stroke = f64::from(overlap);
+    let mut pieces: Vec<GlyphData> = Vec::new();
+    for glyph in glyphs {
+        if !glyph
+            .unicodes
+            .iter()
+            .any(|code| *code == 0x007B || *code == 0x007D)
+        {
+            continue;
+        }
+        let Some((_, y_min, _, y_max)) = glyph.bounding_box() else {
+            continue;
+        };
+        let height = f64::from(y_max - y_min);
+        if height < 8.0 * stroke {
+            continue;
+        }
+        let bottom = f64::from(y_min);
+        let top = f64::from(y_max);
+        let mid = f64::midpoint(bottom, top);
+        // Every part has to carry two connectors, so it needs at least two
+        // strokes of height. The cuts are placed to leave that much for the
+        // point, both bars and both hooks.
+        let point_half = (2.5 * stroke).min(height / 5.0);
+        let hook = point_half;
+
+        let point_low = mid - point_half;
+        let point_high = mid + point_half;
+        let lower_cut = bottom + hook;
+        let upper_cut = top - hook;
+        if lower_cut >= point_low
+            || point_high >= upper_cut
+            || lower_cut - bottom < 2.0 * stroke
+            || point_low - lower_cut < 2.0 * stroke
+            || upper_cut - point_high < 2.0 * stroke
+            || top - upper_cut < 2.0 * stroke
+        {
+            continue;
+        }
+
+        // The stem's horizontal extent, read from a band halfway along each bar
+        // where the brace is straight. Both halves share the x range.
+        let probe = |low: f64, high: f64| {
+            let band = slice_y(glyph, low, high);
+            x_range(&band)
+        };
+        let upper_mid = f64::midpoint(point_high, upper_cut);
+        let lower_mid = f64::midpoint(lower_cut, point_low);
+        let (Some(upper_range), Some(lower_range)) = (
+            probe(upper_mid - stroke / 2.0, upper_mid + stroke / 2.0),
+            probe(lower_mid - stroke / 2.0, lower_mid + stroke / 2.0),
+        ) else {
+            continue;
+        };
+        let x_low = upper_range.0.min(lower_range.0);
+        let x_high = upper_range.1.max(lower_range.1);
+
+        let slices = [
+            (bottom - 1.0, lower_cut),
+            (point_low, point_high),
+            (upper_cut, top + 1.0),
+        ];
+        let mut hooks: Vec<Vec<Vec<QuadifyPoint>>> = slices
+            .iter()
+            .map(|(low, high)| grounded(slice_y(glyph, *low, *high)))
+            .collect();
+        if hooks.iter().any(Vec::is_empty) {
+            continue;
+        }
+        let lower_bar = bar(x_low, x_high, 0.0, point_low - lower_cut);
+        let upper_bar = bar(x_low, x_high, 0.0, upper_cut - point_high);
+
+        let mut pieces_of: Vec<GlyphData> = vec![
+            GlyphData {
+                name: brace_piece_name(&glyph.name, 0),
+                unicodes: Vec::new(),
+                advance: glyph.advance,
+                contours: hooks.remove(0),
+            },
+            GlyphData {
+                name: brace_piece_name(&glyph.name, 1),
+                unicodes: Vec::new(),
+                advance: glyph.advance,
+                contours: vec![lower_bar],
+            },
+            GlyphData {
+                name: brace_piece_name(&glyph.name, 2),
+                unicodes: Vec::new(),
+                advance: glyph.advance,
+                contours: hooks.remove(0),
+            },
+            GlyphData {
+                name: brace_piece_name(&glyph.name, 3),
+                unicodes: Vec::new(),
+                advance: glyph.advance,
+                contours: vec![upper_bar],
+            },
+            GlyphData {
+                name: brace_piece_name(&glyph.name, 4),
+                unicodes: Vec::new(),
+                advance: glyph.advance,
+                contours: hooks.remove(0),
+            },
+        ];
         for piece in &mut pieces_of {
             let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
             piece.unicodes = vec![code];

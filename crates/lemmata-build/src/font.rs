@@ -173,6 +173,12 @@ pub fn derived_with(
         metrics.underline_thickness.unsigned_abs(),
     );
     derived.extend(horizontal);
+    let braces = crate::assembly::derive_braces(
+        glyphs,
+        next_code(&derived),
+        metrics.underline_thickness.unsigned_abs(),
+    );
+    derived.extend(braces);
     let dotless = crate::dotless::derive(glyphs, f64::from(metrics.x_height), next_code(&derived));
     derived.extend(dotless);
     let script = crate::ssty::derive(glyphs, next_code(&derived));
@@ -183,6 +189,56 @@ pub fn derived_with(
     derived.extend(healed);
 
     derived
+}
+
+/// Square the radical's top so a renderer's vinculum rule meets a flat edge.
+///
+/// Iosevka's `sqrt` is a check mark: the long stroke ends in a point at the top
+/// right, with no horizontal bar. A renderer draws the vinculum itself and
+/// starts it at the glyph's advance, so the thin rule meets the stroke's
+/// rounded tip at a single point and leaves a notch. Adding a bar of the rule's
+/// own thickness turns that point into an edge the rule can overlap.
+fn radical_vinculum(glyphs: &mut [GlyphData], metrics: &Metrics) {
+    use lemmata_geom::{QuadifyKind, QuadifyPoint};
+
+    let thickness = f64::from(metrics.underline_thickness.unsigned_abs());
+    for glyph in glyphs {
+        if glyph.name != "sqrt" && !glyph.name.starts_with("sqrt.s") {
+            continue;
+        }
+        let Some((_, _, x_max, y_max)) = glyph.bounding_box() else {
+            continue;
+        };
+        let top = f64::from(y_max);
+        // The renderer starts the rule at the radical's advance, so the bar
+        // runs from there to the ink's right edge. Starting at the ink's left
+        // instead leaves a stub beside the rule.
+        let left = f64::from(glyph.advance);
+        let right = f64::from(x_max);
+        let low = top - thickness;
+        glyph.contours.push(vec![
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: left,
+                y: low,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: right,
+                y: low,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: right,
+                y: top,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: left,
+                y: top,
+            },
+        ]);
+    }
 }
 
 /// The `TXTR` feature: texture healing's passes, in the order they have to run.
@@ -500,6 +556,7 @@ pub fn build_all(
     let glyphs = crate::character::apply(glyphs, variants);
     let mut with_variants = glyphs.clone();
     with_variants.extend(derived_with(&glyphs, metrics, drawn));
+    radical_vinculum(&mut with_variants, metrics);
     let glyphs = with_variants.as_slice();
 
     let mut glyf_builder = GlyfLocaBuilder::new();

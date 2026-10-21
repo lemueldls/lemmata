@@ -547,15 +547,24 @@ fn stretchy_glyphs_have_assemblies() {
         let construction = variants
             .glyph_construction(id, StretchAxis::Vertical)
             .unwrap_or_else(|| panic!("{} has no construction", glyph.name));
+        let brace = glyph
+            .unicodes
+            .iter()
+            .any(|code| *code == 0x007B || *code == 0x007D);
         let Some(resolved) = construction.glyph_assembly() else {
             without.push(glyph.unicodes[0]);
             continue;
         };
         let assembly = resolved.unwrap_or_else(|error| panic!("{}: {error:?}", glyph.name));
         let parts = assembly.part_records();
+        let expected = if brace {
+            lemmata_build::assembly::BRACE_PIECES.len()
+        } else {
+            lemmata_build::assembly::PIECES.len()
+        };
         assert_eq!(
             parts.len(),
-            lemmata_build::assembly::PIECES.len(),
+            expected,
             "{} should have one piece per band",
             glyph.name
         );
@@ -592,10 +601,14 @@ fn stretchy_glyphs_have_assemblies() {
             );
             if part.part_flags().contains(PartFlags::EXTENDER_FLAG) {
                 extenders += 1;
-                assert_eq!(
-                    position,
-                    lemmata_build::assembly::EXTENDER,
-                    "{} repeats a piece that is not the middle one",
+                let expected = if brace {
+                    lemmata_build::assembly::BRACE_EXTENDERS.contains(&position)
+                } else {
+                    position == lemmata_build::assembly::EXTENDER
+                };
+                assert!(
+                    expected,
+                    "{} repeats a piece that is not an extender",
                     glyph.name
                 );
             }
@@ -627,45 +640,48 @@ fn stretchy_glyphs_have_assemblies() {
         }
 
         assert_eq!(
-            extenders, 1,
-            "{} should repeat exactly one piece",
+            extenders,
+            if brace { 2 } else { 1 },
+            "{} should repeat the expected number of pieces",
             glyph.name
         );
 
         // The repeat seam, which is what a derived extender can get wrong. The
-        // middle piece is a band of a curved glyph, so the ink along its bottom
-        // edge need not match the ink along its top edge, and every repeat
-        // steps by that much. The band is narrow for this reason, and this is
-        // the check that it stayed narrow enough.
-        let repeat = &parts[lemmata_build::assembly::EXTENDER];
-        let full = i32::from(u16::from(repeat.full_advance()));
-        let piece = loca
-            .get_glyf(GlyphId::new(u32::from(repeat.glyph_id().to_u16())), &glyf)
-            .expect("read a glyph")
-            .expect("the extender has an outline");
-        let ReadGlyph::Simple(simple) = piece else {
-            panic!("a stretchy piece is a simple glyph");
-        };
-        let (mut low_min, mut low_max) = (i32::MAX, i32::MIN);
-        let (mut high_min, mut high_max) = (i32::MAX, i32::MIN);
-        for point in simple.points() {
-            let (x, y) = (i32::from(point.x), i32::from(point.y));
-            if y <= 0 {
-                low_min = low_min.min(x);
-                low_max = low_max.max(x);
+        // extender is a bar, so its two cut edges have to agree; a bar that
+        // still curves would show every repeat as a step.
+        for repeat in parts
+            .iter()
+            .filter(|part| part.part_flags().contains(PartFlags::EXTENDER_FLAG))
+        {
+            let full = i32::from(u16::from(repeat.full_advance()));
+            let piece = loca
+                .get_glyf(GlyphId::new(u32::from(repeat.glyph_id().to_u16())), &glyf)
+                .expect("read a glyph")
+                .expect("the extender has an outline");
+            let ReadGlyph::Simple(simple) = piece else {
+                panic!("a stretchy piece is a simple glyph");
+            };
+            let (mut low_min, mut low_max) = (i32::MAX, i32::MIN);
+            let (mut high_min, mut high_max) = (i32::MAX, i32::MIN);
+            for point in simple.points() {
+                let (x, y) = (i32::from(point.x), i32::from(point.y));
+                if y <= 0 {
+                    low_min = low_min.min(x);
+                    low_max = low_max.max(x);
+                }
+                if y >= full {
+                    high_min = high_min.min(x);
+                    high_max = high_max.max(x);
+                }
             }
-            if y >= full {
-                high_min = high_min.min(x);
-                high_max = high_max.max(x);
-            }
+            let seam = (high_min - low_min).abs().max((high_max - low_max).abs());
+            assert_eq!(
+                seam, 0,
+                "{}'s extender steps {seam} where it repeats",
+                glyph.name
+            );
+            worst = worst.max(seam);
         }
-        let seam = (high_min - low_min).abs().max((high_max - low_max).abs());
-        assert!(
-            seam <= tolerance,
-            "{}'s extender steps {seam} where it repeats, past the {tolerance} the table allows",
-            glyph.name
-        );
-        worst = worst.max(seam);
 
         let (_, base_low, _, base_high) = span(id);
         let height = base_high - base_low;
@@ -678,11 +694,12 @@ fn stretchy_glyphs_have_assemblies() {
     }
 
     // A glyph whose middle is not a bar has no band that repeats. A summation's
-    // middle holds its crossbar, an angle bracket's holds its vertex, a brace's
-    // holds its point and a radical's is a diagonal, so the piece would stack
-    // the feature rather than a stroke. They need a drawn extender, and the test
-    // names them rather than accepting one that scallops.
-    let pinned = [0x007B_u32, 0x007D, 0x2211, 0x221A, 0x27E8, 0x27E9];
+    // middle holds its crossbar, an angle bracket's holds its vertex and a
+    // radical's is a diagonal, so the piece would stack the feature rather than
+    // a stroke. They need a drawn extender, and the test names them rather than
+    // accepting one that scallops. The braces used to be here; their five-part
+    // construction puts the point between two bars instead.
+    let pinned = [0x2211_u32, 0x221A, 0x27E8, 0x27E9];
     without.sort_unstable();
     assert_eq!(
         without, pinned,
@@ -696,6 +713,71 @@ fn stretchy_glyphs_have_assemblies() {
     eprintln!(
         "assemblies: {assembled} glyphs, {} pinned, {tolerance} unit joins, worst repeat seam {worst}",
         without.len()
+    );
+}
+
+/// The radical's top is flat from its advance to the ink's right edge.
+///
+/// A renderer draws the vinculum itself, starting at the radical's advance. If
+/// the glyph ends in a point there, the rule meets it at one spot and leaves a
+/// notch. The bar this build adds gives the rule an edge to overlap.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[test]
+fn the_radical_has_a_flat_vinculum_edge() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let Some(glyph) = captured
+        .iter()
+        .find(|glyph| glyph.unicodes.contains(&0x221A))
+    else {
+        eprintln!("skipping: the capture holds no radical");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let loca = font.loca(None).expect("loca");
+    let glyf = font.glyf().expect("glyf");
+    let id = GlyphId::new(
+        u32::try_from(
+            captured
+                .iter()
+                .position(|other| other.name == glyph.name)
+                .expect("the radical is in the capture"),
+        )
+        .expect("glyph id")
+            + 1,
+    );
+    let read = loca
+        .get_glyf(id, &glyf)
+        .expect("read a glyph")
+        .expect("the radical has an outline");
+    let ReadGlyph::Simple(simple) = read else {
+        panic!("the radical is a simple glyph");
+    };
+    let y_max = simple
+        .points()
+        .map(|point| i32::from(point.y))
+        .max()
+        .expect("the radical has points");
+    let top: Vec<i32> = simple
+        .points()
+        .filter(|point| i32::from(point.y) == y_max)
+        .map(|point| i32::from(point.x))
+        .collect();
+    let advance = i32::try_from(glyph.advance.round() as u32).expect("advance");
+    assert!(
+        top.iter().any(|x| *x <= advance + 1),
+        "the radical's top does not reach its advance {advance}: {top:?}"
+    );
+    assert!(
+        top.iter().any(|x| *x > advance + 20),
+        "the radical's top does not extend past its advance: {top:?}"
+    );
+    eprintln!(
+        "radical: top edge from {} to {} at {y_max}, advance {advance}",
+        top.iter().min().copied().unwrap_or(0),
+        top.iter().max().copied().unwrap_or(0)
     );
 }
 

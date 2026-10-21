@@ -118,13 +118,21 @@ The test checks that each size is taller than its base, that a large operator is
 
 An assembly is how a renderer goes taller than that: it stacks a bottom piece, repeats a middle one, and caps it with a top piece. The pieces are the glyph cut into three horizontal bands, so the joins are the cuts and the three tile the original outline. They are derived and encoded in the same private-use block as the sizes. The test stacks the parts the way a renderer does and checks that each one's ink spans its declared advance, that consecutive parts cross, that no join overlaps by more than the stroke width the table names as its minimum, and that the middle piece repeats without stepping.
 
+The extender is a straight bar, not the band itself. The band decides where to cut and how wide the bar is; the bar is rebuilt from that ink, so a repeat cannot carry the band's residual curve. A repeated curve is what made the parenthesis look scalloped, one step per repeat. With the bar the seam is zero on every assembly.
+
 Every connector is that same minimum, so the pieces have no slack: a renderer reaches a target size by repeating the extender rather than by sliding the joints. A drawn extender with a long straight bar is what would give it that slack.
 
-The band is what makes a piece repeatable, so the derivation measures it: it slices the band at three heights and compares the ink's horizontal extent across them. Measuring only the two cut edges is not enough, and that is the trap. A brace's middle holds its point, so both ends sit on the stem and agree while the ink bulges out and back between them, and the piece scallops wherever the point repeats.
+The band is what makes a piece repeatable, so the derivation measures it: it slices the band at three heights and compares the ink's horizontal extent across them. Measuring only the two cut edges is not enough, and that is the trap. A brace's middle holds its point, so both ends sit on the stem and agree while the ink bulges out and back between them.
 
 The middle is tried first and taken as soon as it is straight enough, at half the stroke width. Moving the band up is only for a glyph whose middle cannot repeat, and it is not free: the piece below the band then holds more of the glyph than the piece above, so a brace's point lands at the bottom of the assembly instead of in the middle. Trying the straightest band first was that mistake, and it unbalanced every glyph it touched.
 
-Six glyphs have no band that repeats and the test names them rather than giving them an assembly that stacks a feature: a summation's middle holds its crossbar, an angle bracket's holds its vertex, a brace's holds its point, and a radical's is a diagonal. They need a drawn extender. The other ten are the parentheses, brackets, ceilings, floors, integral and product, and they repeat within two units against the twenty-five the band allows.
+A brace needs a shape of its own. Its point cannot repeat, so it gets five parts: the lower hook, a lower bar, the point, an upper bar and the upper hook. Both bars carry the extender flag, which is how a renderer grows the brace on both sides of the point. Noto Sans Math and DejaVu Math TeX Gyre write the same five-part construction. The bars run from the hooks to the point at the stem's own width, so the point stays centred however tall the brace grows.
+
+Four glyphs have no band that repeats and the test names them rather than giving them an assembly that stacks a feature: a summation's middle holds its crossbar, an angle bracket's holds its vertex, and a radical's is a diagonal. They need a drawn extender. The other twelve are the parentheses, brackets, braces, ceilings, floors, integral and product.
+
+The radical also needed a flat top. Iosevka's `sqrt` is a check mark whose long stroke ends in a point, with no horizontal bar, and a renderer draws the vinculum itself starting at the glyph's advance. The thin rule met the stroke at one point and left a notch. The build adds a bar of the rule's own thickness from the advance to the ink's right edge, so the rule starts on an edge instead of a point.
+
+The delimiter bases are ported in `crates/lemmata-glyphs/src/symbol/punctuation/brackets.rs`: parentheses, brackets, braces, angle brackets, floors and ceilings from `brackets.ptl`, gated against the capture. The drawn pieces at U+239B to U+23AD are still not built; the assembly derives its own bars for now.
 
 ## Horizontal constructions
 
@@ -230,3 +238,5 @@ The script style `r[math.alphabets]` names is still a gap in the glyph source, a
 The bottom corner kerns are not derived. A descender can overhang below the baseline, and a subscript at the bottom corner would use that the way a superscript uses the top, but the table leaves those records null. The top corners are where the scripts of an equation sit.
 
 The horizontal braces at U+23DE and U+23DF are not in the source at all, so `\overbrace` needs a drawing before a construction can reach it. The long arrows are in the source but not in the capture, which is a set to widen rather than a shape to draw.
+
+The radical is still a scaled check mark with a flat top. A proper display radical has a vertical stem beside the content, as the reference fonts draw it; no such shape exists upstream, so it would be a new drawing rather than a port.
