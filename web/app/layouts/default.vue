@@ -26,7 +26,7 @@ useHead({
         'document.documentElement.dataset.theme = allowed.includes(stored) ? stored : system;',
     },
   ],
-  link: [{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }],
+  link: [{ rel: "icon", href: "/favicon.svg?v=2", type: "image/svg+xml" }],
 });
 </script>
 

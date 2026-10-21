@@ -428,7 +428,7 @@ kbd {
 }
 
 .brand svg {
-  color: var(--accent);
+  color: var(--ink);
 }
 
 .brand__word {

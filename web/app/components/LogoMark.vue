@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// The mark: a glyph cell with three guides and one filled square.
+// The mark: three stops in the proof triangle.
 //
-// The font has no logo glyph, and a mark that falls back to the reader's system
-// face would change shape per machine. This one is drawn.
+// A1 from the mark studies: 12-unit dots on a 48-unit square, with the top stop
+// centered over the pair below. The margin is seven units on every side.
 defineProps<{ size?: number }>();
 </script>
 
@@ -10,17 +10,12 @@ defineProps<{ size?: number }>();
   <svg
     :width="size ?? 20"
     :height="size ?? 20"
-    viewBox="0 0 20 20"
-    fill="none"
+    viewBox="0 0 48 48"
+    fill="currentColor"
     aria-hidden="true"
   >
-    <path d="M1 1h18v18H1z" stroke="currentColor" stroke-width="1.2" />
-    <path
-      d="M7 1v18M13 1v18M1 7h18M1 13h18"
-      stroke="currentColor"
-      stroke-width="0.7"
-      opacity="0.42"
-    />
-    <rect x="7" y="7" width="6" height="6" fill="currentColor" />
+    <rect x="18" y="8" width="12" height="12" rx="1.4" />
+    <rect x="8" y="28" width="12" height="12" rx="1.4" />
+    <rect x="28" y="28" width="12" height="12" rx="1.4" />
   </svg>
 </template>

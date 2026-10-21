@@ -22,7 +22,7 @@ const live = computed(() => {
   <header class="site-head">
     <div class="site-head__bar">
       <NuxtLink class="brand" to="/" aria-label="Lemmata home">
-        <LogoMark :size="21" />
+        <LogoMark :size="24" />
         <span class="brand__word">lemmata</span>
         <span class="brand__tag">type factory</span>
       </NuxtLink>

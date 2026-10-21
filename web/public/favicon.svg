@@ -1,20 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
   <title>Lemmata</title>
-  <style>
-    /* One green for each ground, because the tile is what changes: a tab strip
-       is a dark place in most browsers and a light one in some. Both are the
-       palette's green against the palette's own background. */
-    rect.tile { fill: #2d353b; }
-    rect.dot { fill: #a7c080; }
-    @media (prefers-color-scheme: light) {
-      rect.tile { fill: #fdf6e3; }
-      rect.dot { fill: #8da101; }
-    }
-  </style>
-  <rect class="tile" width="32" height="32" rx="7" />
-  <g class="dot">
-    <rect x="11.5" y="3" width="9" height="9" />
-    <rect x="3" y="20" width="9" height="9" />
-    <rect x="20" y="20" width="9" height="9" />
+  <!-- The paper tile and ink border hold the mark on both light and dark tab
+       strips. The dots stay ink, so the A1 triangle is legible at 16 px. -->
+  <rect width="48" height="48" rx="10" fill="#f2efe4" stroke="#161811" stroke-width="2" />
+  <g fill="#161811">
+    <rect x="18" y="8" width="12" height="12" rx="1.4" />
+    <rect x="8" y="28" width="12" height="12" rx="1.4" />
+    <rect x="28" y="28" width="12" height="12" rx="1.4" />
   </g>
 </svg>
