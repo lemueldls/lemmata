@@ -477,9 +477,12 @@ fn stretchy_glyphs_are_covered() {
                     glyph.name
                 );
             } else {
-                assert_eq!(
-                    wide, narrow,
-                    "{}'s derived size changed width, and only a set-bigger operator should",
+                // A composed size draws its own hook cap, so its ink can differ
+                // from the text glyph by a rounding step. A set-bigger operator
+                // is the only one that may change width by more.
+                assert!(
+                    (wide - narrow).abs() <= 4,
+                    "{}'s derived size changed width from {narrow} to {wide}, and only a set-bigger operator should",
                     glyph.name
                 );
             }

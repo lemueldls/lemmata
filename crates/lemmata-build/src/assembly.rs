@@ -220,6 +220,13 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
         ) {
             pieces_of[EXTENDER].contours = vec![bar(x_low, x_high, y_low, y_high)];
         }
+        if let (Some(lower), Some(upper)) = (
+            crate::delimiters::drawn_hook(glyph, false, 0.42, 0.12, 0.5, true),
+            crate::delimiters::drawn_hook(glyph, true, 0.42, 0.12, 0.5, true),
+        ) {
+            pieces_of[0].contours = lower;
+            pieces_of[2].contours = upper;
+        }
         for piece in &mut pieces_of {
             let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
             piece.unicodes = vec![code];
@@ -588,6 +595,13 @@ pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec
         if hooks.iter().any(Vec::is_empty) {
             continue;
         }
+        if let (Some(lower), Some(upper)) = (
+            crate::delimiters::drawn_hook(glyph, false, 0.35, 0.08, 0.30, false),
+            crate::delimiters::drawn_hook(glyph, true, 0.35, 0.08, 0.30, false),
+        ) {
+            hooks[0] = lower;
+            hooks[2] = upper;
+        }
         let lower_bar = bar(x_low, x_high, 0.0, point_low - lower_cut);
         let upper_bar = bar(x_low, x_high, 0.0, upper_cut - point_high);
 
@@ -636,7 +650,7 @@ pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec
         let upper = piece_height(&pieces_of[4]);
         for (step, scale) in crate::variants::scales(false).iter().enumerate() {
             let available = height * scale - lower - point - upper;
-            if available < 2.0 * lower_bar.min(upper_bar) {
+            if available <= 0.0 {
                 continue;
             }
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
