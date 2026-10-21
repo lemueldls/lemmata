@@ -24,8 +24,8 @@
 use write_fonts::tables::layout::CoverageTable;
 use write_fonts::tables::math::{
     GlyphAssembly, GlyphPartRecord, Math, MathConstants, MathGlyphConstruction, MathGlyphInfo,
-    MathGlyphVariantRecord, MathItalicsCorrectionInfo, MathTopAccentAttachment, MathValueRecord,
-    MathVariants, PartFlags,
+    MathGlyphVariantRecord, MathItalicsCorrectionInfo, MathKern, MathKernInfo, MathKernInfoRecord,
+    MathTopAccentAttachment, MathValueRecord, MathVariants, PartFlags,
 };
 use write_fonts::types::{FWord, GlyphId16, UfWord};
 
@@ -187,82 +187,129 @@ pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
 #[must_use]
 pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
     let stroke = metrics.underline_thickness.unsigned_abs();
-    let mut ids = Vec::new();
-    for (index, glyph) in glyphs.iter().enumerate() {
-        if !glyph
-            .unicodes
-            .iter()
-            .any(|code| crate::variants::STRETCHY.contains(code))
-        {
-            continue;
-        }
-        let Ok(id) = u16::try_from(index + 1) else {
-            continue;
-        };
-        ids.push(GlyphId16::new(id));
-    }
-    if ids.is_empty() {
-        return MathVariants::default();
-    }
-
-    let constructions = ids
-        .iter()
-        .map(|id| {
-            let base = usize::from(id.to_u16()) - 1;
+    let (vert_ids, vert) = constructions(
+        glyphs,
+        crate::variants::STRETCHY,
+        Axis::Vertical,
+        |glyph| {
             // A large operator carries one more size than a delimiter, so the
             // list is the glyph's own rather than the delimiter's.
-            let large = glyphs[base]
+            let large = glyph
                 .unicodes
                 .iter()
                 .any(|code| crate::variants::OPERATORS.contains(code));
-            let records = (0..crate::variants::scales(large).len())
-                .filter_map(|step| {
-                    let name = crate::variants::variant_name(&glyphs[base].name, step);
-                    let variant = glyphs.iter().position(|other| other.name == name)?;
-                    // A vertical variant's measurement is its height, which is
-                    // what it grew by and what a renderer weighs against the
-                    // room the equation gives it.
-                    let (_, y_min, _, y_max) = glyphs[variant].bounding_box()?;
-                    Some(MathGlyphVariantRecord {
-                        variant_glyph: GlyphId16::new(u16::try_from(variant + 1).ok()?),
-                        advance_measurement: UfWord::new(u16::try_from(y_max - y_min).ok()?),
-                    })
-                })
-                .collect();
-            MathGlyphConstruction {
-                glyph_assembly: assembly(&glyphs[base], glyphs, stroke).into(),
-                math_glyph_variant_records: records,
-            }
-            .into()
-        })
-        .collect();
+            crate::variants::scales(large)
+        },
+        crate::variants::variant_name,
+        stroke,
+    );
+    let (horiz_ids, horiz) = constructions(
+        glyphs,
+        crate::variants::HORIZONTAL,
+        Axis::Horizontal,
+        |_| crate::variants::HORIZONTAL_SCALES,
+        crate::variants::horizontal_variant_name,
+        stroke,
+    );
 
     MathVariants {
         // The pieces of an assembly join along this overlap, so it is the width
         // of a stroke: anything narrower leaves a seam and anything wider
         // doubles the ink where they meet.
         min_connector_overlap: UfWord::new(stroke),
-        vert_glyph_coverage: Some(ids.iter().copied().collect::<CoverageTable>()).into(),
-        vert_glyph_constructions: constructions,
-        ..MathVariants::default()
+        vert_glyph_coverage: (!vert_ids.is_empty())
+            .then(|| vert_ids.iter().copied().collect::<CoverageTable>())
+            .into(),
+        horiz_glyph_coverage: (!horiz_ids.is_empty())
+            .then(|| horiz_ids.iter().copied().collect::<CoverageTable>())
+            .into(),
+        vert_glyph_constructions: vert.into_iter().map(Into::into).collect(),
+        horiz_glyph_constructions: horiz.into_iter().map(Into::into).collect(),
     }
 }
 
-/// The assembly recipe for one stretchy glyph: its three pieces, bottom to top.
+/// The direction a construction grows in.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Axis {
+    Vertical,
+    Horizontal,
+}
+
+/// One construction per glyph in `codes`: the derived sizes a renderer picks
+/// from, and the assembly it builds when none is large enough.
+fn constructions(
+    glyphs: &[GlyphData],
+    codes: &[u32],
+    axis: Axis,
+    scales: impl Fn(&GlyphData) -> &'static [f64],
+    name: impl Fn(&str, usize) -> String,
+    stroke: u16,
+) -> (Vec<GlyphId16>, Vec<MathGlyphConstruction>) {
+    let mut ids = Vec::new();
+    let mut constructions = Vec::new();
+    for (index, glyph) in glyphs.iter().enumerate() {
+        if !glyph.unicodes.iter().any(|code| codes.contains(code)) {
+            continue;
+        }
+        let Ok(id) = u16::try_from(index + 1) else {
+            continue;
+        };
+        ids.push(GlyphId16::new(id));
+        let records = scales(glyph)
+            .iter()
+            .enumerate()
+            .filter_map(|(step, _)| {
+                let variant = glyphs
+                    .iter()
+                    .position(|other| other.name == name(&glyph.name, step))?;
+                Some(MathGlyphVariantRecord {
+                    variant_glyph: GlyphId16::new(u16::try_from(variant + 1).ok()?),
+                    advance_measurement: UfWord::new(extent(&glyphs[variant], axis)?),
+                })
+            })
+            .collect();
+        constructions.push(MathGlyphConstruction {
+            glyph_assembly: assembly(glyph, glyphs, axis, stroke).into(),
+            math_glyph_variant_records: records,
+        });
+    }
+
+    (ids, constructions)
+}
+
+/// The size a variant grew to: its height for a vertical construction, its
+/// width for a horizontal one.
+fn extent(glyph: &GlyphData, axis: Axis) -> Option<u16> {
+    let (x_min, y_min, x_max, y_max) = glyph.bounding_box()?;
+    let size = match axis {
+        Axis::Vertical => y_max - y_min,
+        Axis::Horizontal => x_max - x_min,
+    };
+    u16::try_from(size).ok()
+}
+
+/// The assembly recipe for one stretchy glyph: its three pieces along the axis
+/// it grows in, so bottom to top or left to right.
 ///
-/// The pieces are horizontal bands of the glyph, so each one's ink already
-/// spans its band and the only thing left to say is how far they overlap. Every
-/// connector is the stroke width, which is the value the table gives as the
-/// minimum overlap and roughly the bar material a band has to spare at its
-/// edge.
-fn assembly(base: &GlyphData, glyphs: &[GlyphData], stroke: u16) -> Option<GlyphAssembly> {
+/// The pieces are bands of the glyph, so each one's ink already spans its band
+/// and the only thing left to say is how far they overlap. Every connector is
+/// the stroke width, which is the value the table gives as the minimum overlap
+/// and roughly the bar material a band has to spare at its edge.
+fn assembly(
+    base: &GlyphData,
+    glyphs: &[GlyphData],
+    axis: Axis,
+    stroke: u16,
+) -> Option<GlyphAssembly> {
     let last = crate::assembly::PIECES.len() - 1;
     let mut part_records = Vec::new();
     for index in 0..crate::assembly::PIECES.len() {
-        let name = crate::assembly::piece_name(&base.name, index);
+        let name = match axis {
+            Axis::Vertical => crate::assembly::piece_name(&base.name, index),
+            Axis::Horizontal => crate::assembly::horizontal_piece_name(&base.name, index),
+        };
         let position = glyphs.iter().position(|glyph| glyph.name == name)?;
-        let (_, y_min, _, y_max) = glyphs[position].bounding_box()?;
-        let full = u16::try_from(y_max - y_min).ok()?;
+        let full = extent(&glyphs[position], axis)?;
         // The spec requires the two connectors to fit inside the part, which
         // a short band would otherwise break.
         let overlap = stroke.min(full / 2);
@@ -273,8 +320,8 @@ fn assembly(base: &GlyphData, glyphs: &[GlyphData], stroke: u16) -> Option<Glyph
         };
         part_records.push(GlyphPartRecord {
             glyph_id: GlyphId16::new(u16::try_from(position + 1).ok()?),
-            // The start of a part is its bottom, so the piece that lands first
-            // has nothing below it to join to.
+            // The start of a part is the side the assembly begins at, so the
+            // piece that lands first has nothing before it to join to.
             start_connector_length: UfWord::new(if index == 0 { 0 } else { overlap }),
             end_connector_length: UfWord::new(if index == last { 0 } else { overlap }),
             full_advance: UfWord::new(full),
@@ -365,6 +412,86 @@ fn top_accent_attachment(glyph: &GlyphData) -> i16 {
     f64::midpoint(upper.0, upper.1).round() as i16
 }
 
+/// How many heights the top-corner ink is sampled at.
+///
+/// The table stores one band per change, so the samples only have to find the
+/// heights where the outline's edge moves. Six cuts catch an italic letter's
+/// hook without writing a table of noise.
+const KERN_SAMPLES: usize = 6;
+
+/// The right or left edge of a glyph's ink at a height, within a small band.
+fn ink_edge_at(glyph: &GlyphData, y: f64, left: bool) -> Option<f64> {
+    let mut edge = if left {
+        f64::INFINITY
+    } else {
+        f64::NEG_INFINITY
+    };
+    let mut found = false;
+    for point in glyph.contours.iter().flatten() {
+        if (point.y - y).abs() > 3.0 {
+            continue;
+        }
+        found = true;
+        if left {
+            edge = edge.min(point.x);
+        } else {
+            edge = edge.max(point.x);
+        }
+    }
+
+    found.then_some(edge)
+}
+
+/// The corner kern for a glyph's top right or top left, or `None` when the ink
+/// never leaves the advance.
+///
+/// A renderer places a script at the top of a letter against the letter's
+/// advance. The ink can leave that box: an italic stem leans past the right
+/// edge, and a hook or a swash can reach left of the origin. The table records
+/// that overhang at the heights where it changes, so a renderer can tuck a
+/// script under the lean or push it clear of the hook. Both are zero for an
+/// upright letter that stays inside its box, which is why most glyphs get no
+/// table at all.
+fn top_kern(glyph: &GlyphData, left: bool) -> Option<MathKern> {
+    let (_, y_min, _, y_max) = glyph.bounding_box()?;
+    let low = f64::from(y_min).max(0.0);
+    let high = f64::from(y_max);
+    if high <= low {
+        return None;
+    }
+    let advance = f64::from(glyph.advance);
+    let mut heights = Vec::new();
+    let mut kerns: Vec<i16> = Vec::new();
+    for step in 0..=KERN_SAMPLES {
+        #[allow(clippy::cast_precision_loss)]
+        let y = low + (high - low) * step as f64 / KERN_SAMPLES as f64;
+        let Some(edge) = ink_edge_at(glyph, y, left) else {
+            continue;
+        };
+        let overhang = if left {
+            edge.min(0.0)
+        } else {
+            (edge - advance).max(0.0)
+        };
+        let kern = units(overhang);
+        if kerns.last().copied() == Some(kern) {
+            continue;
+        }
+        if !kerns.is_empty() {
+            heights.push(units(y));
+        }
+        kerns.push(kern);
+    }
+    if kerns.iter().all(|kern| *kern == 0) {
+        return None;
+    }
+
+    Some(MathKern {
+        correction_height: heights.into_iter().map(value).collect(),
+        kern_values: kerns.into_iter().map(value).collect(),
+    })
+}
+
 /// The glyphs a renderer positions against their ink box rather than the
 /// baseline: the stretchy glyphs and the sizes derived from them.
 ///
@@ -374,29 +501,32 @@ fn top_accent_attachment(glyph: &GlyphData) -> i16 {
 /// happens to start at.
 fn extended_shapes(glyphs: &[GlyphData]) -> Vec<GlyphId16> {
     // A large operator carries one more size than a delimiter, so the set the
-    // coverage names is the union rather than one glyph's list.
-    let steps = crate::variants::OPERATOR_SCALES
+    // coverage names is the union rather than one glyph's list. A horizontal
+    // arrow has fewer sizes than either.
+    let vertical_steps = crate::variants::OPERATOR_SCALES
         .len()
         .max(crate::variants::SCALES.len());
     let bases: Vec<&GlyphData> = glyphs
         .iter()
         .filter(|glyph| {
-            glyph
-                .unicodes
-                .iter()
-                .any(|code| crate::variants::STRETCHY.contains(code))
+            glyph.unicodes.iter().any(|code| {
+                crate::variants::STRETCHY.contains(code)
+                    || crate::variants::HORIZONTAL.contains(code)
+            })
         })
         .collect();
     let mut ids = Vec::new();
     for (index, glyph) in glyphs.iter().enumerate() {
-        let stretchy = glyph
-            .unicodes
-            .iter()
-            .any(|code| crate::variants::STRETCHY.contains(code));
-        let derived = bases.iter().any(|base| {
-            (0..steps).any(|step| crate::variants::variant_name(&base.name, step) == glyph.name)
+        let base = glyph.unicodes.iter().any(|code| {
+            crate::variants::STRETCHY.contains(code) || crate::variants::HORIZONTAL.contains(code)
         });
-        if !stretchy && !derived {
+        let derived = bases.iter().any(|base| {
+            (0..vertical_steps).any(|step| {
+                crate::variants::variant_name(&base.name, step) == glyph.name
+                    || crate::variants::horizontal_variant_name(&base.name, step) == glyph.name
+            })
+        });
+        if !base && !derived {
             continue;
         }
         let Ok(id) = u16::try_from(index + 1) else {
@@ -434,6 +564,30 @@ pub fn glyph_info(glyphs: &[GlyphData]) -> MathGlyphInfo {
     let coverage: CoverageTable = ids.iter().copied().collect();
     let extended = extended_shapes(glyphs);
 
+    let mut kern_ids = Vec::new();
+    let mut kern_records = Vec::new();
+    for (index, glyph) in glyphs.iter().enumerate() {
+        if !glyph.unicodes.iter().any(|code| is_letter(*code)) {
+            continue;
+        }
+        let right = top_kern(glyph, false);
+        let left = top_kern(glyph, true);
+        if right.is_none() && left.is_none() {
+            continue;
+        }
+        let Ok(id) = u16::try_from(index + 1) else {
+            continue;
+        };
+        kern_ids.push(GlyphId16::new(id));
+        kern_records.push(MathKernInfoRecord::new(right, left, None, None));
+    }
+    let kern_info = (!kern_ids.is_empty()).then(|| {
+        MathKernInfo::new(
+            kern_ids.iter().copied().collect::<CoverageTable>(),
+            kern_records,
+        )
+    });
+
     MathGlyphInfo {
         math_italics_correction_info: (!ids.is_empty())
             .then(|| MathItalicsCorrectionInfo {
@@ -450,6 +604,6 @@ pub fn glyph_info(glyphs: &[GlyphData]) -> MathGlyphInfo {
         extended_shape_coverage: (!extended.is_empty())
             .then(|| extended.into_iter().collect::<CoverageTable>())
             .into(),
-        ..MathGlyphInfo::default()
+        math_kern_info: kern_info.into(),
     }
 }

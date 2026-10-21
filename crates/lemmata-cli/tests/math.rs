@@ -11,7 +11,7 @@ use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
 use read_fonts::tables::glyf::Glyph as ReadGlyph;
 use read_fonts::tables::gsub::SubstitutionSubtables;
-use read_fonts::tables::math::{PartFlags, StretchAxis};
+use read_fonts::tables::math::{MathKernCorner, PartFlags, StretchAxis};
 use read_fonts::types::{GlyphId, Tag};
 use read_fonts::{FontRef, TableProvider};
 
@@ -205,6 +205,123 @@ fn math_letters_have_corrections_and_accents() {
     eprintln!(
         "math: {covered} letters covered, italic mean {italic_mean}, upright mean {upright_mean}"
     );
+}
+
+/// The top-corner kerns: an italic letter's overhang is recorded at the heights
+/// where it changes, so a renderer can place a script against the ink instead
+/// of the advance.
+#[test]
+fn math_letters_carry_top_corner_kerning() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let info = font
+        .math()
+        .expect("the font has a MATH table")
+        .math_glyph_info()
+        .expect("MathGlyphInfo");
+    let kern_info = info
+        .math_kern_info()
+        .expect("MathKernInfo")
+        .expect("the table resolves");
+
+    let mut italic = 0usize;
+    let mut with_kern = 0usize;
+    for (index, glyph) in captured.iter().enumerate() {
+        if !glyph
+            .unicodes
+            .iter()
+            .any(|code| (0x1D434..=0x1D467).contains(code))
+        {
+            continue;
+        }
+        italic += 1;
+        let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
+        let Some(kern) = kern_info.kern(id, MathKernCorner::TopRight) else {
+            continue;
+        };
+        with_kern += 1;
+        let heights: Vec<i32> = kern
+            .correction_height()
+            .iter()
+            .map(|height| i32::from(height.value().to_i16()))
+            .collect();
+        assert!(
+            heights.windows(2).all(|pair| pair[0] < pair[1]),
+            "{} records heights out of order: {heights:?}",
+            glyph.name
+        );
+        let values: Vec<i32> = kern
+            .kern_values()
+            .iter()
+            .map(|value| i32::from(value.value().to_i16()))
+            .collect();
+        assert_eq!(
+            values.len(),
+            heights.len() + 1,
+            "{} has one more kern than the heights it bands",
+            glyph.name
+        );
+        assert!(
+            values.last().copied().unwrap_or(0) > 0,
+            "{}'s top-right overhang is not positive: {values:?}",
+            glyph.name
+        );
+    }
+
+    // An italic x-height letter can lean and still stay inside its cell. What
+    // the table has to catch is the tall letters whose hook or ascender leaves
+    // it, and there are enough of those to prove the table is filled.
+    assert!(
+        with_kern >= 10,
+        "only {with_kern} of {italic} italic letters carry a top-right kern"
+    );
+
+    // The stored value is the outline's overhang, not a guess. The italic f's
+    // rightmost point is the top of its hook, so the last band is its widest.
+    let (index, glyph) = captured
+        .iter()
+        .enumerate()
+        .find(|(_, glyph)| glyph.unicodes.contains(&0x1D453))
+        .expect("the capture holds the italic f");
+    let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
+    let kern = kern_info
+        .kern(id, MathKernCorner::TopRight)
+        .expect("the italic f has a top-right kern");
+    let contours = lemmata_capture::contours(glyph);
+    let right = contours
+        .iter()
+        .flatten()
+        .fold(f64::NEG_INFINITY, |right, point| right.max(point.x));
+    let overhang = (right - glyph.advance).round().max(0.0);
+    assert_eq!(
+        f64::from(
+            kern.kern_values()
+                .last()
+                .expect("a final value")
+                .value()
+                .to_i16()
+        ),
+        overhang,
+        "the italic f stores a peak kern against an overhang of {overhang}"
+    );
+
+    // The upright block stays inside its advance, so it has no overhang to
+    // record. Covering it with a zero table would only cost bytes.
+    let upright = captured
+        .iter()
+        .enumerate()
+        .find(|(_, glyph)| glyph.unicodes.contains(&0x1D400))
+        .map(|(index, _)| GlyphId::new(u32::try_from(index + 1).expect("glyph id")))
+        .expect("the capture holds bold A");
+    assert!(
+        kern_info.kern(upright, MathKernCorner::TopRight).is_none(),
+        "an upright letter inside its box should have no top-right kern"
+    );
+
+    eprintln!("math kerning: {with_kern} of {italic} italic letters carry a top-right kern");
 }
 
 /// The glyphs a renderer stretches vertically, by codepoint.
@@ -582,6 +699,220 @@ fn stretchy_glyphs_have_assemblies() {
     );
 }
 
+/// `r[math.stretch]`: a horizontal arrow grows along x, by lengthening its
+/// shaft rather than by scaling the head with the cell.
+#[test]
+fn horizontal_arrows_have_assemblies() {
+    let Some((bytes, captured)) = build_math_font() else {
+        eprintln!("skipping: no math capture");
+        return;
+    };
+    let font = FontRef::new(&bytes).expect("reopen the font");
+    let variants = font
+        .math()
+        .expect("MATH")
+        .math_variants()
+        .expect("MathVariants");
+    let tolerance = i32::from(u16::from(variants.min_connector_overlap()));
+    let loca = font.loca(None).expect("loca");
+    let glyf = font.glyf().expect("glyf");
+
+    let span = |id: GlyphId| -> (i32, i32, i32, i32) {
+        let glyph = loca
+            .get_glyf(id, &glyf)
+            .expect("read a glyph")
+            .unwrap_or_else(|| panic!("glyph {id} has no outline"));
+        let ReadGlyph::Simple(simple) = glyph else {
+            panic!("a stretchable arrow is a simple glyph");
+        };
+        let (mut x_min, mut y_min) = (i32::MAX, i32::MAX);
+        let (mut x_max, mut y_max) = (i32::MIN, i32::MIN);
+        for point in simple.points() {
+            x_min = x_min.min(i32::from(point.x));
+            y_min = y_min.min(i32::from(point.y));
+            x_max = x_max.max(i32::from(point.x));
+            y_max = y_max.max(i32::from(point.y));
+        }
+
+        (x_min, y_min, x_max, y_max)
+    };
+
+    let horizontal = lemmata_build::variants::HORIZONTAL;
+    let mut assembled = 0usize;
+    let mut worst = 0i32;
+    let mut without: Vec<&str> = Vec::new();
+    for (index, glyph) in captured.iter().enumerate() {
+        if !glyph.unicodes.iter().any(|code| horizontal.contains(code)) {
+            continue;
+        }
+        let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
+        let construction = variants
+            .glyph_construction(id, StretchAxis::Horizontal)
+            .unwrap_or_else(|| panic!("{} has no horizontal construction", glyph.name));
+        // The sizes are the first thing a renderer reaches for, and each one
+        // measures the width it grew to rather than its height.
+        let records = construction.math_glyph_variant_records();
+        assert_eq!(
+            records.len(),
+            lemmata_build::variants::HORIZONTAL_SCALES.len(),
+            "{} should carry one size per scale",
+            glyph.name
+        );
+        let base_width = span(id).2 - span(id).0;
+        let mut previous = base_width;
+        for record in records {
+            let width = i32::from(u16::from(record.advance_measurement()));
+            assert!(
+                width > previous,
+                "{}'s sizes do not grow: {width} after {previous}",
+                glyph.name
+            );
+            previous = width;
+        }
+
+        let Some(resolved) = construction.glyph_assembly() else {
+            without.push(glyph.name.as_str());
+            continue;
+        };
+        let assembly = resolved.unwrap_or_else(|error| panic!("{}: {error:?}", glyph.name));
+        let parts = assembly.part_records();
+        assert_eq!(
+            parts.len(),
+            lemmata_build::assembly::HORIZONTAL_PIECES.len(),
+            "{} should have one piece per column",
+            glyph.name
+        );
+
+        // Lay the parts left to right the way a renderer does: the first starts
+        // at the origin, and each later one overlaps the one before it.
+        let mut left = 0i32;
+        let mut before: Option<(i32, i32, i32)> = None;
+        let mut extenders = 0usize;
+        let mut joins = 0i32;
+        for (position, part) in parts.iter().enumerate() {
+            let (x_min, _, x_max, _) = span(GlyphId::new(u32::from(part.glyph_id().to_u16())));
+            let full = i32::from(u16::from(part.full_advance()));
+            let start = i32::from(u16::from(part.start_connector_length()));
+            let end = i32::from(u16::from(part.end_connector_length()));
+            assert_eq!(
+                x_min, 0,
+                "{} piece {position} does not start on the origin",
+                glyph.name
+            );
+            assert_eq!(
+                x_max, full,
+                "{} piece {position} spans {x_max} against an advance of {full}",
+                glyph.name
+            );
+            assert!(
+                start + end <= full,
+                "{} piece {position} has connectors wider than the part",
+                glyph.name
+            );
+            if part.part_flags().contains(PartFlags::EXTENDER_FLAG) {
+                extenders += 1;
+                assert_eq!(
+                    position,
+                    lemmata_build::assembly::EXTENDER,
+                    "{} repeats a piece that is not the middle one",
+                    glyph.name
+                );
+            }
+            if let Some((below_x_min, below_x_max, below_end)) = before {
+                assert!(
+                    x_min < below_x_max && below_x_min < x_max,
+                    "{} piece {position} does not cross the one before it",
+                    glyph.name
+                );
+                let overlap = below_end.min(start);
+                assert!(
+                    overlap > 0,
+                    "{} piece {position} does not overlap the one before it",
+                    glyph.name
+                );
+                assert!(
+                    overlap <= tolerance,
+                    "{} piece {position} overlaps by {overlap}, past the {tolerance} the table allows",
+                    glyph.name
+                );
+                joins += overlap;
+                left += full - overlap;
+            } else {
+                left = full;
+            }
+            before = Some((x_min, x_max, end));
+        }
+        assert_eq!(
+            extenders, 1,
+            "{} should repeat exactly one piece",
+            glyph.name
+        );
+
+        // The repeat seam, on the vertical axis this time: the middle column is
+        // a band of a shaft, so its top and bottom inks have to agree at the
+        // left and right edges where the piece repeats.
+        let repeat = &parts[lemmata_build::assembly::EXTENDER];
+        let full = i32::from(u16::from(repeat.full_advance()));
+        let piece = loca
+            .get_glyf(GlyphId::new(u32::from(repeat.glyph_id().to_u16())), &glyf)
+            .expect("read a glyph")
+            .expect("the extender has an outline");
+        let ReadGlyph::Simple(simple) = piece else {
+            panic!("a stretchy piece is a simple glyph");
+        };
+        let (mut low_min, mut low_max) = (i32::MAX, i32::MIN);
+        let (mut high_min, mut high_max) = (i32::MAX, i32::MIN);
+        for point in simple.points() {
+            let (x, y) = (i32::from(point.x), i32::from(point.y));
+            if x <= 0 {
+                low_min = low_min.min(y);
+                low_max = low_max.max(y);
+            }
+            if x >= full {
+                high_min = high_min.min(y);
+                high_max = high_max.max(y);
+            }
+        }
+        let seam = (high_min - low_min).abs().max((high_max - low_max).abs());
+        assert!(
+            seam <= tolerance,
+            "{}'s extender steps {seam} where it repeats, past the {tolerance} the table allows",
+            glyph.name
+        );
+        worst = worst.max(seam);
+
+        assert!(
+            base_width - left <= joins,
+            "{} assembles to {left} against a glyph {base_width} wide",
+            glyph.name
+        );
+        assembled += 1;
+    }
+
+    assert!(
+        assembled + without.len()
+            == captured
+                .iter()
+                .filter(|glyph| glyph.unicodes.iter().any(|code| horizontal.contains(code)))
+                .count(),
+        "every horizontal arrow is either assembled or named"
+    );
+    // A glyph whose middle is not a bar has no column that repeats. The
+    // double-headed right arrow's heads meet in the middle, and the negated
+    // arrow's stroke crosses the shaft, so both would stack the feature rather
+    // than a stroke. They need a drawn extender.
+    without.sort_unstable();
+    assert_eq!(
+        without,
+        ["dhArrowRight.WWID", "uni21AE.WWID"],
+        "the arrows without an assembly should be the ones whose middle is not a bar"
+    );
+    eprintln!(
+        "horizontal assemblies: {assembled} glyphs, {} pinned, {tolerance} unit joins, worst repeat seam {worst}",
+        without.len()
+    );
+}
+
 /// `r[math.stretch]`: a glyph a renderer can stretch is an extended shape, so
 /// what sits beside it is positioned against its ink box rather than its
 /// baseline.
@@ -603,7 +934,12 @@ fn stretched_glyphs_are_extended_shapes() {
 
     let mut covered = 0usize;
     for (index, glyph) in captured.iter().enumerate() {
-        if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
+        let vertical = glyph.unicodes.iter().any(|code| STRETCHY.contains(code));
+        let horizontal = glyph
+            .unicodes
+            .iter()
+            .any(|code| lemmata_build::variants::HORIZONTAL.contains(code));
+        if !vertical && !horizontal {
             continue;
         }
         let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
@@ -616,8 +952,13 @@ fn stretched_glyphs_are_extended_shapes() {
         // The sizes derived from it are the ones a renderer reaches for when
         // the base is too short, so they are the ones that most need the ink
         // box.
+        let axis = if vertical {
+            StretchAxis::Vertical
+        } else {
+            StretchAxis::Horizontal
+        };
         let construction = variants
-            .glyph_construction(id, StretchAxis::Vertical)
+            .glyph_construction(id, axis)
             .unwrap_or_else(|| panic!("{} has no construction", glyph.name));
         for record in construction.math_glyph_variant_records() {
             assert!(
@@ -631,15 +972,20 @@ fn stretched_glyphs_are_extended_shapes() {
         }
     }
 
-    let sizes: usize = STRETCHY
+    let vertical_sizes: usize = STRETCHY
         .iter()
         .map(|code| {
             lemmata_build::variants::scales(lemmata_build::variants::OPERATORS.contains(code)).len()
         })
         .sum();
+    let horizontal_sizes = lemmata_build::variants::HORIZONTAL.len()
+        * lemmata_build::variants::HORIZONTAL_SCALES.len();
     assert_eq!(
         covered,
-        STRETCHY.len() + sizes,
+        STRETCHY.len()
+            + vertical_sizes
+            + lemmata_build::variants::HORIZONTAL.len()
+            + horizontal_sizes,
         "every stretchy glyph and every size derived from it is covered"
     );
     // Nothing else is covered: an extended shape changes how a renderer places

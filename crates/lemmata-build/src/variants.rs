@@ -43,6 +43,19 @@ pub const SCALES: &[f64] = &[1.5, 2.0];
 /// given. `displayOperatorMinHeight` decides which of these it picks.
 pub const OPERATOR_SCALES: &[f64] = &[1.5, 2.0, 2.25];
 
+/// The glyphs a renderer stretches horizontally.
+///
+/// A horizontal arrow grows by lengthening its shaft, so its head keeps the
+/// size it was drawn at. The set is the arrows an equation reaches for:
+/// implication and equivalence, maps-to, the harpoons and the dashed forms.
+pub const HORIZONTAL: &[u32] = &[
+    0x2190, 0x2192, 0x2194, 0x21A0, 0x21A2, 0x21A3, 0x21A6, 0x21A9, 0x21AA, 0x21AE, 0x21BC, 0x21BD,
+    0x21C0, 0x21C1, 0x21C4, 0x21C6, 0x21D0, 0x21D2, 0x21D4, 0x21DA, 0x21DB, 0x21E0, 0x21E2,
+];
+
+/// The scales a horizontal glyph is derived at, beyond its own size.
+pub const HORIZONTAL_SCALES: &[f64] = &[2.0, 3.0];
+
 /// The scales a glyph is derived at.
 #[must_use]
 pub const fn scales(operator: bool) -> &'static [f64] {
@@ -63,11 +76,23 @@ pub fn variant_name(base: &str, index: usize) -> String {
     format!("{base}.s{index}")
 }
 
+/// The suffix a derived horizontal variant carries.
+///
+/// The `.h` keeps it apart from the vertical `.s` set: a glyph carries only one
+/// of the two, but the private-use codes they take must stay unique and the
+/// names are what a reader follows.
+#[must_use]
+pub fn horizontal_variant_name(base: &str, index: usize) -> String {
+    format!("{base}.h{index}")
+}
+
 /// The derived size variants.
 ///
 /// A delimiter is scaled in y alone, which keeps a vertical stroke at its width.
 /// A large operator is scaled in both axes and its advance grows with it, since
 /// a wider drawing in a cell that did not grow would run into its neighbour.
+/// A horizontal arrow is the mirror: it scales in x, and its advance grows with
+/// the drawing so the shaft reaches into the longer cell.
 // The advance of a grown operator is rounded into the 16-bit field the table
 // stores, which cannot overflow a glyph at any scale worth deriving. The
 // arithmetic is kept plain rather than fused, because these transforms decide
@@ -131,6 +156,38 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
                     let grown = (f64::from(glyph.advance) * widen).round();
                     u16::try_from(grown as i32).unwrap_or(glyph.advance)
                 },
+                contours,
+            });
+        }
+    }
+
+    // The horizontal set is the mirror of the vertical one. An arrow keeps its
+    // height and grows in x, so scaling about the left edge leaves the tail
+    // where it was and carries the head into the wider cell.
+    for glyph in glyphs {
+        if !glyph.unicodes.iter().any(|code| HORIZONTAL.contains(code)) {
+            continue;
+        }
+        for (index, scale) in HORIZONTAL_SCALES.iter().enumerate() {
+            let contours = glyph
+                .contours
+                .iter()
+                .map(|contour| {
+                    contour
+                        .iter()
+                        .map(|point| lemmata_geom::QuadifyPoint {
+                            x: point.x * scale,
+                            ..*point
+                        })
+                        .collect()
+                })
+                .collect();
+            let code = PRIVATE_USE_START + u32::try_from(derived.len()).unwrap_or(0);
+            let grown = (f64::from(glyph.advance) * scale).round();
+            derived.push(GlyphData {
+                name: horizontal_variant_name(&glyph.name, index),
+                unicodes: vec![code],
+                advance: u16::try_from(grown as i32).unwrap_or(glyph.advance),
                 contours,
             });
         }

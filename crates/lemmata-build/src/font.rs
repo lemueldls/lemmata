@@ -167,6 +167,12 @@ pub fn derived_with(
         metrics.underline_thickness.unsigned_abs(),
     );
     derived.extend(pieces);
+    let horizontal = crate::assembly::derive_horizontal(
+        glyphs,
+        next_code(&derived),
+        metrics.underline_thickness.unsigned_abs(),
+    );
+    derived.extend(horizontal);
     let dotless = crate::dotless::derive(glyphs, f64::from(metrics.x_height), next_code(&derived));
     derived.extend(dotless);
     let script = crate::ssty::derive(glyphs, next_code(&derived));

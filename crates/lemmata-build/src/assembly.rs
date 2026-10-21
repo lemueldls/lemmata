@@ -46,7 +46,7 @@ pub fn piece_name(base: &str, index: usize) -> String {
 /// The cut is a rectangle around the band, wide enough that only the two cut
 /// lines decide the result, and clipping is the boolean engine's job rather
 /// than this module's.
-fn slice(glyph: &GlyphData, low: f64, high: f64) -> Vec<Vec<QuadifyPoint>> {
+fn slice_y(glyph: &GlyphData, low: f64, high: f64) -> Vec<Vec<QuadifyPoint>> {
     let Some((x_min, _, x_max, _)) = glyph.bounding_box() else {
         return Vec::new();
     };
@@ -113,7 +113,7 @@ fn spread(glyph: &GlyphData, low: f64, high: f64) -> f64 {
     let middle = f64::midpoint(low, high);
     let mut ranges = Vec::new();
     for probe in [low, middle - 2.0, high - 4.0] {
-        let Some(range) = x_range(&slice(glyph, probe, probe + 4.0)) else {
+        let Some(range) = x_range(&slice_y(glyph, probe, probe + 4.0)) else {
             return f64::INFINITY;
         };
         ranges.push(range);
@@ -196,12 +196,181 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
                 name: piece_name(&glyph.name, index),
                 unicodes: Vec::new(),
                 advance: glyph.advance,
-                contours: grounded(slice(glyph, *band_low, *band_high)),
+                contours: grounded(slice_y(glyph, *band_low, *band_high)),
             })
             .collect();
         // A glyph with no ink in one of the bands has no assembly, and half an
         // assembly is worse than none: the table would name parts that do not
         // tile.
+        if pieces_of.iter().any(|piece| piece.contours.is_empty()) {
+            continue;
+        }
+        for piece in &mut pieces_of {
+            let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
+            piece.unicodes = vec![code];
+            pieces.push(piece.clone());
+        }
+    }
+
+    pieces
+}
+
+/// The pieces of a horizontally stretched glyph.
+pub const HORIZONTAL_PIECES: [&str; 3] = ["hp0", "hp1", "hp2"];
+
+/// The name a horizontal piece of `base` carries.
+#[must_use]
+pub fn horizontal_piece_name(base: &str, index: usize) -> String {
+    format!("{base}.{}", HORIZONTAL_PIECES[index])
+}
+
+/// The glyph's ink between two horizontal positions.
+///
+/// The mirror of `slice_y`: the cut is a rectangle around the column, tall
+/// enough that only the two vertical cut lines decide the result.
+fn slice_x(glyph: &GlyphData, low: f64, high: f64) -> Vec<Vec<QuadifyPoint>> {
+    let Some((_, y_min, _, y_max)) = glyph.bounding_box() else {
+        return Vec::new();
+    };
+    let bounds = Rect::new(low, f64::from(y_min) - 1.0, high, f64::from(y_max) + 1.0);
+    let Ok(paths) =
+        lemmata_geom::boolean::intersection(&glyph_path(&glyph.contours), &bounds.to_path(0.1))
+    else {
+        return Vec::new();
+    };
+
+    lemmata_geom::quadify(&lemmata_geom::paths_to_shape(&paths))
+}
+
+/// The contours moved so their left edge sits on the origin.
+///
+/// A horizontal assembly places each part at the advance before it, so a
+/// piece's ink has to start at zero for the part's advance to be the width the
+/// next one begins after.
+fn grounded_x(contours: Vec<Vec<QuadifyPoint>>) -> Vec<Vec<QuadifyPoint>> {
+    let low = contours
+        .iter()
+        .flatten()
+        .fold(f64::INFINITY, |low, point| low.min(point.x));
+    if !low.is_finite() {
+        return contours;
+    }
+
+    contours
+        .into_iter()
+        .map(|contour| {
+            contour
+                .into_iter()
+                .map(|point| QuadifyPoint {
+                    x: point.x - low,
+                    ..point
+                })
+                .collect()
+        })
+        .collect()
+}
+
+/// The vertical extent of a piece's ink.
+fn y_range(contours: &[Vec<QuadifyPoint>]) -> Option<(f64, f64)> {
+    let low = contours
+        .iter()
+        .flatten()
+        .fold(f64::INFINITY, |low, point| low.min(point.y));
+    let high = contours
+        .iter()
+        .flatten()
+        .fold(f64::NEG_INFINITY, |high, point| high.max(point.y));
+
+    (low.is_finite() && high.is_finite()).then_some((low, high))
+}
+
+/// How far a column's ink wanders up or down over its width.
+fn spread_x(glyph: &GlyphData, low: f64, high: f64) -> f64 {
+    let middle = f64::midpoint(low, high);
+    let mut ranges = Vec::new();
+    for probe in [low, middle - 2.0, high - 4.0] {
+        let Some(range) = y_range(&slice_x(glyph, probe, probe + 4.0)) else {
+            return f64::INFINITY;
+        };
+        ranges.push(range);
+    }
+
+    let across = |index: usize| {
+        let values: Vec<f64> = ranges
+            .iter()
+            .map(|range| if index == 0 { range.0 } else { range.1 })
+            .collect();
+        values.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            - values.iter().copied().fold(f64::INFINITY, f64::min)
+    };
+
+    across(0).max(across(1))
+}
+
+/// The pieces for every horizontally stretched glyph, encoded from `first_code`
+/// upward.
+///
+/// A horizontal arrow repeats a column of its shaft, and the same band rules
+/// apply: the middle is tried first, and a column only repeats when its ink
+/// holds its height across the width.
+#[allow(clippy::cast_possible_truncation)]
+#[must_use]
+pub fn derive_horizontal(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphData> {
+    let tolerance = f64::from(overlap) / 2.0;
+    let mut pieces: Vec<GlyphData> = Vec::new();
+    for glyph in glyphs {
+        if !glyph
+            .unicodes
+            .iter()
+            .any(|code| crate::variants::HORIZONTAL.contains(code))
+        {
+            continue;
+        }
+        let Some((x_min, _, x_max, _)) = glyph.bounding_box() else {
+            continue;
+        };
+        let width = f64::from(x_max - x_min);
+
+        let mut cut: Option<(f64, f64)> = None;
+        for (centre, fraction) in BANDS {
+            let low = width
+                .mul_add(centre - fraction / 2.0, f64::from(x_min))
+                .round();
+            let high = width
+                .mul_add(centre + fraction / 2.0, f64::from(x_min))
+                .round();
+            if spread_x(glyph, low, high) <= tolerance {
+                cut = Some((low, high));
+                break;
+            }
+        }
+        let Some((low, high)) = cut else {
+            continue;
+        };
+
+        let bands = [
+            (f64::from(x_min) - 1.0, low),
+            (low, high),
+            (high, f64::from(x_max) + 1.0),
+        ];
+        let mut pieces_of: Vec<GlyphData> = bands
+            .iter()
+            .enumerate()
+            .map(|(index, (band_low, band_high))| {
+                let contours = grounded_x(slice_x(glyph, *band_low, *band_high));
+                // A horizontal part is placed by its width, so the advance is
+                // the ink's width once the left edge is on the origin.
+                let advance = x_range(&contours)
+                    .map_or(0.0, |(low, high)| high - low)
+                    .round();
+                GlyphData {
+                    name: horizontal_piece_name(&glyph.name, index),
+                    unicodes: Vec::new(),
+                    advance: u16::try_from(advance as i32).unwrap_or(0),
+                    contours,
+                }
+            })
+            .collect();
         if pieces_of.iter().any(|piece| piece.contours.is_empty()) {
             continue;
         }

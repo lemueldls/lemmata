@@ -34,13 +34,17 @@ The clamp matters. An italic `l` has a tail that reaches right at the baseline, 
 
 A top accent attachment is the horizontal midpoint of the upper ink, which is where an accent is centred over a letter.
 
-A third coverage names the glyphs a renderer positions against their ink box rather than the baseline. Those are the stretchy glyphs and the sizes derived from them, 48 in all. Without it, a superscript beside a parenthesis grown to enclose a fraction is aligned with the parenthesis's own baseline instead of the line the rest of the equation sits on.
+A third coverage names the glyphs a renderer positions against their ink box rather than the baseline. Those are the stretchy glyphs and the sizes derived from them, 120 in all. Without it, a superscript beside a parenthesis grown to enclose a fraction is aligned with the parenthesis's own baseline instead of the line the rest of the equation sits on.
+
+The table also carries the corner kerns. A renderer places a script against the letter's advance, but the ink can leave that box: an italic stem leans past the right edge, and a hook can reach left of the origin. `MathKernInfo` records the overhang at the heights where it changes, so a renderer can move the script with the ink instead of the cell. The derivation samples the outline six times between the baseline and the top of the ink and keeps a band only where the edge moves. Most glyphs stay inside their box and get no table at all. Fifteen of the 51 italic letters in the capture have a top-right overhang worth recording, and the upright block has none.
+
+Only the top corners are written. A descender can overhang below the baseline, and a subscript at the bottom corner would use that the way a superscript uses the top, but the bottom records are left null until a case asks for them.
 
 These are proxies, like the constants. A design pass against a reference math font is what would replace them.
 
 ## Verification
 
-Two tests, because the table has two halves and they read different captures.
+Two test files, because the table has two halves and they read different captures.
 
 `crates/lemmata-cli/tests/build.rs` builds the font, reopens it with `read-fonts`, and checks that the constants survive the write and the read: the profile's two values, the four derived from measurements, one left at zero to confirm it stays zero, and the mandatory-nonzero set. That is `r[math.table]`.
 
@@ -121,6 +125,16 @@ The band is what makes a piece repeatable, so the derivation measures it: it sli
 The middle is tried first and taken as soon as it is straight enough, at half the stroke width. Moving the band up is only for a glyph whose middle cannot repeat, and it is not free: the piece below the band then holds more of the glyph than the piece above, so a brace's point lands at the bottom of the assembly instead of in the middle. Trying the straightest band first was that mistake, and it unbalanced every glyph it touched.
 
 Six glyphs have no band that repeats and the test names them rather than giving them an assembly that stacks a feature: a summation's middle holds its crossbar, an angle bracket's holds its vertex, a brace's holds its point, and a radical's is a diagonal. They need a drawn extender. The other ten are the parentheses, brackets, ceilings, floors, integral and product, and they repeat within two units against the twenty-five the band allows.
+
+## Horizontal constructions
+
+A horizontal arrow grows the other way, and `MathVariants` carries a second coverage and construction list for it. The same record serves both: two scales, here 2 and 3 times the base, and an assembly for a length beyond them.
+
+The sizes scale x alone, about the left edge, and the advance grows with the drawing. Scaling both axes would make the head as tall as the longer cell, which is not what a long arrow looks like. Scaling in x stretches the head as well, and that is the compromise of deriving a variant rather than drawing one. The assembly avoids it for the lengths a renderer builds: it cuts three vertical columns, repeats the middle one, and leaves the head and the tail alone. The middle is a column of the shaft, so its ink holds the same height across the width, and the band check from the vertical assembly decides whether it repeats.
+
+Twenty-three arrows are covered: implication, maps-to, the harpoons, and the dashed and double forms in the capture. Twenty-one build an assembly. The double-headed right arrow's heads meet in the middle and the negated arrow's stroke crosses the shaft, so neither has a column that repeats, and the test names them.
+
+The long arrows at U+27F5 to U+27FF are drawn upstream but are not in the capture set. The construction code covers whatever the capture holds, so the font has no glyph to build those from until the set grows.
 
 ## The browser
 
@@ -213,4 +227,6 @@ They also have to join the glyph set before anything counts it. Appending them l
 
 The script style `r[math.alphabets]` names is still a gap in the glyph source, and it is the last thing `r[math.script-style]` waits on: its other half is the `ssty` and `flac` features, and both are written.
 
-Math kerning and the horizontal constructions are also unwritten. Neither is needed by a simple equation.
+The bottom corner kerns are not derived. A descender can overhang below the baseline, and a subscript at the bottom corner would use that the way a superscript uses the top, but the table leaves those records null. The top corners are where the scripts of an equation sit.
+
+The horizontal braces at U+23DE and U+23DF are not in the source at all, so `\overbrace` needs a drawing before a construction can reach it. The long arrows are in the source but not in the capture, which is a set to widen rather than a shape to draw.
