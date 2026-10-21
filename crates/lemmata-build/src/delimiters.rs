@@ -207,7 +207,7 @@ pub fn radical(advance: f64, height: f64, rule: f64) -> Vec<Vec<QuadifyPoint>> {
     // The stem and hook carry the drawing's stroke, which is heavier than the
     // rule a renderer draws for the vinculum.
     let stroke = rule * 1.5;
-    let gap = advance * 0.04;
+    let gap = advance * 0.12;
     let stem_right = advance - gap;
     let stem_left = stem_right - stroke;
     let stem = stem_right - stroke / 2.0;
@@ -253,4 +253,64 @@ pub fn radical(advance: f64, height: f64, rule: f64) -> Vec<Vec<QuadifyPoint>> {
     contours.push(rect(stem_left, advance, height - stroke, height));
 
     contours
+}
+
+/// The three pieces of the radical's assembly, bottom to top.
+///
+/// The bottom piece carries the hook, the extender is the stem, and the top
+/// piece carries the bridge that meets the renderer's vinculum.
+#[must_use]
+pub fn radical_pieces(advance: f64, height: f64, rule: f64) -> Vec<Vec<Vec<QuadifyPoint>>> {
+    let stroke = rule * 1.5;
+    let gap = advance * 0.12;
+    let stem_right = advance - gap;
+    let stem_left = stem_right - stroke;
+    let stem = stem_right - stroke / 2.0;
+    let low_cut = (height * 0.55).round();
+    let high_cut = (height * 0.75).round();
+
+    let hook = hook(
+        (stroke / 2.0, height * 0.45),
+        (stroke / 2.0 + advance * 0.18, height * 0.45),
+        (stem, height * 0.15),
+        (stem, stroke / 2.0),
+        stroke,
+        0.0,
+        true,
+    );
+    let rect = |left: f64, right: f64, low: f64, high: f64| {
+        vec![
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: left,
+                y: low,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: right,
+                y: low,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: right,
+                y: high,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: left,
+                y: high,
+            },
+        ]
+    };
+
+    let mut bottom = hook;
+    bottom.push(rect(stem_left, stem_right, 0.0, low_cut));
+    let extender = vec![rect(stem_left, stem_right, 0.0, high_cut - low_cut)];
+    let top_height = height - high_cut;
+    let top = vec![
+        rect(stem_left, stem_right, 0.0, top_height),
+        rect(stem_left, advance, top_height - stroke, top_height),
+    ];
+
+    vec![bottom, extender, top]
 }

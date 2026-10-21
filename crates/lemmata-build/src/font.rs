@@ -194,9 +194,10 @@ pub fn derived_with(
 /// Replace the check-mark radical with a drawn one: a bottom hook and a
 /// vertical stem against the advance, so a renderer's vinculum starts on a flat
 /// edge and the content sits beside a stem rather than a diagonal.
-fn radical_glyphs(glyphs: &mut [GlyphData], metrics: &Metrics) {
+fn radical_glyphs(glyphs: &mut Vec<GlyphData>, metrics: &Metrics, next_code: u32) {
     let rule = f64::from(metrics.underline_thickness.unsigned_abs());
-    for glyph in glyphs {
+    let mut base = None;
+    for glyph in glyphs.iter_mut() {
         if glyph.name != "sqrt" && !glyph.name.starts_with("sqrt.s") {
             continue;
         }
@@ -208,6 +209,9 @@ fn radical_glyphs(glyphs: &mut [GlyphData], metrics: &Metrics) {
         // font's.
         let bottom = f64::from(metrics.descender).min(f64::from(y_min));
         let height = f64::from(y_max) - bottom;
+        if glyph.name == "sqrt" {
+            base = Some((glyph.advance, height));
+        }
         glyph.contours = crate::delimiters::radical(f64::from(glyph.advance), height, rule)
             .into_iter()
             .map(|contour| {
@@ -220,6 +224,22 @@ fn radical_glyphs(glyphs: &mut [GlyphData], metrics: &Metrics) {
                     .collect()
             })
             .collect();
+    }
+
+    // The assembly pieces use the base's height and the next free private-use
+    // codes. The table names them by `sqrt.a0` and its neighbours.
+    if let Some((advance, height)) = base {
+        for (index, contours) in crate::delimiters::radical_pieces(f64::from(advance), height, rule)
+            .into_iter()
+            .enumerate()
+        {
+            glyphs.push(GlyphData {
+                name: crate::assembly::piece_name("sqrt", index),
+                unicodes: vec![next_code + u32::try_from(index).unwrap_or(0)],
+                advance,
+                contours,
+            });
+        }
     }
 }
 
@@ -538,7 +558,9 @@ pub fn build_all(
     let glyphs = crate::character::apply(glyphs, variants);
     let mut with_variants = glyphs.clone();
     with_variants.extend(derived_with(&glyphs, metrics, drawn));
-    radical_glyphs(&mut with_variants, metrics);
+    let next_code = crate::variants::PRIVATE_USE_START
+        + u32::try_from(with_variants.len() - glyphs.len()).unwrap_or(0);
+    radical_glyphs(&mut with_variants, metrics, next_code);
     let glyphs = with_variants.as_slice();
 
     let mut glyf_builder = GlyfLocaBuilder::new();
