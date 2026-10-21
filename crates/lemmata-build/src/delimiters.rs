@@ -247,10 +247,11 @@ pub fn radical(advance: f64, height: f64, rule: f64) -> Vec<Vec<QuadifyPoint>> {
     };
 
     let mut contours = hook;
-    contours.push(rect(stem_left, stem_right, 0.0, height - stroke));
-    // The top bar bridges the gap the stem leaves, so the renderer's rule
-    // starts at the advance where the bar ends.
-    contours.push(rect(stem_left, advance, height - stroke, height));
+    contours.push(rect(stem_left, stem_right, 0.0, height - rule));
+    // The top bar is the renderer's rule thickness, not the stem's, so the
+    // rule that starts at the advance continues it without a step. It bridges
+    // the gap the stem leaves.
+    contours.push(rect(stem_left, advance, height - rule, height));
 
     contours
 }
@@ -308,8 +309,8 @@ pub fn radical_pieces(advance: f64, height: f64, rule: f64) -> Vec<Vec<Vec<Quadi
     let extender = vec![rect(stem_left, stem_right, 0.0, high_cut - low_cut)];
     let top_height = height - high_cut;
     let top = vec![
-        rect(stem_left, stem_right, 0.0, top_height),
-        rect(stem_left, advance, top_height - stroke, top_height),
+        rect(stem_left, stem_right, 0.0, top_height - rule),
+        rect(stem_left, advance, top_height - rule, top_height),
     ];
 
     vec![bottom, extender, top]
