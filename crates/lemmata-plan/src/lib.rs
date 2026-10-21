@@ -45,6 +45,31 @@ impl Spacing {
     }
 }
 
+/// The OS/2 width class Iosevka gives each width grade.
+const WIDTH_GRADES: [(f64, u16); 7] = [
+    (416.0, 3),
+    (456.0, 4),
+    (500.0, 5),
+    (547.0, 6),
+    (600.0, 7),
+    (657.0, 8),
+    (720.0, 9),
+];
+
+/// The class nearest a width.
+///
+/// The grades are not evenly spaced, so dividing a width by a hundred puts 600
+/// in class 6 where Iosevka has class 7. A width outside the grades takes the
+/// nearest end. Classes 1 and 2 are narrower than any Iosevka grade and are not
+/// reachable from a width.
+#[must_use]
+pub fn width_class(width: f64) -> u16 {
+    WIDTH_GRADES
+        .iter()
+        .min_by(|(left, _), (right, _)| (left - width).abs().total_cmp(&(right - width).abs()))
+        .map_or(5, |(_, class)| *class)
+}
+
 /// What a caller chooses about the font.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Plan {
@@ -64,6 +89,15 @@ pub struct Plan {
     pub strikeout_position: i16,
     pub strikeout_thickness: i16,
     pub weight_class: u16,
+    /// The width the outlines are drawn at, in font units, which is also the
+    /// normal spacing's advance.
+    ///
+    /// Iosevka grades the width at 416, 456, 500, 547, 600, 657 and 720 and
+    /// interpolates between them, so a value between two grades is a coherent
+    /// frame rather than a rounded one. 500 is the normal face.
+    pub width: f64,
+    /// The OS/2 width class, which follows from the grade unless a plan sets it
+    /// on its own.
     pub width_class: u16,
     pub italic_angle: f64,
     /// The spacing the outlines were drawn at.
@@ -97,6 +131,7 @@ impl Default for Plan {
             strikeout_position: 250,
             strikeout_thickness: 50,
             weight_class: 400,
+            width: 500.0,
             width_class: 5,
             italic_angle: 0.0,
             spacing: Spacing::Normal,
@@ -160,7 +195,20 @@ pub fn from_json(text: &str) -> Result<Plan, String> {
     set_i16("strikeoutPosition", &mut plan.strikeout_position)?;
     set_i16("strikeoutThickness", &mut plan.strikeout_thickness)?;
     set_u16("weight", &mut plan.weight_class)?;
-    set_u16("width", &mut plan.width_class)?;
+    if let Some(value) = object.get("width") {
+        let width = value
+            .as_f64()
+            .ok_or_else(|| "width must be a number in font units".to_string())?;
+        if !(100.0..=2000.0).contains(&width) {
+            return Err("width is in font units, so 500 is normal, not 5".to_string());
+        }
+        plan.width = width;
+        plan.width_class = width_class(width);
+    }
+    set_u16("widthClass", &mut plan.width_class)?;
+    if !(1..=9).contains(&plan.width_class) {
+        return Err("widthClass is an OS/2 class from 1 to 9".to_string());
+    }
     if let Some(angle) = object.get("italicAngle") {
         plan.italic_angle = angle
             .as_f64()

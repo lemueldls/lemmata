@@ -210,7 +210,18 @@ fn build_font(build: Build) -> Result<(), String> {
         plan_path = std::fs::read_to_string(&plan_path)
             .map_err(|error| format!("reading {plan_path}: {error}"))?;
     }
-    let plan = lemmata_plan::from_json(&plan_path)?;
+    let mut plan = lemmata_plan::from_json(&plan_path)?;
+    // A shape flag builds the capture, so the plan has to agree with it or the
+    // ported glyphs are drawn at one shape into an advance from another.
+    if let Some(width) = width {
+        plan.width = width;
+        plan.width_class = lemmata_plan::width_class(width);
+    }
+    if let Some(weight) = weight {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let weight = weight.round().clamp(0.0, f64::from(u16::MAX)) as u16;
+        plan.weight_class = weight;
+    }
 
     // The glyph source is shared with the browser build, so a plan draws the
     // same outlines in both front ends.

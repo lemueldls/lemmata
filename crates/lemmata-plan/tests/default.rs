@@ -66,3 +66,32 @@ fn a_malformed_plan_is_an_error() {
     assert!(lemmata_plan::from_json("[1, 2]").is_err());
     assert!(lemmata_plan::from_json(r#"{"capHeight": "tall"}"#).is_err());
 }
+
+#[test]
+fn a_width_in_font_units_sets_the_class() {
+    let plan = lemmata_plan::from_json(r#"{"width": 600}"#).expect("parse");
+    assert_eq!(plan.width, 600.0);
+    assert_eq!(plan.width_class, 7, "600 is Iosevka's class 7 grade");
+    assert_eq!(plan.to_font_metrics().width_class, 7);
+
+    // A width between grades is kept, and the class goes to the nearer grade.
+    let between = lemmata_plan::from_json(r#"{"width": 580}"#).expect("parse");
+    assert_eq!(between.width, 580.0);
+    assert_eq!(between.width_class, 7);
+
+    let explicit = lemmata_plan::from_json(r#"{"width": 600, "widthClass": 6}"#).expect("parse");
+    assert_eq!(explicit.width, 600.0);
+    assert_eq!(explicit.width_class, 6, "an explicit class wins");
+}
+
+#[test]
+fn a_width_class_is_not_a_width() {
+    assert!(
+        lemmata_plan::from_json(r#"{"width": 6}"#).is_err(),
+        "the width key is in font units"
+    );
+    assert!(
+        lemmata_plan::from_json(r#"{"widthClass": 12}"#).is_err(),
+        "an OS/2 width class stops at 9"
+    );
+}

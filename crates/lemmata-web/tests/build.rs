@@ -127,8 +127,8 @@ fn a_quasi_proportional_capture_is_proportional() {
 
     // The two captures are the same set drawn differently, so the advances are
     // what separates them: one for every glyph, against one per letter class.
-    let advances = |capture: &[u8]| -> Vec<u16> {
-        let bytes = lemmata_web::build(capture, "").expect("build");
+    let advances = |capture: &[u8], plan: &str| -> Vec<u16> {
+        let bytes = lemmata_web::build(capture, plan).expect("build");
         let font = read_fonts::FontRef::new(&bytes).expect("reopen");
         let cmap = font.cmap().expect("cmap");
         let hmtx = font.hmtx().expect("hmtx");
@@ -143,10 +143,10 @@ fn a_quasi_proportional_capture_is_proportional() {
             })
             .collect()
     };
-    let [mono_i, mono_m] = advances(&mono)[..] else {
+    let [mono_i, mono_m] = advances(&mono, "")[..] else {
         panic!("two advances")
     };
-    let [quasi_i, quasi_m] = advances(&quasi)[..] else {
+    let [quasi_i, quasi_m] = advances(&quasi, r#"{"spacing": "quasi-proportional"}"#)[..] else {
         panic!("two advances")
     };
     assert_eq!(

@@ -20,7 +20,7 @@ use std::rc::Rc;
 
 use lemmata_build::font::GlyphData;
 use lemmata_geom::{Geometry, QuadifyPoint};
-use lemmata_plan::Plan;
+use lemmata_plan::{Plan, Spacing};
 use lemmata_ptl::metrics::{Metrics, Para};
 use lemmata_ptl::param::{self, Shape};
 use lemmata_ptl::shapes::Design;
@@ -52,7 +52,7 @@ pub fn shape_of(plan: &Plan) -> Shape {
         serifs: Some("sans".to_string()),
         spacing: Some(plan.spacing.name().to_string()),
         weight: f64::from(plan.weight_class),
-        width: f64::from(plan.width_class) * 100.0,
+        width: plan.width,
         slope_angle: plan.italic_angle,
         slope: if plan.italic_angle == 0.0 {
             "Upright".to_string()
@@ -311,6 +311,45 @@ pub fn advance_to_u16(advance: f64) -> u16 {
     advance.round().clamp(0.0, f64::from(u16::MAX)) as u16
 }
 
+/// The advance the plan gives a glyph.
+///
+/// A normal-spacing face has one advance for every glyph, and the plan's width
+/// is it. The capture's advance is the width the capture was drawn at, which is
+/// the same only when the plan asks for the default. A quasi-proportional
+/// capture carries an advance per letter class, so the plan keeps the capture's
+/// and the width reaches the ported outlines only.
+fn advance_of(plan: &Plan, glyph: &lemmata_capture::Glyph) -> u16 {
+    match plan.spacing {
+        Spacing::Normal => advance_to_u16(plan.width),
+        Spacing::QuasiProportional => advance_to_u16(glyph.advance),
+    }
+}
+
+/// The contours of an unported glyph, centred in the plan's frame.
+///
+/// A wider plan adds the space to the sidebearings, so the drawing moves half
+/// the difference. Left where the capture put it, the ink would sit against the
+/// left edge of a wider advance.
+fn centred(plan: &Plan, glyph: &lemmata_capture::Glyph, contours: &Contours) -> Contours {
+    let dx = (plan.width - glyph.advance) / 2.0;
+    if plan.spacing != Spacing::Normal || dx.abs() < 0.5 {
+        return contours.clone();
+    }
+
+    contours
+        .iter()
+        .map(|contour| {
+            contour
+                .iter()
+                .map(|point| QuadifyPoint {
+                    x: point.x + dx,
+                    ..*point
+                })
+                .collect()
+        })
+        .collect()
+}
+
 /// The glyphs a plan builds, from the ported definitions and the capture.
 ///
 /// A base letter takes the contours of the variant it was drawn from, so a plan
@@ -328,14 +367,19 @@ pub fn glyphs(plan: &Plan, captured: &[lemmata_capture::Glyph]) -> Vec<GlyphData
                 .get(&glyph.name)
                 .and_then(|variant| contours_of(variant))
                 .or_else(|| contours_of(&glyph.name));
+            let contours = drawn.map_or_else(
+                || {
+                    capture
+                        .get(&glyph.name)
+                        .map_or_else(Vec::new, |contours| centred(plan, glyph, contours))
+                },
+                |contours| contours.as_ref().clone(),
+            );
             GlyphData {
                 name: glyph.name.clone(),
                 unicodes: glyph.unicodes.clone(),
-                advance: advance_to_u16(glyph.advance),
-                contours: drawn
-                    .or_else(|| capture.get(&glyph.name).cloned())
-                    .map(|contours| contours.as_ref().clone())
-                    .unwrap_or_default(),
+                advance: advance_of(plan, glyph),
+                contours,
             }
         })
         .collect();
@@ -387,14 +431,25 @@ pub fn preview_glyphs(
     let wanted: BTreeSet<u32> = text.chars().map(u32::from).collect();
     let capture = capture_map(captured);
     let bases = base_variants(captured, &capture);
-    let needed: BTreeSet<String> = captured
+    let mut needed: BTreeSet<String> = captured
         .iter()
         .filter(|glyph| glyph.unicodes.iter().any(|code| wanted.contains(code)))
         .filter_map(|glyph| bases.get(&glyph.name).cloned())
         .collect();
+    // A chosen variant is part of what the text draws, and the capture may not
+    // hold it. Its contours are ported, so fill them and let the code below add
+    // the glyph the font applies.
+    for (group, variant) in &plan.variants {
+        let in_text = captured.iter().any(|glyph| {
+            glyph.name == *group && glyph.unicodes.iter().any(|code| wanted.contains(code))
+        });
+        if in_text {
+            needed.insert(lemmata_build::character::variant_name(group, variant));
+        }
+    }
     fill(plan, Some(&needed));
 
-    captured
+    let mut glyphs: Vec<GlyphData> = captured
         .iter()
         .map(|glyph| {
             let drawn = bases
@@ -402,17 +457,51 @@ pub fn preview_glyphs(
                 .filter(|_| glyph.unicodes.iter().any(|code| wanted.contains(code)))
                 .and_then(|variant| contours_of(variant))
                 .or_else(|| contours_of(&glyph.name));
+            let contours = drawn.map_or_else(
+                || {
+                    capture
+                        .get(&glyph.name)
+                        .map_or_else(Vec::new, |contours| centred(plan, glyph, contours))
+                },
+                |contours| contours.as_ref().clone(),
+            );
             GlyphData {
                 name: glyph.name.clone(),
                 unicodes: glyph.unicodes.clone(),
-                advance: advance_to_u16(glyph.advance),
-                contours: drawn
-                    .or_else(|| capture.get(&glyph.name).cloned())
-                    .map(|contours| contours.as_ref().clone())
-                    .unwrap_or_default(),
+                advance: advance_of(plan, glyph),
+                contours,
             }
         })
-        .collect()
+        .collect();
+
+    // A plan choice can name a drawing the capture never held. The arm above
+    // only maps letters the capture has, so add the chosen variant here.
+    let mut known: BTreeSet<String> = glyphs.iter().map(|glyph| glyph.name.clone()).collect();
+    for (group, variant) in &plan.variants {
+        let name = lemmata_build::character::variant_name(group, variant);
+        if known.contains(&name) {
+            continue;
+        }
+        let Some(contours) = contours_of(&name) else {
+            continue;
+        };
+        let Some(advance) = glyphs
+            .iter()
+            .find(|glyph| glyph.name == *group)
+            .map(|glyph| glyph.advance)
+        else {
+            continue;
+        };
+        glyphs.push(GlyphData {
+            name: name.clone(),
+            unicodes: Vec::new(),
+            advance,
+            contours: contours.as_ref().clone(),
+        });
+        known.insert(name);
+    }
+
+    glyphs
 }
 
 /// The group a glyph belongs to when the group is a single character.

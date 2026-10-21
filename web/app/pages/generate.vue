@@ -43,6 +43,7 @@ const BASICS = [
   { key: "ascender", label: "ascender", unit: "units", step: 1 },
   { key: "descender", label: "descender", unit: "units", step: 1 },
   { key: "weight", label: "weight", unit: "class", step: 100 },
+  { key: "width", label: "width", unit: "units", step: 1 },
   { key: "italicAngle", label: "italic angle", unit: "deg", step: 1 },
 ];
 
@@ -228,9 +229,9 @@ onBeforeUnmount(() => {
               </h2>
             </div>
             <p class="prose">
-              These keys become the font's vertical metrics and its weight class.
-              A weight change moves the tables in the browser; the outline itself
-              needs the native tool.
+              These keys become the font's metrics and the shape it draws. The
+              port redraws the letters it covers at the weight and width the
+              plan asks for; the rest keep the shape the capture was drawn at.
             </p>
           </div>
 

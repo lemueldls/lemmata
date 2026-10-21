@@ -85,13 +85,14 @@ pub fn preview_font(capture: &[u8], plan: &str, text: &str) -> Result<Vec<u8>, J
 pub fn default_plan() -> String {
     let plan = lemmata_plan::Plan::default();
     format!(
-        "{{\n  \"capHeight\": {},\n  \"xHeight\": {},\n  \"ascender\": {},\n  \"descender\": {},\n  \"italicAngle\": {},\n  \"weight\": {},\n  \"spacing\": \"{}\"\n}}",
+        "{{\n  \"capHeight\": {},\n  \"xHeight\": {},\n  \"ascender\": {},\n  \"descender\": {},\n  \"italicAngle\": {},\n  \"weight\": {},\n  \"width\": {},\n  \"spacing\": \"{}\"\n}}",
         plan.cap_height,
         plan.x_height,
         plan.ascender,
         plan.descender,
         plan.italic_angle,
         plan.weight_class,
+        plan.width,
         plan.spacing.name()
     )
 }
