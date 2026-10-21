@@ -351,6 +351,13 @@ helper; the flat bottom is the corner bowl with its rise set to zero. The
 capture holds 36 of the 50 built, 670 knots, exact. The hooked, short-leg,
 tailed-stem, Greek and Cyrillic forms are not ported.
 
+`z.ptl` has the straight and curly bodies over four serif settings, for the
+capital and the lower case. The straight middle is a four-corner spiro
+outline; the curly one is `XStrand`; the lower-case straight middle is an
+`ExtLineRhsToLhs`. The capture holds all 16 built, 536 knots, exact. The
+cursive body, the crossbar overlays, the hooked and swash forms, `Z.PLK` and
+the Cyrillic forms are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

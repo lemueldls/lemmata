@@ -479,7 +479,35 @@ u.toothedBottomRightSerifed,u.toothedMotionSerifed,u.toothedSerifed,\
 u.toothedSerifless,u.toothlessCornerMotionSerifed,\
 u.toothlessCornerSerifed,u.toothlessCornerSerifless,\
 u.toothlessRoundedMotionSerifed,u.toothlessRoundedSerifed,\
-u.toothlessRoundedSerifless'
+u.toothlessRoundedSerifless,Z.PLK,Z.curlyBottomSerifed,\
+Z.curlyBottomSerifedWithCrossBar,\
+Z.curlyBottomSerifedWithHorizontalCrossBar,Z.curlySerifed,\
+Z.curlySerifedWithCrossBar,Z.curlySerifedWithHorizontalCrossBar,\
+Z.curlySerifless,Z.curlySeriflessWithCrossBar,\
+Z.curlySeriflessWithHorizontalCrossBar,Z.curlyTopSerifed,\
+Z.curlyTopSerifedWithCrossBar,Z.curlyTopSerifedWithHorizontalCrossBar,\
+Z.cursive,Z.cursiveWithCrossBar,Z.cursiveWithHorizontalCrossBar,\
+Z.straightBottomSerifed,Z.straightBottomSerifedWithCrossBar,\
+Z.straightBottomSerifedWithHorizontalCrossBar,Z.straightSerifed,\
+Z.straightSerifedWithCrossBar,Z.straightSerifedWithHorizontalCrossBar,\
+Z.straightSerifless,Z.straightSeriflessWithCrossBar,\
+Z.straightSeriflessWithHorizontalCrossBar,Z.straightTopSerifed,\
+Z.straightTopSerifedWithCrossBar,\
+Z.straightTopSerifedWithHorizontalCrossBar,z.PLK,z.curlyBottomSerifed,\
+z.curlyBottomSerifedWithCrossBar,\
+z.curlyBottomSerifedWithHorizontalCrossBar,z.curlySerifed,\
+z.curlySerifedWithCrossBar,z.curlySerifedWithHorizontalCrossBar,\
+z.curlySerifless,z.curlySeriflessWithCrossBar,\
+z.curlySeriflessWithHorizontalCrossBar,z.curlyTopSerifed,\
+z.curlyTopSerifedWithCrossBar,z.curlyTopSerifedWithHorizontalCrossBar,\
+z.cursive,z.cursiveWithCrossBar,z.cursiveWithHorizontalCrossBar,\
+z.straightBottomSerifed,z.straightBottomSerifedWithCrossBar,\
+z.straightBottomSerifedWithHorizontalCrossBar,z.straightSerifed,\
+z.straightSerifedWithCrossBar,z.straightSerifedWithHorizontalCrossBar,\
+z.straightSerifless,z.straightSeriflessWithCrossBar,\
+z.straightSeriflessWithHorizontalCrossBar,z.straightTopSerifed,\
+z.straightTopSerifedWithCrossBar,\
+z.straightTopSerifedWithHorizontalCrossBar'
 npm run build -- ttf-unhinted::RefA
 ```
 
