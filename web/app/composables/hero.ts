@@ -1,10 +1,9 @@
-// A hero word that redraws itself from the plan.
+// A hero word whose letters each redraw themselves from the plan.
 //
 // The ported letters carry variants, and a plan selects one by moving its
-// drawing onto the letter a codepoint maps to. So the word is rebuilt as a small
-// preview font on a timer, rather than switched between glyphs in a fixed file:
-// `preview_font` recomputes only the letters the word draws, which is a few
-// milliseconds.
+// drawing onto the letter a codepoint maps to. A font draws every occurrence of
+// a letter the same way, so each occurrence gets its own face: the two `a`s and
+// the two `m`s can then hold different drawings at once.
 //
 // The choices come from the registry rather than from the capture. A capture
 // holds the drawings one build produced, which is the `a` family; the registry
@@ -15,7 +14,7 @@ import { preview_font, registry_names } from "lemmata-web";
 import { usePlan } from "~/composables/plan";
 
 const WORD = "lemmata";
-const PERIOD = 3200;
+const SWAP = 1800;
 const FALLBACK = "live from the font";
 
 interface Choice {
@@ -28,76 +27,91 @@ function kebab(name: string): string {
   return name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
 
-/// The variant choices the port draws for the letters of the word.
-function choices(): Choice[] {
-  const names = registry_names().split("\n");
-  const out: Choice[] = [];
-  for (const group of new Set(WORD)) {
+export function useHeroVariants() {
+  const { capture, ensure } = usePlan();
+  const letter = [...WORD];
+  const site = '"Lemmata", var(--built)';
+
+  /// The face each letter is drawn in.
+  const families = ref<string[]>(letter.map(() => site));
+  /// The face a letter is wiping towards, while its animation runs.
+  const pending = ref<(string | null)[]>(letter.map(() => null));
+  /// Bumped per letter so a new wipe restarts.
+  const swaps = ref<number[]>(letter.map(() => 0));
+  /// Which side the wipe enters from.
+  const directions = ref<("ltr" | "rtl")[]>(letter.map(() => "ltr"));
+  const label = ref(FALLBACK);
+
+  let options: Choice[] = [];
+  let swappable: number[] = [];
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let busy = false;
+  let serial = 0;
+  const current: (FontFace | null)[] = letter.map(() => null);
+  const next: (FontFace | null)[] = letter.map(() => null);
+  const last: string[] = letter.map(() => "");
+
+  /// The variant choices the port draws for a group.
+  function choices(group: string): Choice[] {
     const prefix = `${group}.`;
-    for (const name of names) {
+    const out: Choice[] = [];
+    for (const name of registry_names().split("\n")) {
       if (!name.startsWith(prefix)) continue;
       const suffix = name.slice(prefix.length);
-      // A suffix is a variant name. The derived drawings (`mathbb/a`, `aCap`)
-      // are other groups and never reach here.
       if (!/^[A-Za-z0-9]+$/.test(suffix)) continue;
       out.push({ group, variant: kebab(suffix) });
     }
+
+    return out;
   }
 
-  return out;
-}
+  /// A face that draws one letter with one variant.
+  async function makeFace(choice: Choice): Promise<FontFace | null> {
+    const bytes = capture.value;
+    if (!bytes) return null;
+    const plan = JSON.stringify({
+      variants: { [choice.group]: choice.variant },
+    });
+    const font = preview_font(bytes, plan, choice.group);
+    if (!font.length) return null;
+    const family = `Lemmata Hero ${serial++}`;
+    const face = new FontFace(family, font.buffer as ArrayBuffer);
+    await face.load();
+    document.fonts.add(face);
 
-export function useHeroVariants() {
-  const { capture, ensure } = usePlan();
-  const family = ref('"Lemmata", var(--built)');
-  const label = ref(FALLBACK);
-  /// The letters whose drawing just changed, so the page can animate them.
-  const changed = ref<number[]>([]);
-  /// Bumped on every swap; a key on the letter restarts its animation.
-  const tick = ref(0);
-
-  let face: FontFace | null = null;
-  let timer: ReturnType<typeof setInterval> | null = null;
-  let busy = false;
-  let last = "";
-  let options: Choice[] = [];
+    return face;
+  }
 
   async function swap(): Promise<void> {
-    const bytes = capture.value;
-    if (!bytes || busy || !options.length) return;
-    // Pick the letter first, then its drawing. Picking a drawing directly would
-    // drown `l` and `a` in the hundred `m` variants.
-    const groups = [...new Set(options.map((option) => option.group))];
-    const group = groups[Math.floor(Math.random() * groups.length)];
-    // Never the same drawing twice running, so the change reads as a cycle
-    // rather than a flicker.
+    if (busy || !swappable.length) return;
+    // A letter already wiping waits for its reveal to finish.
+    const ready = swappable.filter((index) => pending.value[index] === null);
+    if (!ready.length) return;
+    const index = ready[Math.floor(Math.random() * ready.length)];
+    if (index === undefined) return;
+    const group = letter[index];
+    if (!group) return;
+    // Pick the drawing first, then the direction it enters from.
     const pool = options.filter(
-      (option) =>
-        option.group === group && `${option.group}/${option.variant}` !== last,
+      (option) => option.group === group && option.variant !== last[index],
     );
-    const pick =
-      pool[Math.floor(Math.random() * pool.length)] ??
-      options.find((option) => option.group === group);
-    if (!pick) return;
+    const choice = pool[Math.floor(Math.random() * pool.length)];
+    if (!choice) return;
 
     busy = true;
     try {
-      const plan = JSON.stringify({
-        variants: { [pick.group]: pick.variant },
-      });
-      const font = preview_font(bytes, plan, WORD);
-      if (!font.length) return;
-      if (face) document.fonts.delete(face);
-      face = new FontFace("Lemmata Hero", font.buffer as ArrayBuffer);
-      await face.load();
-      document.fonts.add(face);
-      family.value = '"Lemmata Hero", var(--built)';
-      label.value = `${pick.group} · ${pick.variant}`;
-      changed.value = [...WORD]
-        .map((letter, index) => (letter === pick.group ? index : -1))
-        .filter((index) => index >= 0);
-      tick.value += 1;
-      last = `${pick.group}/${pick.variant}`;
+      const face = await makeFace(choice);
+      if (!face) return;
+      next[index] = face;
+      pending.value[index] = `"${face.family}"`;
+      directions.value[index] = Math.random() < 0.5 ? "ltr" : "rtl";
+      swaps.value[index] = (swaps.value[index] ?? 0) + 1;
+      label.value = `${group} · ${choice.variant}`;
+      last[index] = choice.variant;
+      // The reveal promotes on its own end, but a backgrounded tab throttles
+      // animations and that event never arrives. The timer is the fallback, and
+      // `promote` is idempotent.
+      window.setTimeout(() => promote(index), 700);
     } catch {
       // The last good drawing stays on screen.
     } finally {
@@ -105,21 +119,44 @@ export function useHeroVariants() {
     }
   }
 
+  /// The wipe finished: the letter keeps the new drawing and the old face goes.
+  function promote(index: number): void {
+    const family = pending.value[index];
+    const face = next[index];
+    if (!family || !face) return;
+    families.value[index] = family;
+    pending.value[index] = null;
+    if (current[index]) document.fonts.delete(current[index]);
+    current[index] = face;
+    next[index] = null;
+  }
+
   onMounted(async () => {
     // A word that redraws itself is motion. Honour the setting that asks for
     // none, and leave the site face in place.
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     await ensure();
-    options = choices();
-    if (!options.length) return;
+    for (const index of letter.keys()) {
+      const group = letter[index];
+      if (!group) continue;
+      if (!options.some((option) => option.group === group)) {
+        options.push(...choices(group));
+      }
+    }
+    swappable = [...letter.keys()].filter((index) =>
+      options.some((option) => option.group === letter[index]),
+    );
+    if (!swappable.length) return;
     await swap();
-    timer = setInterval(() => void swap(), PERIOD);
+    timer = setInterval(() => void swap(), SWAP);
   });
 
   onBeforeUnmount(() => {
     if (timer) clearInterval(timer);
-    if (face) document.fonts.delete(face);
+    for (const face of [...current, ...next]) {
+      if (face) document.fonts.delete(face);
+    }
   });
 
-  return { family, label, changed, tick };
+  return { letter, families, pending, swaps, directions, label, promote };
 }
