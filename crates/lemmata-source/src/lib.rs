@@ -177,7 +177,8 @@ pub fn ligature_glyphs(plan: &Plan) -> Vec<GlyphData> {
         design: &design,
     };
     let drawn: BTreeMap<String, Geometry> = ligation.glyphs().into_iter().collect();
-    let advance = u16::try_from(metrics.width.round() as i64).unwrap_or(0);
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let advance = metrics.width.round() as u16;
     let mut out = Vec::new();
     for (target, source) in lemmata_build::ligatures::sources() {
         let Some(geometry) = drawn.get(source) else {

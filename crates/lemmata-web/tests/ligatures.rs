@@ -141,14 +141,26 @@ fn the_preview_joins_the_sequences_too() {
         eprintln!("skipping: no capture");
         return;
     };
-    let bytes = lemmata_web::build_preview(&capture, "", "-> => /* */").expect("preview");
+    let bytes = lemmata_web::build_preview(&capture, "", "-> => <= >= /* */").expect("preview");
     let blob: harfrust::font::Blob = bytes.into();
     let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
 
-    for text in ["->", "=>", "/*"] {
-        let (plain_a, _) = shape(&font, &text[..1]);
-        let (plain_b, _) = shape(&font, &text[1..]);
+    for (text, first, second) in [
+        ("->", "-", ">"),
+        ("=>", "=", ">"),
+        ("<=", "<", "="),
+        (">=", ">", "="),
+    ] {
         let (joined, _) = shape(&font, text);
-        assert_ne!(joined, vec![plain_a[0], plain_b[0]], "{text} did not join");
+        let (plain_first, _) = shape(&font, first);
+        let (plain_second, _) = shape(&font, second);
+        assert_ne!(
+            joined[0], plain_first[0],
+            "{text}: the left glyph did not join"
+        );
+        assert_ne!(
+            joined[1], plain_second[0],
+            "{text}: the right glyph did not join"
+        );
     }
 }

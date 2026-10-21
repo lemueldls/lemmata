@@ -147,23 +147,40 @@ pub fn add_for(
     text_names: &std::collections::BTreeSet<String>,
 ) -> Vec<Ligature> {
     let (rules, extra) = fixture();
-    let relevant: Vec<Ligature> = rules
-        .iter()
-        .filter(|rule| {
-            text_names.contains(&rule.input)
+    // The right half of a pair names the left half's joined form in its
+    // context, so a rule becomes reachable only after the rule that produces
+    // that form. Grow the set until it stops changing.
+    let mut known = text_names.clone();
+    let mut included = vec![false; rules.len()];
+    let mut relevant = Vec::new();
+    loop {
+        let mut progress = false;
+        for (index, rule) in rules.iter().enumerate() {
+            if included[index] {
+                continue;
+            }
+            let ready = known.contains(&rule.input)
                 && rule
                     .lookahead
                     .iter()
                     .flatten()
-                    .all(|name| text_names.contains(name))
+                    .all(|name| known.contains(name))
                 && rule
                     .backtrack
                     .iter()
                     .flatten()
-                    .all(|name| text_names.contains(name))
-        })
-        .cloned()
-        .collect();
+                    .all(|name| known.contains(name));
+            if ready {
+                included[index] = true;
+                known.insert(rule.target.clone());
+                relevant.push(rule.clone());
+                progress = true;
+            }
+        }
+        if !progress {
+            break;
+        }
+    }
     let targets: std::collections::BTreeSet<&str> =
         relevant.iter().map(|rule| rule.target.as_str()).collect();
     for glyph in extra {
