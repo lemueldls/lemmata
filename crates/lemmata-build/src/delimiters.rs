@@ -84,10 +84,8 @@ fn hook(
     points.push((inner[SAMPLES].0, bottom));
     points.extend(inner.iter().rev().copied());
 
-    // The tip is closed with a separate disc rather than a cap arc on the body.
-    // A half-circle stitched into the body can cross the offsets it meets; a
-    // disc overlaps the body and both contours wind the same way, so the union
-    // is solid.
+    // The tip is a flat cap: the contour closes straight across the stroke,
+    // matching the drawn ends of the rest of the font.
     let area = points
         .iter()
         .zip(points.iter().cycle().skip(1))
@@ -97,19 +95,11 @@ fn hook(
     if area < 0.0 {
         points.reverse();
     }
-    let mut cap = Vec::new();
-    const DISC: usize = 20;
-    for step in 0..DISC {
-        let angle = std::f64::consts::TAU * f64::from(u32::try_from(step).unwrap_or(0))
-            / f64::from(u32::try_from(DISC).unwrap_or(1));
-        cap.push((p0.0 + half * angle.cos(), p0.1 + half * angle.sin()));
-    }
 
     // Round before grounding so the piece's bbox and the advance the table
     // writes are the same integer.
     let low = points
         .iter()
-        .chain(cap.iter())
         .fold(f64::INFINITY, |low, point| low.min(point.1.round()));
     let body = points
         .into_iter()
@@ -119,16 +109,8 @@ fn hook(
             y: y.round() - low,
         })
         .collect();
-    let disc = cap
-        .into_iter()
-        .map(|(x, y)| QuadifyPoint {
-            kind: QuadifyKind::Corner,
-            x: x.round(),
-            y: y.round() - low,
-        })
-        .collect();
 
-    vec![body, disc]
+    vec![body]
 }
 
 /// The top or bottom hook of a delimiter, from the glyph's own stem and tip.
@@ -179,10 +161,11 @@ pub fn drawn_hook(
         };
     }
     // The cap's outer edge is the glyph's own extreme.
+    // A flat cap ends at the tip itself, so the tip is the glyph's own extreme.
     let tip = if measured > stem {
-        f64::from(x_max) - width / 2.0
+        f64::from(x_max)
     } else {
-        f64::from(x_min) + width / 2.0
+        f64::from(x_min)
     };
     let hook_height = h * hook_fraction;
     let stub = h * stub_fraction;
@@ -211,11 +194,19 @@ pub fn radical(advance: f64, height: f64, rule: f64) -> Vec<Vec<QuadifyPoint>> {
     let stem_right = advance - gap;
     let stem_left = stem_right - stroke;
     let stem = stem_right - stroke / 2.0;
+    let start = (stroke / 2.0, height * 0.45);
+    let end = (stem, stroke / 2.0);
     let hook = hook(
-        (stroke / 2.0, height * 0.45),
-        (stroke / 2.0 + advance * 0.18, height * 0.45),
-        (stem, height * 0.15),
-        (stem, stroke / 2.0),
+        start,
+        (
+            start.0 + (end.0 - start.0) / 3.0,
+            start.1 + (end.1 - start.1) / 3.0,
+        ),
+        (
+            start.0 + 2.0 * (end.0 - start.0) / 3.0,
+            start.1 + 2.0 * (end.1 - start.1) / 3.0,
+        ),
+        end,
         stroke,
         0.0,
         true,
@@ -270,11 +261,19 @@ pub fn radical_pieces(advance: f64, height: f64, rule: f64) -> Vec<Vec<Vec<Quadi
     let low_cut = (height * 0.55).round();
     let high_cut = (height * 0.75).round();
 
+    let start = (stroke / 2.0, height * 0.45);
+    let end = (stem, stroke / 2.0);
     let hook = hook(
-        (stroke / 2.0, height * 0.45),
-        (stroke / 2.0 + advance * 0.18, height * 0.45),
-        (stem, height * 0.15),
-        (stem, stroke / 2.0),
+        start,
+        (
+            start.0 + (end.0 - start.0) / 3.0,
+            start.1 + (end.1 - start.1) / 3.0,
+        ),
+        (
+            start.0 + 2.0 * (end.0 - start.0) / 3.0,
+            start.1 + 2.0 * (end.1 - start.1) / 3.0,
+        ),
+        end,
         stroke,
         0.0,
         true,
