@@ -20,6 +20,7 @@ use crate::letter::latin::{
 };
 use crate::symbol::math::dots_and_colons::DotsAndColons;
 use crate::symbol::punctuation::asterisk::Asterisk;
+use crate::symbol::punctuation::brackets::Brackets;
 
 /// Every glyph the ported definitions build, by name.
 #[must_use]
@@ -52,6 +53,15 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
         .glyphs(),
     );
     out.extend(DotsAndColons { metrics, kit: &kit }.glyphs());
+    out.extend(
+        Brackets {
+            df: &df,
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
     out.extend(
         lower_a::LowerA {
             df: &df,

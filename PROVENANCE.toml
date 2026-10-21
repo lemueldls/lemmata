@@ -24,6 +24,10 @@ ours = "crates/lemmata-glyphs/src/symbol/punctuation/asterisk.rs"
 upstream = "packages/font-glyphs/src/symbol/punctuation/asterisk.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/brackets.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/brackets.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/lower_a.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-a.ptl"
 

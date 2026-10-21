@@ -44,6 +44,20 @@ pub struct Design {
     pub f_bar_pos_to_xh: f64,
     pub fbar_stroke_adj: f64,
     pub tight_hook_superness: f64,
+    pub paren_outside: f64,
+    pub paren_outside_sw_adj: f64,
+    pub paren_inside: f64,
+    pub paren_inside_sw_adj: f64,
+    pub paren_curliness: f64,
+    pub paren_overshoot: f64,
+    pub bracket_outside: f64,
+    pub bracket_outside_sw_adj: f64,
+    pub bracket_inside: f64,
+    pub brace_outside: f64,
+    pub brace_inside: f64,
+    pub brace_curly_m1: f64,
+    pub brace_curly_m2: f64,
+    pub brace_overshoot: f64,
 }
 
 impl Default for Design {
@@ -57,6 +71,20 @@ impl Default for Design {
             f_bar_pos_to_xh: 0.875,
             fbar_stroke_adj: 0.25,
             tight_hook_superness: 2.30,
+            paren_outside: 0.2,
+            paren_outside_sw_adj: 0.2,
+            paren_inside: 0.9,
+            paren_inside_sw_adj: 0.35,
+            paren_curliness: 0.7,
+            paren_overshoot: 0.0375,
+            bracket_outside: 0.2,
+            bracket_outside_sw_adj: 0.2,
+            bracket_inside: 0.9,
+            brace_outside: 0.05,
+            brace_inside: 0.9,
+            brace_curly_m1: 0.6,
+            brace_curly_m2: 0.45,
+            brace_overshoot: 0.02,
         }
     }
 }
