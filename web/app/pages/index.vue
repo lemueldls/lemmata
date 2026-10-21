@@ -10,7 +10,13 @@ import { useHeroVariants } from "~/composables/hero";
 useHead({ title: "Specimen" });
 
 const font = useLemmataFont();
-const { family: heroFamily, label: heroLabel } = useHeroVariants();
+const {
+  family: heroFamily,
+  label: heroLabel,
+  changed: heroChanged,
+  tick: heroTick,
+} = useHeroVariants();
+const HERO = [..."lemmata"];
 
 /// The reference plan, which is what the builder uses when a key is absent.
 const PLAN = {
@@ -109,7 +115,15 @@ const readings = computed(() => {
             <b>+</b> specimen 001 <i>/</i> {{ heroLabel }}
           </p>
 
-          <h1 class="hero__word" :style="{ fontFamily: heroFamily }">lemmata</h1>
+          <h1 class="hero__word" :style="{ fontFamily: heroFamily }">
+            <span
+              v-for="(letter, index) in HERO"
+              :key="`${index}-${heroChanged.includes(index) ? heroTick : 0}`"
+              class="hero__letter"
+              :class="{ 'hero__letter--swap': heroChanged.includes(index) }"
+              >{{ letter }}</span
+            >
+          </h1>
 
           <div class="hero__rule">
             <span>one plan</span>
@@ -327,3 +341,40 @@ const readings = computed(() => {
     </div>
   </PlusPlate>
 </template>
+
+<style scoped>
+/* The letters are separate inline blocks so the one whose drawing changed can
+   be animated on its own. The word is monospaced, so nothing is lost between
+   them. */
+.hero__letter {
+  display: inline-block;
+  white-space: pre;
+}
+
+.hero__letter--swap {
+  animation: hero-letter 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@keyframes hero-letter {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.05em) scale(0.96);
+    filter: blur(3px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__letter--swap {
+    animation: none;
+  }
+}
+</style>
