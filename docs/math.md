@@ -22,6 +22,8 @@ Most of them the specification gives a formula for, in multiples of the rule thi
 
 The values are floors rather than the last word. A renderer also clears the base it places a script against, and that rule reads this font's own x-height, so a shift that is too small here is still raised there.
 
+The numerator sits farther from the fraction bar than the denominator. The numerator shift, 677 units in display style and 394 in text, is larger than the denominator's clearance once the denominator's cap height is taken out, 686 and 345. A renderer therefore clamps the denominator to the minimum gap and leaves the numerator where its shift puts it. Noto Sans Math and DejaVu Math TeX Gyre behave the same way, so the asymmetry is in the constants rather than in Typst or MathML. Lowering `fractionNumeratorShiftUp` is what would equalise the two gaps; the New Computer Modern value is kept.
+
 Two defects followed from leaving those at zero, both visible in a Typst render of the corpus: superscripts sat on the baseline because `superscriptShiftUp` was zero, and a display summation and integral stayed at text size because `displayOperatorMinHeight` was. A renderer that substitutes its own default for a zero hides the difference; Typst reads the constant as written.
 
 ## Per-glyph information
