@@ -772,7 +772,7 @@ fn the_radical_has_a_vertical_stem() {
         .map(|(x, _)| *x)
         .collect();
 
-    assert_eq!(right, advance, "the stem's right edge is the advance");
+    assert_eq!(right, advance, "the top bar reaches the advance");
     assert!(
         left < advance - 40,
         "the hook reaches left of the stem: {left}"

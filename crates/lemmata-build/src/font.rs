@@ -203,14 +203,18 @@ fn radical_glyphs(glyphs: &mut [GlyphData], metrics: &Metrics) {
         let Some((_, y_min, _, y_max)) = glyph.bounding_box() else {
             continue;
         };
-        let height = f64::from(y_max - y_min);
+        // A radical's depth has to cover a descender as well as the baseline.
+        // The text glyph stops at its own depth, which is shallower than the
+        // font's.
+        let bottom = f64::from(metrics.descender).min(f64::from(y_min));
+        let height = f64::from(y_max) - bottom;
         glyph.contours = crate::delimiters::radical(f64::from(glyph.advance), height, rule)
             .into_iter()
             .map(|contour| {
                 contour
                     .into_iter()
                     .map(|point| lemmata_geom::QuadifyPoint {
-                        y: point.y + f64::from(y_min),
+                        y: point.y + bottom,
                         ..point
                     })
                     .collect()

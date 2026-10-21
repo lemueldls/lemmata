@@ -204,40 +204,53 @@ pub fn drawn_hook(
 /// touch it.
 #[must_use]
 pub fn radical(advance: f64, height: f64, rule: f64) -> Vec<Vec<QuadifyPoint>> {
-    let stem = advance - rule / 2.0;
+    // The stem and hook carry the drawing's stroke, which is heavier than the
+    // rule a renderer draws for the vinculum.
+    let stroke = rule * 1.5;
+    let gap = advance * 0.04;
+    let stem_right = advance - gap;
+    let stem_left = stem_right - stroke;
+    let stem = stem_right - stroke / 2.0;
     let hook = hook(
-        (rule / 2.0, height * 0.45),
-        (rule / 2.0 + advance * 0.18, height * 0.45),
+        (stroke / 2.0, height * 0.45),
+        (stroke / 2.0 + advance * 0.18, height * 0.45),
         (stem, height * 0.15),
-        (stem, rule / 2.0),
-        rule,
+        (stem, stroke / 2.0),
+        stroke,
         0.0,
         true,
     );
 
+    let rect = |left: f64, right: f64, low: f64, high: f64| {
+        vec![
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: left,
+                y: low,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: right,
+                y: low,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: right,
+                y: high,
+            },
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: left,
+                y: high,
+            },
+        ]
+    };
+
     let mut contours = hook;
-    contours.push(vec![
-        QuadifyPoint {
-            kind: QuadifyKind::Corner,
-            x: advance - rule,
-            y: 0.0,
-        },
-        QuadifyPoint {
-            kind: QuadifyKind::Corner,
-            x: advance,
-            y: 0.0,
-        },
-        QuadifyPoint {
-            kind: QuadifyKind::Corner,
-            x: advance,
-            y: height,
-        },
-        QuadifyPoint {
-            kind: QuadifyKind::Corner,
-            x: advance - rule,
-            y: height,
-        },
-    ]);
+    contours.push(rect(stem_left, stem_right, 0.0, height - stroke));
+    // The top bar bridges the gap the stem leaves, so the renderer's rule
+    // starts at the advance where the bar ends.
+    contours.push(rect(stem_left, advance, height - stroke, height));
 
     contours
 }
