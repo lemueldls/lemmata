@@ -572,8 +572,10 @@ pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec
             let band = slice_y(glyph, low, high);
             x_range(&band)
         };
-        let upper_mid = f64::midpoint(point_high, upper_cut);
-        let lower_mid = f64::midpoint(lower_cut, point_low);
+        // Measure at the point's cuts, not halfway along the bars: those are
+        // the edges the point and the hooks actually meet.
+        let upper_mid = point_high;
+        let lower_mid = point_low;
         let (Some(upper_range), Some(lower_range)) = (
             probe(upper_mid - stroke / 2.0, upper_mid + stroke / 2.0),
             probe(lower_mid - stroke / 2.0, lower_mid + stroke / 2.0),
