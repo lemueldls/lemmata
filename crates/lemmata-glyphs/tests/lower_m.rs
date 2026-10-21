@@ -199,8 +199,8 @@ fn lower_m_matches_capture() {
                         b.y
                     ),
                     (None, None) => {}
-                    _ => panic!(
-                        "{name} {index}: one side has a normal at ({}, {}) and the other does not",
+                    (ours_normal, theirs_normal) => panic!(
+                        "{name} {index}: normal at ({}, {}) is {ours_normal:?}, capture has {theirs_normal:?}",
                         knot.x, knot.y
                     ),
                 }
