@@ -26,6 +26,13 @@ A candidate nothing depends on belongs in neither the manifest nor this table.
 | ttf2woff2 | 0.14.0 |
 | wasm-bindgen | 0.2.129 |
 
+## Configuration
+
+| Crate | Version |
+| --- | --- |
+| serde | 1.0.229 |
+| toml | 0.9.12 |
+
 ## Tooling
 
 | Tool | Version |

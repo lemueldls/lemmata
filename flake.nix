@@ -110,7 +110,7 @@
               mkdir -p "$out/share/fonts/$kind"
               lemmata build \
                 --glyphs ${capture} \
-                --family ${lib.escapeShellArg family} \
+                --name ${lib.escapeShellArg family} \
                 --plan ${
                   if builtins.isString plan then
                     pkgs.writeText "lemmata-plan.json" plan

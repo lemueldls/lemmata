@@ -52,7 +52,7 @@ const build = (capture, planFile, out, family) => {
       out,
       "--plan",
       planFile,
-      "--family",
+      "--name",
       family,
     ],
     { stdio: ["ignore", "inherit", "inherit"] },

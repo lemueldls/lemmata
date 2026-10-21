@@ -6,6 +6,7 @@
 //!
 //! r[impl build.name]
 //! r[impl build.valid]
+//! r[impl family.names]
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
@@ -48,6 +49,9 @@ pub struct Metrics {
     pub weight_class: u16,
     pub width_class: u16,
     pub italic_angle: f64,
+    /// Whether the face is drawn on one advance. `post.isFixedPitch` sets this,
+    /// and a quasi-proportional face must not claim it.
+    pub is_fixed_pitch: bool,
 }
 
 impl Default for Metrics {
@@ -72,6 +76,7 @@ impl Default for Metrics {
             weight_class: 400,
             width_class: 5,
             italic_angle: 0.0,
+            is_fixed_pitch: true,
         }
     }
 }
@@ -81,6 +86,13 @@ impl Default for Metrics {
 pub struct Names {
     pub family: String,
     pub subfamily: String,
+    /// The typographic family (name ID 16). `None` falls back to `family`.
+    pub typographic_family: Option<String>,
+    /// The typographic subfamily (name ID 17). `None` falls back to `subfamily`.
+    pub typographic_subfamily: Option<String>,
+    /// The PostScript name (name ID 6). `None` derives `Family-Subfamily` with
+    /// spaces removed.
+    pub postscript_name: Option<String>,
     pub version: String,
     pub vendor: Tag,
 }
@@ -90,10 +102,56 @@ impl Default for Names {
         Self {
             family: "Lemmata".to_string(),
             subfamily: "Regular".to_string(),
+            typographic_family: None,
+            typographic_subfamily: None,
+            postscript_name: None,
             version: "Version 1.000".to_string(),
             vendor: Tag::new(b"LEMM"),
         }
     }
+}
+
+impl Names {
+    /// The typographic family, falling back to the legacy family.
+    #[must_use]
+    pub fn typographic_family(&self) -> &str {
+        self.typographic_family.as_deref().unwrap_or(&self.family)
+    }
+
+    /// The typographic subfamily, falling back to the legacy subfamily.
+    #[must_use]
+    pub fn typographic_subfamily(&self) -> &str {
+        self.typographic_subfamily
+            .as_deref()
+            .unwrap_or(&self.subfamily)
+    }
+
+    /// The PostScript name, with spaces removed from the fallback so the name
+    /// is legal for a name ID 6 record.
+    #[must_use]
+    pub fn postscript_name(&self) -> String {
+        self.postscript_name.clone().unwrap_or_else(|| {
+            format!(
+                "{}-{}",
+                self.family.replace(' ', ""),
+                self.subfamily.replace(' ', "")
+            )
+        })
+    }
+}
+
+/// Reads the four-character vendor tag a family file writes.
+///
+/// # Errors
+///
+/// Returns a message when the tag is not four ASCII characters.
+pub fn vendor_tag(text: &str) -> Result<Tag, String> {
+    let bytes = text.as_bytes();
+    if bytes.len() != 4 || !bytes.is_ascii() {
+        return Err("the vendor tag must be four ASCII characters".to_string());
+    }
+
+    Ok(Tag::new(&[bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
 
 /// One glyph, ready to write.
@@ -639,10 +697,37 @@ pub fn build_all(
         .map(|(ch, _)| *ch as u32)
         .max()
         .unwrap_or(0);
+    let x_avg_char_width = if h_metrics.is_empty() {
+        0
+    } else {
+        let total: u64 = h_metrics
+            .iter()
+            .map(|metric| u64::from(metric.advance))
+            .sum();
+        i16::try_from(total / h_metrics.len() as u64).unwrap_or(i16::MAX)
+    };
 
     // One source of truth for the style. A renderer picks an italic face by the
     // style bits, so they have to agree with the angle the glyphs were drawn at.
+    // Bold is the weight the font declares; a face at 700 or above is bold, and
+    // a lighter face with a name like SemiBold is not.
     let italic = metrics.italic_angle != 0.0;
+    let bold = metrics.weight_class >= 700;
+    let mut mac_style = MacStyle::empty();
+    if bold {
+        mac_style |= MacStyle::BOLD;
+    }
+    if italic {
+        mac_style |= MacStyle::ITALIC;
+    }
+    let caret = if italic {
+        (
+            1000,
+            (-lemmata_geom::math::tan(metrics.italic_angle.to_radians()) * 1000.0).round() as i16,
+        )
+    } else {
+        (1, 0)
+    };
 
     let head = Head {
         font_revision: Fixed::from_f64(1.0),
@@ -656,11 +741,7 @@ pub fn build_all(
         y_min,
         x_max,
         y_max,
-        mac_style: if italic {
-            MacStyle::ITALIC
-        } else {
-            MacStyle::empty()
-        },
+        mac_style,
         lowest_rec_ppem: 8,
         font_direction_hint: 2,
         index_to_loc_format: match loca_format {
@@ -677,8 +758,8 @@ pub fn build_all(
         min_left_side_bearing: FWord::new(min_left_side_bearing),
         min_right_side_bearing: FWord::new(min_right_side_bearing),
         x_max_extent: FWord::new(x_max_extent),
-        caret_slope_rise: 1,
-        caret_slope_run: 0,
+        caret_slope_rise: caret.0,
+        caret_slope_run: caret.1,
         caret_offset: 0,
         number_of_h_metrics: glyph_count,
     };
@@ -701,9 +782,7 @@ pub fn build_all(
     };
 
     let os2 = Os2 {
-        x_avg_char_width: h_metrics
-            .first()
-            .map_or(0, |metric| i16::try_from(metric.advance).unwrap_or(0)),
+        x_avg_char_width,
         us_weight_class: metrics.weight_class,
         us_width_class: metrics.width_class,
         fs_type: 0,
@@ -724,12 +803,21 @@ pub fn build_all(
         ul_unicode_range_3: 0,
         ul_unicode_range_4: 0,
         ach_vend_id: names.vendor,
-        // The specification has REGULAR mean neither bold nor italic, so an
-        // italic face sets ITALIC alone.
-        fs_selection: if italic {
-            SelectionFlags::ITALIC
-        } else {
-            SelectionFlags::REGULAR
+        // The specification has REGULAR mean neither bold nor italic. A bold
+        // face sets BOLD alone, an italic face ITALIC alone, and a bold italic
+        // sets both.
+        fs_selection: {
+            let mut selection = SelectionFlags::empty();
+            if bold {
+                selection |= SelectionFlags::BOLD;
+            }
+            if italic {
+                selection |= SelectionFlags::ITALIC;
+            }
+            if !bold && !italic {
+                selection |= SelectionFlags::REGULAR;
+            }
+            selection
         },
         us_first_char_index: first_char as u16,
         us_last_char_index: last_char as u16,
@@ -756,7 +844,7 @@ pub fn build_all(
         italic_angle: Fixed::from_f64(-metrics.italic_angle),
         underline_position: FWord::new(metrics.underline_position),
         underline_thickness: FWord::new(metrics.underline_thickness),
-        is_fixed_pitch: 1,
+        is_fixed_pitch: u32::from(metrics.is_fixed_pitch),
         min_mem_type42: 0,
         max_mem_type42: 0,
         min_mem_type1: 0,
@@ -893,12 +981,16 @@ const UPSTREAM: &str =
     "Glyph source: Iosevka 34.9.0, commit 2487637bb71f41b2a66134afd9faa6c316e5a438";
 
 fn build_name_table(names: &Names, metrics: &Metrics) -> Name {
-    let full_name = format!("{} {}", names.family, names.subfamily);
-    let postscript_name = format!("{}-{}", names.family, names.subfamily);
+    let family = names.family.clone();
+    let subfamily = names.subfamily.clone();
+    let typographic_family = names.typographic_family().to_string();
+    let typographic_subfamily = names.typographic_subfamily().to_string();
+    let full_name = format!("{family} {subfamily}");
+    let postscript_name = names.postscript_name();
     let unique_id = format!("{full_name}; Lemmata; {}\n", names.version);
     let records = [
-        (NameId::FAMILY_NAME, names.family.clone()),
-        (NameId::SUBFAMILY_NAME, names.subfamily.clone()),
+        (NameId::FAMILY_NAME, family),
+        (NameId::SUBFAMILY_NAME, subfamily),
         (NameId::UNIQUE_ID, unique_id),
         (NameId::FULL_NAME, full_name),
         (NameId::VERSION_STRING, names.version.clone()),
@@ -907,8 +999,8 @@ fn build_name_table(names: &Names, metrics: &Metrics) -> Name {
         // the family rather than treating it as a family of its own. Without
         // it a math renderer sets variables upright, because it never pairs
         // the two.
-        (NameId::TYPOGRAPHIC_FAMILY_NAME, names.family.clone()),
-        (NameId::TYPOGRAPHIC_SUBFAMILY_NAME, names.subfamily.clone()),
+        (NameId::TYPOGRAPHIC_FAMILY_NAME, typographic_family),
+        (NameId::TYPOGRAPHIC_SUBFAMILY_NAME, typographic_subfamily),
         // The license asks for a copyright notice and a statement of the
         // license, and a font that derives from OFL Font Software has to carry
         // both wherever it goes.

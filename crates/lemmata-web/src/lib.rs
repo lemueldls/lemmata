@@ -30,15 +30,25 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
     glyphs.extend(lemmata_source::ligature_glyphs(&plan));
     let rules = lemmata_build::ligatures::add(&mut glyphs);
     let drawn = lemmata_source::texture_forms(&plan, &captured);
+    let names = names_for(&plan);
 
-    lemmata_build::font::build_all(
-        &glyphs,
-        &metrics,
-        &Names::default(),
-        &plan.variants,
-        rules,
-        &drawn,
-    )
+    lemmata_build::font::build_all(&glyphs, &metrics, &names, &plan.variants, rules, &drawn)
+}
+
+/// The names the page's font carries. The page has one family; the style comes
+/// from the plan's weight and slope, so a bold or slanted build is not filed as
+/// a Regular.
+fn names_for(plan: &lemmata_plan::Plan) -> Names {
+    let subfamily = plan.style_subfamily();
+
+    Names {
+        family: "Lemmata".to_string(),
+        subfamily,
+        typographic_family: None,
+        typographic_subfamily: None,
+        postscript_name: None,
+        ..Names::default()
+    }
 }
 
 /// The same build, for the page.
@@ -75,8 +85,9 @@ pub fn build_preview(capture: &[u8], plan: &str, text: &str) -> Result<Vec<u8>, 
         .map(|glyph| glyph.name.clone())
         .collect();
     let rules = lemmata_build::ligatures::add_for(&mut glyphs, &text_names);
+    let names = names_for(&plan);
 
-    lemmata_build::font::build_with(&glyphs, &metrics, &Names::default(), &plan.variants, &rules)
+    lemmata_build::font::build_with(&glyphs, &metrics, &names, &plan.variants, &rules)
 }
 
 /// The preview, for the page.
@@ -95,7 +106,7 @@ pub fn preview_font(capture: &[u8], plan: &str, text: &str) -> Result<Vec<u8>, J
 pub fn default_plan() -> String {
     let plan = lemmata_plan::Plan::default();
     format!(
-        "{{\n  \"capHeight\": {},\n  \"xHeight\": {},\n  \"ascender\": {},\n  \"descender\": {},\n  \"italicAngle\": {},\n  \"weight\": {},\n  \"width\": {},\n  \"spacing\": \"{}\"\n}}",
+        "{{\n  \"capHeight\": {},\n  \"xHeight\": {},\n  \"ascender\": {},\n  \"descender\": {},\n  \"italicAngle\": {},\n  \"weight\": {},\n  \"width\": {},\n  \"spacing\": \"{}\",\n  \"serifs\": \"{}\"\n}}",
         plan.cap_height,
         plan.x_height,
         plan.ascender,
@@ -103,7 +114,8 @@ pub fn default_plan() -> String {
         plan.italic_angle,
         plan.weight_class,
         plan.width,
-        plan.spacing.name()
+        plan.spacing.name(),
+        plan.serifs
     )
 }
 

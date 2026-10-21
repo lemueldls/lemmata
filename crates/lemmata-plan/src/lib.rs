@@ -16,7 +16,10 @@
 //! one tool reads in the other for the fields both have.
 
 use lemmata_build::font::Metrics;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeMap;
+use std::path::Path;
 
 /// The spacing a font is drawn at.
 ///
@@ -41,6 +44,19 @@ impl Spacing {
         match self {
             Self::Normal => "normal",
             Self::QuasiProportional => "quasi-proportional",
+        }
+    }
+
+    /// Reads the name a plan writes.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message for a name that is not one of the two spacings.
+    pub fn from_name(name: &str) -> Result<Self, String> {
+        match name {
+            "normal" => Ok(Self::Normal),
+            "quasi-proportional" => Ok(Self::QuasiProportional),
+            _ => Err("spacing must be \"normal\" or \"quasi-proportional\"".to_string()),
         }
     }
 }
@@ -102,6 +118,9 @@ pub struct Plan {
     pub italic_angle: f64,
     /// The spacing the outlines were drawn at.
     pub spacing: Spacing,
+    /// The serif style the outlines were drawn with. The ported source reads
+    /// this, so a slab family cannot be drawn as sans.
+    pub serifs: String,
     /// The character variants the plan selects, by group and variant name.
     ///
     /// Iosevka names these in kebab case under `variants.design`, and the glyph
@@ -135,6 +154,7 @@ impl Default for Plan {
             width_class: 5,
             italic_angle: 0.0,
             spacing: Spacing::Normal,
+            serifs: "sans".to_string(),
             variants: Vec::new(),
         }
     }
@@ -215,11 +235,17 @@ pub fn from_json(text: &str) -> Result<Plan, String> {
             .ok_or_else(|| "italicAngle must be a number".to_string())?;
     }
     if let Some(spacing) = object.get("spacing") {
-        plan.spacing = match spacing.as_str() {
-            Some("normal") => Spacing::Normal,
-            Some("quasi-proportional") => Spacing::QuasiProportional,
-            _ => return Err("spacing must be \"normal\" or \"quasi-proportional\"".to_string()),
-        };
+        plan.spacing = Spacing::from_name(
+            spacing
+                .as_str()
+                .ok_or_else(|| "spacing must be a name".to_string())?,
+        )?;
+    }
+    if let Some(serifs) = object.get("serifs") {
+        plan.serifs = serifs
+            .as_str()
+            .ok_or_else(|| "serifs must be a name".to_string())?
+            .to_string();
     }
     if let Some(variants) = object.get("variants") {
         let variants = variants
@@ -255,9 +281,22 @@ pub fn from_json(text: &str) -> Result<Plan, String> {
 }
 
 impl Plan {
+    /// The RIBBI style name the face's weight and slope imply.
+    #[must_use]
+    pub fn style_subfamily(&self) -> String {
+        let bold = self.weight_class >= 700;
+        let italic = self.italic_angle != 0.0;
+        match (bold, italic) {
+            (true, true) => "Bold Italic".to_string(),
+            (true, false) => "Bold".to_string(),
+            (false, true) => "Italic".to_string(),
+            (false, false) => "Regular".to_string(),
+        }
+    }
+
     /// The values the writer puts in the font tables.
     #[must_use]
-    pub const fn to_font_metrics(&self) -> Metrics {
+    pub fn to_font_metrics(&self) -> Metrics {
         Metrics {
             units_per_em: self.units_per_em,
             ascender: self.ascender,
@@ -277,6 +316,392 @@ impl Plan {
             weight_class: self.weight_class,
             width_class: self.width_class,
             italic_angle: self.italic_angle,
+            is_fixed_pitch: self.spacing == Spacing::Normal,
         }
     }
+}
+
+/// A family file: one base plan and the faces it expands to.
+///
+/// r[impl family.schema]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FamilyDocument {
+    pub family: Family,
+}
+
+/// The family header and its instances.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Family {
+    pub name: String,
+    #[serde(default = "default_version")]
+    pub version: String,
+    #[serde(default = "default_vendor")]
+    pub vendor: String,
+    #[serde(default = "default_out")]
+    pub out: String,
+    #[serde(default = "default_formats")]
+    pub formats: Vec<OutputFormat>,
+    #[serde(default)]
+    pub policy: CoveragePolicy,
+    /// The Unicode ranges the host should capture. `None` means read them from
+    /// the base capture.
+    #[serde(default)]
+    pub codepoints: Option<String>,
+    /// A base capture, used for its codepoints. An instance that does not name
+    /// its own capture is drawn by the host.
+    #[serde(default)]
+    pub capture: Option<String>,
+    /// The plan keys every instance starts from.
+    #[serde(default)]
+    pub base: Value,
+    pub instances: BTreeMap<String, FamilyInstance>,
+}
+
+/// One face in a family.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FamilyInstance {
+    #[serde(default)]
+    pub weight: Option<f64>,
+    #[serde(default)]
+    pub slope: Option<f64>,
+    #[serde(default)]
+    pub width: Option<f64>,
+    #[serde(default)]
+    pub serifs: Option<String>,
+    #[serde(default)]
+    pub spacing: Option<String>,
+    #[serde(default)]
+    pub legacy_family: Option<String>,
+    #[serde(default)]
+    pub legacy: Option<String>,
+    #[serde(default)]
+    pub typographic_family: Option<String>,
+    #[serde(default)]
+    pub typographic: Option<String>,
+    #[serde(default)]
+    pub postscript: Option<String>,
+    /// A capture at this instance's shape. Omit it to have the host build one.
+    #[serde(default)]
+    pub capture: Option<String>,
+    /// Plan keys that apply only to this face.
+    #[serde(default)]
+    pub plan: Value,
+}
+
+/// A family instance with its plan and release names resolved.
+#[derive(Clone, Debug)]
+pub struct ResolvedInstance {
+    pub id: String,
+    pub plan: Plan,
+    pub capture: Option<std::path::PathBuf>,
+    pub legacy_family: String,
+    pub legacy_subfamily: String,
+    pub typographic_family: String,
+    pub typographic_subfamily: String,
+    pub postscript_name: String,
+}
+
+/// What a family build does when a glyph is not ported.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CoveragePolicy {
+    /// Fail when the port does not cover a glyph.
+    Strict,
+    /// Build, and report what came from the capture.
+    #[default]
+    Mixed,
+    /// Fail when a capture is needed at all.
+    PortOnly,
+}
+
+/// One file a family build can write.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum OutputFormat {
+    Ttf,
+    Woff2,
+    Css,
+}
+
+fn default_version() -> String {
+    "Version 1.000".to_string()
+}
+
+fn default_vendor() -> String {
+    "LEMM".to_string()
+}
+
+fn default_out() -> String {
+    "dist".to_string()
+}
+
+fn default_formats() -> Vec<OutputFormat> {
+    vec![OutputFormat::Ttf, OutputFormat::Woff2, OutputFormat::Css]
+}
+
+/// The family file as JSON. The CLI reads TOML through the same serde types.
+///
+/// # Errors
+///
+/// Returns a message when the document does not match the family schema.
+pub fn family_from_json(text: &str) -> Result<FamilyDocument, String> {
+    serde_json::from_str(text).map_err(|error| error.to_string())
+}
+
+impl Family {
+    /// Expands the base plan and the instances into plans and names.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message for a bad plan value, a duplicate style name, or an
+    /// output name that Iosevka reserves.
+    pub fn resolve(&self, config_dir: &Path) -> Result<Vec<ResolvedInstance>, String> {
+        if self.name.trim().is_empty() {
+            return Err("the family needs a name".to_string());
+        }
+        if self.instances.is_empty() {
+            return Err(format!("family {} has no instances", self.name));
+        }
+        let base = if self.base.is_null() {
+            Value::Object(serde_json::Map::new())
+        } else {
+            self.base.clone()
+        };
+        let mut resolved = Vec::with_capacity(self.instances.len());
+        let mut styles: BTreeMap<(String, String), String> = BTreeMap::new();
+        let mut typographic_styles: BTreeMap<(String, String), String> = BTreeMap::new();
+        let mut postscript: BTreeMap<String, String> = BTreeMap::new();
+
+        for (id, instance) in &self.instances {
+            if id.trim().is_empty() {
+                return Err("an instance needs an id".to_string());
+            }
+            let mut value = base.clone();
+            merge_json(&mut value, &instance.plan);
+            let mut plan = plan_from_value(&value)?;
+            if let Some(weight) = instance.weight {
+                if !(1.0..=1000.0).contains(&weight) {
+                    return Err(format!("{id}: weight must be between 1 and 1000"));
+                }
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let weight = weight.round().clamp(1.0, 1000.0) as u16;
+                plan.weight_class = weight;
+            }
+            if let Some(slope) = instance.slope {
+                if !(-90.0..=90.0).contains(&slope) {
+                    return Err(format!("{id}: slope must be between -90 and 90 degrees"));
+                }
+                plan.italic_angle = slope;
+            }
+            if let Some(width) = instance.width {
+                if !(100.0..=2000.0).contains(&width) {
+                    return Err(format!("{id}: width is in font units, so 500 is normal"));
+                }
+                plan.width = width;
+                plan.width_class = width_class(width);
+            }
+            if let Some(serifs) = &instance.serifs {
+                if serifs.trim().is_empty() {
+                    return Err(format!("{id}: serifs cannot be empty"));
+                }
+                plan.serifs.clone_from(serifs);
+            }
+            if let Some(spacing) = &instance.spacing {
+                plan.spacing = Spacing::from_name(spacing)?;
+            }
+
+            let italic = plan.italic_angle != 0.0;
+            let bold = plan.weight_class >= 700;
+            let width = width_label(plan.width_class);
+            let weight = weight_label(plan.weight_class);
+            let ribbi_weight = matches!(plan.weight_class, 400 | 700);
+
+            let default_legacy_family = if ribbi_weight {
+                width.map_or_else(
+                    || self.name.clone(),
+                    |width| format!("{} {width}", self.name),
+                )
+            } else {
+                let mut parts = vec![self.name.clone()];
+                if let Some(width) = width {
+                    parts.push(width.to_string());
+                }
+                parts.push(weight.to_string());
+                parts.join(" ")
+            };
+            let default_legacy_subfamily = if italic {
+                if bold { "Bold Italic" } else { "Italic" }
+            } else if bold {
+                "Bold"
+            } else {
+                "Regular"
+            };
+            let default_typographic_subfamily = {
+                let mut parts = Vec::new();
+                if let Some(width) = width {
+                    parts.push(width.to_string());
+                }
+                if plan.weight_class != 400 {
+                    parts.push(weight.to_string());
+                }
+                if italic {
+                    parts.push("Italic".to_string());
+                }
+                if parts.is_empty() {
+                    "Regular".to_string()
+                } else {
+                    parts.join(" ")
+                }
+            };
+
+            let legacy_family = instance
+                .legacy_family
+                .clone()
+                .unwrap_or(default_legacy_family);
+            let legacy_subfamily = instance
+                .legacy
+                .clone()
+                .unwrap_or_else(|| default_legacy_subfamily.to_string());
+            let typographic_family = instance
+                .typographic_family
+                .clone()
+                .unwrap_or_else(|| self.name.clone());
+            let typographic_subfamily = instance
+                .typographic
+                .clone()
+                .unwrap_or(default_typographic_subfamily);
+            let postscript_name = instance.postscript.clone().unwrap_or_else(|| {
+                format!(
+                    "{}-{}",
+                    typographic_family.replace(' ', ""),
+                    typographic_subfamily.replace(' ', "")
+                )
+            });
+
+            if legacy_family.trim().is_empty()
+                || legacy_subfamily.trim().is_empty()
+                || typographic_family.trim().is_empty()
+                || typographic_subfamily.trim().is_empty()
+                || postscript_name.trim().is_empty()
+            {
+                return Err(format!("{id}: a family name cannot be empty"));
+            }
+            if is_reserved_family(&legacy_family) || is_reserved_family(&typographic_family) {
+                return Err(format!(
+                    "{id}: the family name {legacy_family} is reserved by Iosevka"
+                ));
+            }
+            if let Some(other) = styles.insert(
+                (legacy_family.clone(), legacy_subfamily.clone()),
+                id.clone(),
+            ) {
+                return Err(format!(
+                    "{id}: legacy style {legacy_family} {legacy_subfamily} is already used by {other}"
+                ));
+            }
+            if let Some(other) = typographic_styles.insert(
+                (typographic_family.clone(), typographic_subfamily.clone()),
+                id.clone(),
+            ) {
+                return Err(format!(
+                    "{id}: typographic style {typographic_family} {typographic_subfamily} is already used by {other}"
+                ));
+            }
+            if let Some(other) = postscript.insert(postscript_name.clone(), id.clone()) {
+                return Err(format!(
+                    "{id}: PostScript name {postscript_name} is already used by {other}"
+                ));
+            }
+            if postscript_name.contains(' ') {
+                return Err(format!("{id}: a PostScript name cannot contain a space"));
+            }
+
+            let capture = instance.capture.as_ref().map(|path| {
+                let path = Path::new(path);
+                if path.is_absolute() {
+                    path.to_path_buf()
+                } else {
+                    config_dir.join(path)
+                }
+            });
+            resolved.push(ResolvedInstance {
+                id: id.clone(),
+                plan,
+                capture,
+                legacy_family,
+                legacy_subfamily,
+                typographic_family,
+                typographic_subfamily,
+                postscript_name,
+            });
+        }
+
+        Ok(resolved)
+    }
+}
+
+fn plan_from_value(value: &Value) -> Result<Plan, String> {
+    let text = serde_json::to_string(value).map_err(|error| error.to_string())?;
+    from_json(&text)
+}
+
+fn merge_json(target: &mut Value, source: &Value) {
+    if source.is_null() {
+        return;
+    }
+    match (target, source) {
+        (Value::Object(target), Value::Object(source)) => {
+            for (key, value) in source {
+                match target.get_mut(key) {
+                    Some(existing) => merge_json(existing, value),
+                    None => {
+                        target.insert(key.clone(), value.clone());
+                    }
+                }
+            }
+        }
+        (target, source) => *target = source.clone(),
+    }
+}
+
+const fn weight_label(weight: u16) -> &'static str {
+    match weight {
+        0..=150 => "Thin",
+        151..=250 => "ExtraLight",
+        251..=350 => "Light",
+        351..=425 => "Regular",
+        426..=550 => "Medium",
+        551..=650 => "SemiBold",
+        651..=750 => "Bold",
+        751..=850 => "ExtraBold",
+        _ => "Black",
+    }
+}
+
+const fn width_label(class: u16) -> Option<&'static str> {
+    match class {
+        1 => Some("UltraCondensed"),
+        2 => Some("ExtraCondensed"),
+        3 => Some("Condensed"),
+        4 => Some("SemiCondensed"),
+        5 => None,
+        6 => Some("SemiExpanded"),
+        7 => Some("Expanded"),
+        8 => Some("ExtraExpanded"),
+        _ => Some("UltraExpanded"),
+    }
+}
+
+fn is_reserved_family(name: &str) -> bool {
+    matches!(
+        name,
+        "Iosevka"
+            | "Iosevka Aile"
+            | "Iosevka Comfy"
+            | "Iosevka Curly"
+            | "Iosevka Etoile"
+            | "Iosevka Fixed"
+            | "Iosevka Slab"
+            | "Iosevka Term"
+    )
 }

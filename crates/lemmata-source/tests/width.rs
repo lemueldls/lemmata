@@ -52,8 +52,21 @@ fn a_wider_plan_is_a_wider_advance() {
     assert_eq!(plan.width, 600.0);
 
     let glyphs = lemmata_source::glyphs(&plan, &captured);
+    let space = glyphs
+        .iter()
+        .find(|glyph| glyph.name == "space")
+        .expect("the capture has a space");
+    assert_eq!(
+        space.advance, 600,
+        "a one-cell glyph takes the plan's width"
+    );
+
+    // A combining mark adds no space between its base and what follows, and a
+    // two-cell glyph keeps the cell pair the capture drew.
     for glyph in &glyphs {
-        assert_eq!(glyph.advance, 600, "{} kept another advance", glyph.name);
+        if glyph.name.starts_with("dotAbove") {
+            assert_eq!(glyph.advance, 0, "{} gained an advance", glyph.name);
+        }
     }
 }
 

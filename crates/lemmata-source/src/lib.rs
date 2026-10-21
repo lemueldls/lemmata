@@ -50,7 +50,7 @@ type ContoursByGlyph = BTreeMap<String, Rc<Contours>>;
 #[must_use]
 pub fn shape_of(plan: &Plan) -> Shape {
     Shape {
-        serifs: Some("sans".to_string()),
+        serifs: Some(plan.serifs.clone()),
         spacing: Some(plan.spacing.name().to_string()),
         weight: f64::from(plan.weight_class),
         width: plan.width,
@@ -366,11 +366,21 @@ pub fn advance_to_u16(advance: f64) -> u16 {
 /// mark keeps its zero advance so it adds no space between its base and what
 /// follows. A quasi-proportional capture carries an advance per letter class,
 /// so every glyph keeps the capture's there.
-fn advance_of(plan: &Plan, glyph: &lemmata_capture::Glyph) -> u16 {
+fn advance_of(plan: &Plan, glyph: &lemmata_capture::Glyph, cell_width: f64) -> u16 {
     match plan.spacing {
-        Spacing::Normal if (glyph.advance - plan.width).abs() < 0.5 => advance_to_u16(plan.width),
+        Spacing::Normal if (glyph.advance - cell_width).abs() < 0.5 => advance_to_u16(plan.width),
         Spacing::Normal | Spacing::QuasiProportional => advance_to_u16(glyph.advance),
     }
+}
+
+/// The capture's one-cell advance, or the plan's width when the capture has no
+/// positive advance to read.
+fn cell_width(captured: &[lemmata_capture::Glyph]) -> Option<f64> {
+    captured
+        .iter()
+        .map(|glyph| glyph.advance)
+        .filter(|advance| *advance > 0.0)
+        .min_by(f64::total_cmp)
 }
 
 /// The contours of an unported glyph, centred in the plan's frame.
@@ -398,6 +408,17 @@ fn centred(plan: &Plan, glyph: &lemmata_capture::Glyph, contours: &Contours) -> 
         .collect()
 }
 
+/// How a build's glyphs were drawn: from the port, from the capture, or not at
+/// all.
+///
+/// r[impl family.coverage]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Coverage {
+    pub ported: usize,
+    pub captured: usize,
+    pub missing: usize,
+}
+
 /// The glyphs a plan builds, from the ported definitions and the capture.
 ///
 /// A base letter takes the contours of the variant it was drawn from, so a plan
@@ -405,9 +426,25 @@ fn centred(plan: &Plan, glyph: &lemmata_capture::Glyph, contours: &Contours) -> 
 /// the plan names it, so the choice still reaches the font.
 #[must_use]
 pub fn glyphs(plan: &Plan, captured: &[lemmata_capture::Glyph]) -> Vec<GlyphData> {
+    glyphs_reported(plan, captured).0
+}
+
+/// The same glyphs, with a count of where each one came from.
+///
+/// The family builder uses the counts for its coverage report. The `captured`
+/// count means the plan's shape could not draw that glyph and the capture had
+/// to supply it; whether that capture is at the plan's shape is the caller's
+/// knowledge, not this function's.
+#[must_use]
+pub fn glyphs_reported(
+    plan: &Plan,
+    captured: &[lemmata_capture::Glyph],
+) -> (Vec<GlyphData>, Coverage) {
     fill(plan, None);
     let capture = capture_map(captured);
     let bases = base_variants(captured, &capture);
+    let cell = cell_width(captured).unwrap_or(plan.width);
+    let mut coverage = Coverage::default();
     let mut glyphs: Vec<GlyphData> = captured
         .iter()
         .map(|glyph| {
@@ -417,16 +454,20 @@ pub fn glyphs(plan: &Plan, captured: &[lemmata_capture::Glyph]) -> Vec<GlyphData
                 .or_else(|| contours_of(&glyph.name));
             let contours = drawn.map_or_else(
                 || {
+                    coverage.captured += 1;
                     capture
                         .get(&glyph.name)
                         .map_or_else(Vec::new, |contours| centred(plan, glyph, contours))
                 },
-                |contours| contours.as_ref().clone(),
+                |contours| {
+                    coverage.ported += 1;
+                    contours.as_ref().clone()
+                },
             );
             GlyphData {
                 name: glyph.name.clone(),
                 unicodes: glyph.unicodes.clone(),
-                advance: advance_of(plan, glyph),
+                advance: advance_of(plan, glyph, cell),
                 contours,
             }
         })
@@ -442,6 +483,7 @@ pub fn glyphs(plan: &Plan, captured: &[lemmata_capture::Glyph]) -> Vec<GlyphData
             continue;
         }
         let Some(contours) = contours_of(&name) else {
+            coverage.missing += 1;
             continue;
         };
         let Some(advance) = glyphs
@@ -449,6 +491,7 @@ pub fn glyphs(plan: &Plan, captured: &[lemmata_capture::Glyph]) -> Vec<GlyphData
             .find(|glyph| glyph.name == *group)
             .map(|glyph| glyph.advance)
         else {
+            coverage.missing += 1;
             continue;
         };
         glyphs.push(GlyphData {
@@ -457,10 +500,11 @@ pub fn glyphs(plan: &Plan, captured: &[lemmata_capture::Glyph]) -> Vec<GlyphData
             advance,
             contours: contours.as_ref().clone(),
         });
+        coverage.ported += 1;
         known.insert(name);
     }
 
-    glyphs
+    (glyphs, coverage)
 }
 
 /// The glyphs a short piece of text draws, with the rest left at the capture's
@@ -479,6 +523,7 @@ pub fn preview_glyphs(
     let wanted: BTreeSet<u32> = text.chars().map(u32::from).collect();
     let capture = capture_map(captured);
     let bases = base_variants(captured, &capture);
+    let cell = cell_width(captured).unwrap_or(plan.width);
     let mut needed: BTreeSet<String> = captured
         .iter()
         .filter(|glyph| glyph.unicodes.iter().any(|code| wanted.contains(code)))
@@ -516,7 +561,7 @@ pub fn preview_glyphs(
             GlyphData {
                 name: glyph.name.clone(),
                 unicodes: glyph.unicodes.clone(),
-                advance: advance_of(plan, glyph),
+                advance: advance_of(plan, glyph, cell),
                 contours,
             }
         })

@@ -1,0 +1,45 @@
+# A four-face family. Build it with:
+#
+#   IOSEVKA_BUILD_DIR=/path/to/Iosevka lemmata build --family families/lemmata.toml
+#
+# The base build directory is a scratch copy of vendor/Iosevka with
+# `npm install` run in it. The base capture supplies the codepoints and the
+# regular drawing. The host builds a capture at the bold and slanted shapes; the
+# ported glyphs are drawn at the same shape. A family that supplies `capture` on
+# each instance does not need the host.
+
+[family]
+name = "Lemmata"
+version = "Version 1.000"
+vendor = "LEMM"
+out = "../dist/lemmata"
+formats = ["ttf", "woff2", "css"]
+policy = "mixed"
+capture = "../web/public/glyphs.bin"
+
+[family.base]
+capHeight = 735
+xHeight = 520
+ascender = 965
+descender = -215
+lineGap = 70
+width = 500
+spacing = "normal"
+serifs = "sans"
+
+[family.instances.regular]
+weight = 400
+slope = 0
+capture = "../web/public/glyphs.bin"
+
+[family.instances.bold]
+weight = 700
+slope = 0
+
+[family.instances.italic]
+weight = 400
+slope = 12
+
+[family.instances.bold-italic]
+weight = 700
+slope = 12

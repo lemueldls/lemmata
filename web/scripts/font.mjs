@@ -66,7 +66,7 @@ const build = (capture, out, family) =>
       capture,
       "--out",
       out,
-      ...(family ? ["--family", family] : []),
+      ...(family ? ["--name", family] : []),
     ],
     { stdio: ["ignore", "inherit", "inherit"] },
   );

@@ -26,24 +26,126 @@ use std::path::Path;
 use std::process::Command;
 
 use lemmata_ptl::param::Shape;
+use serde::{Deserialize, Serialize};
+
+/// The shape a capture was built for, written beside it.
+///
+/// r[impl family.capture]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct CaptureShape {
+    pub weight: f64,
+    pub width: f64,
+    pub slope_angle: f64,
+    pub serifs: Option<String>,
+    pub spacing: Option<String>,
+    pub codepoints: Vec<u32>,
+}
 
 /// The name a shape's capture is built under.
 ///
 /// The build keys its cache and its output directory by this, so two shapes need
-/// two names and one shape has to keep its own.
+/// two names and one shape has to keep its own. The angle, serifs and spacing
+/// are part of the name because two italic angles or two serif styles are two
+/// different drawings.
 #[must_use]
 pub fn plan_name(shape: &Shape) -> String {
     let slope = if shape.slope_angle == 0.0 {
-        "upright"
+        "upright".to_string()
     } else {
-        "italic"
+        format!("slope{}", trimmed(shape.slope_angle).replace('.', "_"))
     };
+    let serifs = shape.serifs.as_deref().unwrap_or("sans");
+    let spacing = shape.spacing.as_deref().unwrap_or("normal");
 
     format!(
-        "Host{}x{}-{slope}",
+        "Host{}x{}-{slope}-{}-{}",
         shape.weight.round() as i64,
-        shape.width.round() as i64
+        shape.width.round() as i64,
+        key_component(serifs),
+        key_component(spacing)
     )
+}
+
+fn key_component(text: &str) -> String {
+    text.chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || matches!(character, '-' | '_') {
+                character
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+/// A file-safe key for a capture, including the codepoints it holds.
+///
+/// The shape alone is not enough: an ASCII capture and a capture of the whole
+/// repertoire are different inputs to the same build.
+#[must_use]
+pub fn capture_key(shape: &Shape, codepoints: &[u32]) -> String {
+    let mut codes = codepoints.to_vec();
+    codes.sort_unstable();
+    codes.dedup();
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for code in codes {
+        for byte in code.to_le_bytes() {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    }
+
+    format!("{}-{hash:016x}", plan_name(shape))
+}
+
+fn trimmed(value: f64) -> String {
+    let text = format!("{value:.3}");
+    text.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
+/// Writes the sidecar that says which shape and codepoints a capture holds.
+///
+/// # Errors
+///
+/// Returns a message when the file cannot be written.
+pub fn write_shape(path: &Path, shape: &Shape, codepoints: &[u32]) -> Result<(), String> {
+    let sidecar = CaptureShape {
+        weight: shape.weight,
+        width: shape.width,
+        slope_angle: shape.slope_angle,
+        serifs: shape.serifs.clone(),
+        spacing: shape.spacing.clone(),
+        codepoints: codepoints.to_vec(),
+    };
+    let text = serde_json::to_string_pretty(&sidecar).map_err(|error| error.to_string())?;
+    let path = path.with_extension("shape.json");
+    std::fs::write(&path, text).map_err(|error| format!("writing {}: {error}", path.display()))
+}
+
+/// Reads a capture sidecar when one is present.
+#[must_use]
+pub fn read_shape(path: &Path) -> Option<CaptureShape> {
+    let text = std::fs::read_to_string(path.with_extension("shape.json")).ok()?;
+
+    serde_json::from_str(&text).ok()
+}
+
+/// Whether a capture's sidecar describes the shape a build is about to use.
+#[must_use]
+pub fn shape_matches(recorded: &CaptureShape, shape: &Shape, codepoints: &[u32]) -> bool {
+    let mut expected = codepoints.to_vec();
+    expected.sort_unstable();
+    expected.dedup();
+    let mut actual = recorded.codepoints.clone();
+    actual.sort_unstable();
+    actual.dedup();
+
+    recorded.weight.to_bits() == shape.weight.to_bits()
+        && recorded.width.to_bits() == shape.width.to_bits()
+        && recorded.slope_angle.to_bits() == shape.slope_angle.to_bits()
+        && recorded.serifs == shape.serifs
+        && recorded.spacing == shape.spacing
+        && actual == expected
 }
 
 /// The upstream build plan for one shape, as TOML.

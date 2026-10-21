@@ -95,3 +95,32 @@ fn a_width_class_is_not_a_width() {
         "an OS/2 width class stops at 9"
     );
 }
+
+#[test]
+fn spacing_and_serifs_reach_the_face() {
+    let plan = lemmata_plan::from_json(r#"{"spacing": "quasi-proportional", "serifs": "slab"}"#)
+        .expect("parse");
+
+    assert_eq!(plan.spacing, lemmata_plan::Spacing::QuasiProportional);
+    assert_eq!(plan.serifs, "slab");
+    assert!(
+        !plan.to_font_metrics().is_fixed_pitch,
+        "a quasi-proportional face is not fixed pitch"
+    );
+}
+
+#[test]
+fn the_style_name_follows_the_weight_and_slope() {
+    let regular = Plan::default();
+    assert_eq!(regular.style_subfamily(), "Regular");
+
+    let bold = lemmata_plan::from_json(r#"{"weight": 700}"#).expect("parse");
+    assert_eq!(bold.style_subfamily(), "Bold");
+
+    let italic = lemmata_plan::from_json(r#"{"italicAngle": 12}"#).expect("parse");
+    assert_eq!(italic.style_subfamily(), "Italic");
+
+    let bold_italic =
+        lemmata_plan::from_json(r#"{"weight": 700, "italicAngle": 12}"#).expect("parse");
+    assert_eq!(bold_italic.style_subfamily(), "Bold Italic");
+}
