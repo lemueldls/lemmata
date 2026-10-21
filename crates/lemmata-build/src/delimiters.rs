@@ -139,18 +139,22 @@ pub fn drawn_hook(
     hook_fraction: f64,
     stub_fraction: f64,
     stem_fraction: f64,
+    stem_override: Option<(f64, f64)>,
     stem_at_edge: bool,
 ) -> Option<Vec<Vec<QuadifyPoint>>> {
     let (x_min, y_min, x_max, y_max) = glyph.bounding_box()?;
     let h = f64::from(y_max - y_min);
-    let stem_y = if top {
-        f64::from(y_max) - h * stem_fraction
+    let (mut stem, width) = if let Some(stem) = stem_override {
+        stem
     } else {
-        f64::from(y_min) + h * stem_fraction
+        let stem_y = if top {
+            f64::from(y_max) - h * stem_fraction
+        } else {
+            f64::from(y_min) + h * stem_fraction
+        };
+        let (stem_low, stem_high) = range_at(glyph, stem_y, h * 0.03)?;
+        (f64::midpoint(stem_low, stem_high), stem_high - stem_low)
     };
-    let (stem_low, stem_high) = range_at(glyph, stem_y, h * 0.03)?;
-    let mut stem = f64::midpoint(stem_low, stem_high);
-    let width = stem_high - stem_low;
     if width <= 0.0 {
         return None;
     }

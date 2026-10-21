@@ -221,8 +221,8 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
             pieces_of[EXTENDER].contours = vec![bar(x_low, x_high, y_low, y_high)];
         }
         if let (Some(lower), Some(upper)) = (
-            crate::delimiters::drawn_hook(glyph, false, 0.42, 0.12, 0.5, true),
-            crate::delimiters::drawn_hook(glyph, true, 0.42, 0.12, 0.5, true),
+            crate::delimiters::drawn_hook(glyph, false, 0.42, 0.12, 0.5, None, true),
+            crate::delimiters::drawn_hook(glyph, true, 0.42, 0.12, 0.5, None, true),
         ) {
             pieces_of[0].contours = lower;
             pieces_of[2].contours = upper;
@@ -596,8 +596,24 @@ pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec
             continue;
         }
         if let (Some(lower), Some(upper)) = (
-            crate::delimiters::drawn_hook(glyph, false, 0.45, 0.05, 0.30, false),
-            crate::delimiters::drawn_hook(glyph, true, 0.45, 0.05, 0.30, false),
+            crate::delimiters::drawn_hook(
+                glyph,
+                false,
+                0.30,
+                0.03,
+                0.30,
+                Some((f64::midpoint(x_low, x_high), x_high - x_low)),
+                false,
+            ),
+            crate::delimiters::drawn_hook(
+                glyph,
+                true,
+                0.30,
+                0.03,
+                0.30,
+                Some((f64::midpoint(x_low, x_high), x_high - x_low)),
+                false,
+            ),
         ) {
             hooks[0] = lower;
             hooks[2] = upper;
