@@ -86,26 +86,55 @@ fn hook(
     points.extend(inner.iter().rev().copied());
 
     // The round cap at the tip: a half circle from the inner point to the outer,
-    // on the side the curve leaves behind.
+    // in front of the tip. A cap behind it cuts a bite out of the stroke.
     let start = inner[0];
     let end = outer[0];
     let a0 = (start.0 - p0.0).atan2(start.1 - p0.1);
     let a1 = (end.0 - p0.0).atan2(end.1 - p0.1);
-    let back = (-(c0.0 - p0.0), -(c0.1 - p0.1));
-    let back_angle = back.1.atan2(back.0);
     let delta =
         (a1 - a0 + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI;
-    let middle = a0 + delta / 2.0;
-    let sweep = if (back_angle - middle).abs() > std::f64::consts::FRAC_PI_2 {
-        -delta
+    let tangent = (c0.0 - p0.0, c0.1 - p0.1);
+    let tangent_length = f64::hypot(tangent.0, tangent.1);
+    let back = if tangent_length > f64::EPSILON {
+        (
+            p0.0 - tangent.0 / tangent_length * half,
+            p0.1 - tangent.1 / tangent_length * half,
+        )
     } else {
-        delta
+        p0
     };
+    let plus = (
+        p0.0 + half * (a0 + delta / 2.0).cos(),
+        p0.1 + half * (a0 + delta / 2.0).sin(),
+    );
+    let minus = (
+        p0.0 + half * (a0 - delta / 2.0).cos(),
+        p0.1 + half * (a0 - delta / 2.0).sin(),
+    );
+    let sweep =
+        if (plus.0 - back.0).hypot(plus.1 - back.1) <= (minus.0 - back.0).hypot(minus.1 - back.1) {
+            delta
+        } else {
+            -delta
+        };
     for step in 1..CAP {
         let t = f64::from(u32::try_from(step).unwrap_or(0))
             / f64::from(u32::try_from(CAP).unwrap_or(1));
         let angle = a0 + sweep * t;
         points.push((p0.0 + half * angle.cos(), p0.1 + half * angle.sin()));
+    }
+
+    // A contour that crosses another with the opposite winding cancels where
+    // they overlap, which is a white seam in a composed glyph. Keep every hook
+    // counter-clockwise.
+    let area = points
+        .iter()
+        .zip(points.iter().cycle().skip(1))
+        .take(points.len())
+        .map(|(a, b)| a.0 * b.1 - b.0 * a.1)
+        .sum::<f64>();
+    if area < 0.0 {
+        points.reverse();
     }
 
     // Round before grounding so the piece's bbox and the advance the table
