@@ -14,7 +14,8 @@ import { preview_font, registry_names } from "lemmata-web";
 import { usePlan } from "~/composables/plan";
 
 const WORD = "lemmata";
-const SWAP = 1800;
+const SWAP = 1900;
+const FOLD = 240;
 const FALLBACK = "live from the font";
 
 interface Choice {
@@ -34,12 +35,10 @@ export function useHeroVariants() {
 
   /// The face each letter is drawn in.
   const families = ref<string[]>(letter.map(() => site));
-  /// The face a letter is wiping towards, while its animation runs.
-  const pending = ref<(string | null)[]>(letter.map(() => null));
-  /// Bumped per letter so a new wipe restarts.
-  const swaps = ref<number[]>(letter.map(() => 0));
-  /// Which side the wipe enters from.
-  const directions = ref<("ltr" | "rtl")[]>(letter.map(() => "ltr"));
+  /// Which half of the fold a letter is in: out, in, or at rest.
+  const phases = ref<("out" | "in" | "")[]>(letter.map(() => ""));
+  /// The accent mark under the letter that just changed.
+  const notes = ref<boolean[]>(letter.map(() => false));
   const label = ref(FALLBACK);
 
   let options: Choice[] = [];
@@ -48,7 +47,6 @@ export function useHeroVariants() {
   let busy = false;
   let serial = 0;
   const current: (FontFace | null)[] = letter.map(() => null);
-  const next: (FontFace | null)[] = letter.map(() => null);
   const last: string[] = letter.map(() => "");
 
   /// The variant choices the port draws for a group.
@@ -82,16 +80,17 @@ export function useHeroVariants() {
     return face;
   }
 
+  /// The letter folds edge-on, changes its drawing, and unfolds.
   async function swap(): Promise<void> {
     if (busy || !swappable.length) return;
-    // A letter already wiping waits for its reveal to finish.
-    const ready = swappable.filter((index) => pending.value[index] === null);
+    // A letter mid-fold waits for it to finish.
+    const ready = swappable.filter((index) => phases.value[index] === "");
     if (!ready.length) return;
     const index = ready[Math.floor(Math.random() * ready.length)];
     if (index === undefined) return;
     const group = letter[index];
     if (!group) return;
-    // Pick the drawing first, then the direction it enters from.
+    // Pick the drawing first, then fold towards it.
     const pool = options.filter(
       (option) => option.group === group && option.variant !== last[index],
     );
@@ -102,33 +101,29 @@ export function useHeroVariants() {
     try {
       const face = await makeFace(choice);
       if (!face) return;
-      next[index] = face;
-      pending.value[index] = `"${face.family}"`;
-      directions.value[index] = Math.random() < 0.5 ? "ltr" : "rtl";
-      swaps.value[index] = (swaps.value[index] ?? 0) + 1;
+      phases.value[index] = "out";
+      notes.value[index] = true;
       label.value = `${group} · ${choice.variant}`;
       last[index] = choice.variant;
-      // The reveal promotes on its own end, but a backgrounded tab throttles
-      // animations and that event never arrives. The timer is the fallback, and
-      // `promote` is idempotent.
-      window.setTimeout(() => promote(index), 700);
+      window.setTimeout(() => {
+        // The edge-on frame hides this swap, so the two drawings never show at
+        // once.
+        families.value[index] = `"${face.family}"`;
+        if (current[index]) document.fonts.delete(current[index]);
+        current[index] = face;
+        phases.value[index] = "in";
+        window.setTimeout(() => {
+          if (phases.value[index] === "in") phases.value[index] = "";
+        }, 360);
+      }, FOLD);
+      window.setTimeout(() => {
+        notes.value[index] = false;
+      }, 900);
     } catch {
-      // The last good drawing stays on screen.
+      phases.value[index] = "";
     } finally {
       busy = false;
     }
-  }
-
-  /// The wipe finished: the letter keeps the new drawing and the old face goes.
-  function promote(index: number): void {
-    const family = pending.value[index];
-    const face = next[index];
-    if (!family || !face) return;
-    families.value[index] = family;
-    pending.value[index] = null;
-    if (current[index]) document.fonts.delete(current[index]);
-    current[index] = face;
-    next[index] = null;
   }
 
   onMounted(async () => {
@@ -153,10 +148,10 @@ export function useHeroVariants() {
 
   onBeforeUnmount(() => {
     if (timer) clearInterval(timer);
-    for (const face of [...current, ...next]) {
+    for (const face of current) {
       if (face) document.fonts.delete(face);
     }
   });
 
-  return { letter, families, pending, swaps, directions, label, promote };
+  return { letter, families, phases, notes, label };
 }

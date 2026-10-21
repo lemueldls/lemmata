@@ -13,11 +13,9 @@ const font = useLemmataFont();
 const {
   letter: heroLetters,
   families: heroFamilies,
-  pending: heroPending,
-  swaps: heroSwaps,
-  directions: heroDirections,
+  phases: heroPhases,
+  notes: heroNotes,
   label: heroLabel,
-  promote: heroPromote,
 } = useHeroVariants();
 
 /// The reference plan, which is what the builder uses when a key is absent.
@@ -122,18 +120,15 @@ const readings = computed(() => {
               v-for="(glyph, index) in heroLetters"
               :key="index"
               class="hero__letter"
+              :class="{ 'hero__letter--note': heroNotes[index] }"
             >
-              <span class="hero__ink" :style="{ fontFamily: heroFamilies[index] }">{{
-                glyph
-              }}</span>
               <span
-                v-if="heroPending[index]"
-                :key="heroSwaps[index]"
-                class="hero__ink hero__ink--over"
-                :class="{ 'hero__ink--rtl': heroDirections[index] === 'rtl' }"
-                :style="{ fontFamily: heroPending[index] }"
-                aria-hidden="true"
-                @animationend="heroPromote(index)"
+                class="hero__ink"
+                :class="{
+                  'hero__ink--out': heroPhases[index] === 'out',
+                  'hero__ink--in': heroPhases[index] === 'in',
+                }"
+                :style="{ fontFamily: heroFamilies[index] }"
                 >{{ glyph }}</span
               >
             </span>
@@ -363,52 +358,82 @@ const readings = computed(() => {
   position: relative;
   display: inline-block;
   white-space: pre;
+  perspective: 900px;
 }
 
 .hero__ink {
   display: inline-block;
+  transform-origin: 50% 58%;
+  backface-visibility: hidden;
 }
 
-/* The incoming drawing sits exactly over the outgoing one and is revealed by a
-   clip, so the change reads as the letter being redrawn rather than replaced. */
-.hero__ink--over {
+/* A split-flap: the letter folds edge-on, the face changes in that frame, and
+   it unfolds with the new drawing. The two drawings are never visible at the
+   same time. */
+.hero__ink--out {
+  animation: hero-fold-out 240ms cubic-bezier(0.55, 0.05, 0.9, 0.6) forwards;
+}
+
+.hero__ink--in {
+  animation: hero-fold-in 360ms cubic-bezier(0.12, 0.62, 0.28, 1) forwards;
+}
+
+@keyframes hero-fold-out {
+  from {
+    transform: rotateX(0deg) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: rotateX(-86deg) scale(0.985);
+    opacity: 0.18;
+  }
+}
+
+@keyframes hero-fold-in {
+  from {
+    transform: rotateX(86deg) scale(0.985);
+    opacity: 0.18;
+  }
+  to {
+    transform: rotateX(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* The annotation: an accent rule drawn under the letter that just changed,
+   which names the change in the eyebrow at the same moment. */
+.hero__letter--note::after {
+  content: "";
   position: absolute;
-  inset: 0;
-  animation: hero-wipe-ltr 620ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  right: 10%;
+  bottom: -0.02em;
+  left: 10%;
+  height: 0.022em;
+  background: var(--accent);
+  transform-origin: left center;
+  animation: hero-note 900ms ease-out forwards;
+  pointer-events: none;
 }
 
-.hero__ink--rtl {
-  animation-name: hero-wipe-rtl;
-}
-
-@keyframes hero-wipe-ltr {
+@keyframes hero-note {
   0% {
-    clip-path: inset(0 100% 0 0);
-    filter: blur(5px);
-    opacity: 0.35;
-  }
-  100% {
-    clip-path: inset(0 0 0 0);
-    filter: blur(0);
+    transform: scaleX(0);
     opacity: 1;
   }
-}
-
-@keyframes hero-wipe-rtl {
-  0% {
-    clip-path: inset(0 0 0 100%);
-    filter: blur(5px);
-    opacity: 0.35;
+  38% {
+    transform: scaleX(1);
+    opacity: 1;
   }
   100% {
-    clip-path: inset(0 0 0 0);
-    filter: blur(0);
-    opacity: 1;
+    transform: scaleX(1);
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero__ink--over {
+  .hero__ink--out,
+  .hero__ink--in,
+  .hero__letter--note::after {
     animation: none;
   }
 }
