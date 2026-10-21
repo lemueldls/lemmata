@@ -549,7 +549,7 @@ pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec
         // Every part has to carry two connectors, so it needs at least two
         // strokes of height. The cuts are placed to leave that much for the
         // point, both bars and both hooks.
-        let point_half = (2.5 * stroke).min(height / 5.0);
+        let point_half = (3.0 * stroke).min(height / 5.0);
         let hook = point_half;
 
         let point_low = mid - point_half;
@@ -596,8 +596,8 @@ pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec
             continue;
         }
         if let (Some(lower), Some(upper)) = (
-            crate::delimiters::drawn_hook(glyph, false, 0.35, 0.08, 0.30, false),
-            crate::delimiters::drawn_hook(glyph, true, 0.35, 0.08, 0.30, false),
+            crate::delimiters::drawn_hook(glyph, false, 0.45, 0.05, 0.30, false),
+            crate::delimiters::drawn_hook(glyph, true, 0.45, 0.05, 0.30, false),
         ) {
             hooks[0] = lower;
             hooks[2] = upper;

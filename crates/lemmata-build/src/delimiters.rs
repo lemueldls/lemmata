@@ -56,7 +56,6 @@ fn hook(
     down: bool,
 ) -> Vec<Vec<QuadifyPoint>> {
     const SAMPLES: usize = 24;
-    const CAP: usize = 8;
 
     let half = width / 2.0;
     let mut outer = Vec::new();
@@ -85,48 +84,10 @@ fn hook(
     points.push((inner[SAMPLES].0, bottom));
     points.extend(inner.iter().rev().copied());
 
-    // The round cap at the tip: a half circle from the inner point to the outer,
-    // in front of the tip. A cap behind it cuts a bite out of the stroke.
-    let start = inner[0];
-    let end = outer[0];
-    let a0 = (start.0 - p0.0).atan2(start.1 - p0.1);
-    let a1 = (end.0 - p0.0).atan2(end.1 - p0.1);
-    let delta =
-        (a1 - a0 + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI;
-    let tangent = (c0.0 - p0.0, c0.1 - p0.1);
-    let tangent_length = f64::hypot(tangent.0, tangent.1);
-    let back = if tangent_length > f64::EPSILON {
-        (
-            p0.0 - tangent.0 / tangent_length * half,
-            p0.1 - tangent.1 / tangent_length * half,
-        )
-    } else {
-        p0
-    };
-    let plus = (
-        p0.0 + half * (a0 + delta / 2.0).cos(),
-        p0.1 + half * (a0 + delta / 2.0).sin(),
-    );
-    let minus = (
-        p0.0 + half * (a0 - delta / 2.0).cos(),
-        p0.1 + half * (a0 - delta / 2.0).sin(),
-    );
-    let sweep =
-        if (plus.0 - back.0).hypot(plus.1 - back.1) <= (minus.0 - back.0).hypot(minus.1 - back.1) {
-            delta
-        } else {
-            -delta
-        };
-    for step in 1..CAP {
-        let t = f64::from(u32::try_from(step).unwrap_or(0))
-            / f64::from(u32::try_from(CAP).unwrap_or(1));
-        let angle = a0 + sweep * t;
-        points.push((p0.0 + half * angle.cos(), p0.1 + half * angle.sin()));
-    }
-
-    // A contour that crosses another with the opposite winding cancels where
-    // they overlap, which is a white seam in a composed glyph. Keep every hook
-    // counter-clockwise.
+    // The tip is closed with a separate disc rather than a cap arc on the body.
+    // A half-circle stitched into the body can cross the offsets it meets; a
+    // disc overlaps the body and both contours wind the same way, so the union
+    // is solid.
     let area = points
         .iter()
         .zip(points.iter().cycle().skip(1))
@@ -136,13 +97,29 @@ fn hook(
     if area < 0.0 {
         points.reverse();
     }
+    let mut cap = Vec::new();
+    const DISC: usize = 20;
+    for step in 0..DISC {
+        let angle = std::f64::consts::TAU * f64::from(u32::try_from(step).unwrap_or(0))
+            / f64::from(u32::try_from(DISC).unwrap_or(1));
+        cap.push((p0.0 + half * angle.cos(), p0.1 + half * angle.sin()));
+    }
 
     // Round before grounding so the piece's bbox and the advance the table
     // writes are the same integer.
     let low = points
         .iter()
+        .chain(cap.iter())
         .fold(f64::INFINITY, |low, point| low.min(point.1.round()));
-    let contour = points
+    let body = points
+        .into_iter()
+        .map(|(x, y)| QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: x.round(),
+            y: y.round() - low,
+        })
+        .collect();
+    let disc = cap
         .into_iter()
         .map(|(x, y)| QuadifyPoint {
             kind: QuadifyKind::Corner,
@@ -151,7 +128,7 @@ fn hook(
         })
         .collect();
 
-    vec![contour]
+    vec![body, disc]
 }
 
 /// The top or bottom hook of a delimiter, from the glyph's own stem and tip.
