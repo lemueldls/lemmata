@@ -41,6 +41,9 @@ pub struct Design {
     pub a_bar_stroke_adj: f64,
     pub upper_e_bar_pos: f64,
     pub h_bar_pos: f64,
+    pub f_bar_pos_to_xh: f64,
+    pub fbar_stroke_adj: f64,
+    pub tight_hook_superness: f64,
 }
 
 impl Default for Design {
@@ -51,6 +54,9 @@ impl Default for Design {
             a_bar_stroke_adj: -0.075,
             upper_e_bar_pos: 0.52,
             h_bar_pos: 0.525,
+            f_bar_pos_to_xh: 0.875,
+            fbar_stroke_adj: 0.25,
+            tight_hook_superness: 2.30,
         }
     }
 }
@@ -616,7 +622,7 @@ fn hook_shape(
     } else {
         Direction::Left
     };
-    let key_heading = rightward();
+    let key_heading = if ltr { rightward() } else { leftward() };
     let extra_slope = (if ltr { 1.0 } else { -1.0 }) * 0.5 * (args.sw - args.sw_terminal) / args.sw;
     let final_turn_slope =
         key_heading.x + extra_slope - (if ltr { 1.0 } else { -1.0 }) * 0.5 * params.tan_slope;
@@ -2674,6 +2680,163 @@ pub fn curly_tail(
         items.push(kit.knot(KnotType::G2, args.x2 + delta_x, y2 + delta_y, Vec::new()));
         items.push(kit.knot(KnotType::G2, args.x2, y2, Vec::new()));
     }
+
+    items
+}
+
+/// `HCrossBar.top`: the horizontal bar at a crossbar height.
+#[must_use]
+pub fn h_cross_bar_top(kit: &Kit, x_left: f64, x_right: f64, y: f64, sw: Option<f64>) -> Dispiro {
+    let sw = sw.unwrap_or(kit.stroke);
+    let bar_y = y - 0.5 * sw;
+
+    kit.dispiro(vec![
+        Item::Af(kit.widths_center(Some(sw))),
+        kit.knot(KnotType::Left, x_left, bar_y, Vec::new()),
+        kit.knot(KnotType::Right, x_right, bar_y, Vec::new()),
+    ])
+}
+
+/// `DiagTail.FineSw`: the thin stroke the diagonal tail turns with.
+fn diag_tail_fine_sw(metrics: &Metrics, sw: f64) -> f64 {
+    let fine = metrics.advice_stroke(2.5, 1.0, 1.0) * (sw / metrics.stroke);
+
+    fine / mix(1.0, metrics.hv_contrast, 0.375)
+}
+
+/// One point of the diagonal tail's superellipse.
+fn super_ellipse(theta: f64, superness: f64) -> (f64, f64) {
+    let exponent = 2.0 / superness;
+
+    (theta.cos().powf(exponent), theta.sin().powf(exponent))
+}
+
+/// The derivative of the superellipse at `theta`, normalized.
+fn super_ellipse_derivative(theta: f64, superness: f64) -> (f64, f64) {
+    let exponent = 2.0 / superness;
+    let dc = exponent * (-theta).sin() * theta.cos().powf(exponent - 1.0);
+    let ds = exponent * (-theta).cos() * theta.sin().powf(exponent - 1.0);
+    let h = dc.hypot(ds);
+
+    (dc / h, ds / h)
+}
+
+/// The ratios of the samples `DiagTail.FArc` puts between the turn and the tip.
+fn diag_tail_f_arc(tail_angle: f64, n: usize, superness: f64) -> Vec<(f64, f64, f64)> {
+    let (end_x, end_y) = super_ellipse(tail_angle, superness);
+    let mut out = Vec::with_capacity(n - 1);
+    for i in 1..n {
+        let t = i as f64 / n as f64;
+        let (cos, sin) = super_ellipse(t * tail_angle, superness);
+        out.push((sin / end_y, (1.0 - cos) / (1.0 - end_x), t));
+    }
+
+    out
+}
+
+/// `DiagTail.StdDepth`: how far the tail reaches for a frame.
+#[must_use]
+pub fn diag_tail_std_depth(metrics: &Metrics, adws: f64, sw: f64) -> f64 {
+    (adws * metrics.unit_width_scalar * metrics.diag_tail_depth - 0.25 * sw).max(0.5 * sw)
+}
+
+/// `DiagTail.F`: the curved tail itself.
+#[allow(clippy::too_many_arguments)]
+fn diag_tail_f(
+    kit: &Kit,
+    metrics: &Metrics,
+    superness: f64,
+    sign: f64,
+    cx: f64,
+    cy: f64,
+    r_in: f64,
+    angle: f64,
+    depth: f64,
+    sw: f64,
+) -> Vec<Item> {
+    let tail_angle = angle / 180.0 * std::f64::consts::PI;
+    let (cos_angle, sin_angle) = super_ellipse(tail_angle, superness);
+    let (d_cos, d_sin) = super_ellipse_derivative(tail_angle, superness);
+    let fine = diag_tail_fine_sw(metrics, sw);
+    let dx_turn = r_in;
+    let dx_tail_start = dx_turn + sin_angle * r_in;
+    let dy_tail_start = (r_in + fine) - cos_angle * r_in;
+    let dx_depth = (depth - 0.25 * sw) * d_sin;
+    let dy_depth = (depth - 0.25 * sw) * -d_cos;
+    let widths = if sign > 0.0 {
+        kit.widths_rhs(Some(fine))
+    } else {
+        kit.widths_lhs(Some(fine))
+    };
+
+    vec![
+        kit.pair(
+            Family::G4,
+            if sign > 0.0 {
+                Direction::Right
+            } else {
+                Direction::Left
+            },
+            Position::Mid,
+            cx + sign * dx_turn,
+            cy + metrics.o + fine,
+            widths,
+        ),
+        kit.also_thru_them(
+            diag_tail_f_arc(tail_angle, 4, superness),
+            Vec::new(),
+            KnotType::G2,
+        ),
+        kit.knot(
+            KnotType::Left,
+            cx + sign * dx_tail_start,
+            cy + metrics.o + dy_tail_start,
+            Vec::new(),
+        ),
+        kit.knot(
+            KnotType::Right,
+            cx + sign * (dx_tail_start + dx_depth),
+            cy + metrics.o + dy_tail_start + dy_depth,
+            Vec::new(),
+        ),
+    ]
+}
+
+/// `DiagTail.L`: the diagonal tail leaving a stem to the left.
+#[must_use]
+pub fn diag_tail_l(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    cx: f64,
+    cy: f64,
+    depth: f64,
+    sw: f64,
+) -> Vec<Item> {
+    let r_in = metrics.tight_bend_inner_radius;
+    let inner_x = cx - 0.5 * sw * metrics.hv_contrast;
+    let fine = diag_tail_fine_sw(metrics, sw);
+    let mut items = vec![
+        kit.knot(
+            KnotType::Right,
+            inner_x,
+            cy + fine + r_in,
+            kit.widths_lhs(Some(sw)),
+        ),
+        kit.arcvh(Some(8), Some(design.superness)),
+    ];
+    items.extend(diag_tail_f(
+        kit,
+        metrics,
+        design.superness,
+        -1.0,
+        inner_x,
+        cy,
+        r_in,
+        metrics.diag_tail_angle,
+        depth,
+        sw,
+    ));
 
     items
 }

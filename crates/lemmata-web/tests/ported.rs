@@ -51,6 +51,7 @@ fn the_site_draws_the_ported_glyphs() {
         "D.standardSerifless",
         "E.serifless",
         "F.serifless",
+        "f.serifless",
         "I.serifed",
         "L.serifless",
         "p.earedSerifless",

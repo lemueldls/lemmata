@@ -49,6 +49,7 @@ pub struct Para {
     pub tail_y: f64,
     pub diag_tail_angle: f64,
     pub diag_tail_depth: f64,
+    pub unit_width_scalar: f64,
     pub arch_depth: f64,
     pub small_arch_depth: f64,
     pub stroke: f64,
@@ -143,6 +144,7 @@ pub struct Metrics {
     pub tail_y: f64,
     pub diag_tail_angle: f64,
     pub diag_tail_depth: f64,
+    pub unit_width_scalar: f64,
     pub arch_depth: f64,
     pub small_arch_depth: f64,
     pub stroke: f64,
@@ -330,6 +332,7 @@ impl Para {
             tail_y: require(&get, "tailY")?,
             diag_tail_angle: require(&get, "diagTailAngle")?,
             diag_tail_depth: require(&get, "diagTailDepth")?,
+            unit_width_scalar: require(&get, "unitWidthScalar")?,
             arch_depth: require(&get, "archDepth")?,
             small_arch_depth: require(&get, "smallArchDepth")?,
             stroke: require(&get, "stroke")?,
@@ -510,6 +513,7 @@ impl Metrics {
             tail_y: para.tail_y,
             diag_tail_angle: para.diag_tail_angle,
             diag_tail_depth: para.diag_tail_depth,
+            unit_width_scalar: para.unit_width_scalar,
             arch_depth: para.arch_depth,
             small_arch_depth: para.small_arch_depth,
             stroke,
@@ -618,6 +622,16 @@ fn arch_depth_b_of(
 }
 
 impl Metrics {
+    /// `AdviceStroke(crowdedness, adws, mul)`.
+    #[must_use]
+    pub fn advice_stroke(&self, crowdedness: f64, adws: f64, mul: f64) -> f64 {
+        WeightControl::new(self.stroke, self.width, self.sb, self.hv_contrast).advice_stroke(
+            crowdedness,
+            adws,
+            mul,
+        )
+    }
+
     /// `ArchDepthAOf`.
     #[must_use]
     pub fn arch_depth_a_of(&self, arch_depth: f64, width: Option<f64>) -> f64 {

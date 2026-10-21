@@ -14,8 +14,8 @@ use lemmata_ptl::shapes::Design;
 use lemmata_ptl::spiro_kit::Kit;
 
 use crate::letter::latin::{
-    lower_a, lower_b, lower_d, lower_h, lower_il, lower_m, lower_n, lower_p, upper_b, upper_d,
-    upper_e, upper_f, upper_h, upper_i, upper_l, upper_m, upper_n, upper_p, upper_q,
+    lower_a, lower_b, lower_d, lower_f, lower_h, lower_il, lower_m, lower_n, lower_p, upper_b,
+    upper_d, upper_e, upper_f, upper_h, upper_i, upper_l, upper_m, upper_n, upper_p, upper_q,
 };
 
 /// Every glyph the ported definitions build, by name.
@@ -61,6 +61,14 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
     out.extend(
         lower_d::LowerD {
             df: &df,
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_f::LowerF {
             metrics,
             kit: &kit,
             design,

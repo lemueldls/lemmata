@@ -347,7 +347,34 @@ m.flatTopShortLegTailedSerifless,m.flatTopShortLegTailedSerifed,\
 m.flatTopShortLegTailedTopLeftSerifed,\
 m.flatTopShortLegTailedBottomRightSerifed,\
 m.flatTopShortLegTailedTopLeftAndBottomRightSerifed,\
-TieMark{i.TRK/tittleAbove}'
+TieMark{i.TRK/tittleAbove},f.serifless,f.serifed,f.extended,f.tailed,\
+f.diagonalTailed,f.seriflessCrossbarAtXHeight,\
+f.serifedCrossbarAtXHeight,f.extendedCrossbarAtXHeight,\
+f.tailedCrossbarAtXHeight,f.diagonalTailedCrossbarAtXHeight,\
+f.seriflessCrossbarAtHalfAscenderHeight,\
+f.serifedCrossbarAtHalfAscenderHeight,\
+f.extendedCrossbarAtHalfAscenderHeight,\
+f.tailedCrossbarAtHalfAscenderHeight,\
+f.diagonalTailedCrossbarAtHalfAscenderHeight,f.narrowSerifless,\
+f.narrowSerifed,f.narrowExtended,f.narrowTailed,f.narrowDiagonalTailed,\
+f.narrowSeriflessCrossbarAtXHeight,f.narrowSerifedCrossbarAtXHeight,\
+f.narrowExtendedCrossbarAtXHeight,f.narrowTailedCrossbarAtXHeight,\
+f.narrowDiagonalTailedCrossbarAtXHeight,\
+f.narrowSeriflessCrossbarAtHalfAscenderHeight,\
+f.narrowSerifedCrossbarAtHalfAscenderHeight,\
+f.narrowExtendedCrossbarAtHalfAscenderHeight,\
+f.narrowTailedCrossbarAtHalfAscenderHeight,\
+f.narrowDiagonalTailedCrossbarAtHalfAscenderHeight,f.flatHookSerifless,\
+f.flatHookSerifed,f.flatHookExtended,f.flatHookTailed,\
+f.flatHookDiagonalTailed,f.flatHookSeriflessCrossbarAtXHeight,\
+f.flatHookSerifedCrossbarAtXHeight,f.flatHookExtendedCrossbarAtXHeight,\
+f.flatHookTailedCrossbarAtXHeight,\
+f.flatHookDiagonalTailedCrossbarAtXHeight,\
+f.flatHookSeriflessCrossbarAtHalfAscenderHeight,\
+f.flatHookSerifedCrossbarAtHalfAscenderHeight,\
+f.flatHookExtendedCrossbarAtHalfAscenderHeight,\
+f.flatHookTailedCrossbarAtHalfAscenderHeight,\
+f.flatHookDiagonalTailedCrossbarAtHalfAscenderHeight'
 npm run build -- ttf-unhinted::RefA
 ```
 

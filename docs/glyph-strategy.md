@@ -271,6 +271,20 @@ variants and leaves the three earless ones unbuilt, so those are drawn but
 ungated.
 `mCrossedTail`, the Cyrillic forms and the turned family are not ported.
 
+`lower-f.ptl` has three bodies: the standard stem, the narrow one, and the
+flat-hook body that turns the stem's top into a hook. Each takes five counter
+ends and three crossbar heights, and the flat-hook body also has four CLC
+settings that widen the hook and the crossbar. The standard and narrow bodies
+build the stem at the reference bar position and then translate it, which the
+tree keeps as a `Transformed` node. The diagonal-tailed ends use `DiagTail.L`:
+a superellipse turn sampled by `DiagTail.FArc`, with the superellipse's
+derivative giving the depth direction. `HCrossBar.top` and `HookStart` are the
+shared helpers; the counter serif, the down extension, the down hook and the
+diagonal tail are local to this file. The table names 105 glyphs. Forty-five are
+in the capture, the standard, narrow and flat-hook bodies at every hook and
+bar, 1296 knots, exact. The four CLC settings are drawn but the plan does not
+build them, so they are ungated.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
