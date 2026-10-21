@@ -526,7 +526,7 @@ impl LowerM<'_> {
             ty: KnotType::Left,
             x: self.right_sb(),
             y: (top - adb).max(rbot + metrics.tiny),
-            af: Vec::new(),
+            af: self.kit.heading(shapes::downward(metrics.hv_contrast)),
         };
         let mut items = vec![
             Item::Af(self.kit.widths_rhs(Some(sw))),
