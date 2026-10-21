@@ -207,7 +207,7 @@ pub fn radical(advance: f64, height: f64, rule: f64) -> Vec<Vec<QuadifyPoint>> {
     // The stem and hook carry the drawing's stroke, which is heavier than the
     // rule a renderer draws for the vinculum.
     let stroke = rule * 1.5;
-    let gap = advance * 0.12;
+    let gap = advance * 0.20;
     let stem_right = advance - gap;
     let stem_left = stem_right - stroke;
     let stem = stem_right - stroke / 2.0;
@@ -263,7 +263,7 @@ pub fn radical(advance: f64, height: f64, rule: f64) -> Vec<Vec<QuadifyPoint>> {
 #[must_use]
 pub fn radical_pieces(advance: f64, height: f64, rule: f64) -> Vec<Vec<Vec<QuadifyPoint>>> {
     let stroke = rule * 1.5;
-    let gap = advance * 0.12;
+    let gap = advance * 0.20;
     let stem_right = advance - gap;
     let stem_left = stem_right - stroke;
     let stem = stem_right - stroke / 2.0;
