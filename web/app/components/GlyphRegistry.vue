@@ -101,7 +101,7 @@ const previewName = computed(
 );
 
 const previewLabel = computed(() =>
-  previewName.value ? humanize(previewName.value) : "outline's own drawing",
+  previewName.value ? humanize(previewName.value) : "no drawing",
 );
 
 const selectedChar = computed(() => {
@@ -142,11 +142,6 @@ function choose(name: string): void {
   hovered.value = name;
   if (!canApply.value) return;
   planner.choose(group.value, toKebab(suffixOf(name)));
-}
-
-function clearChoice(): void {
-  if (!canApply.value) return;
-  planner.choose(group.value, "");
 }
 
 function focusSearch(event: KeyboardEvent): void {
@@ -334,21 +329,12 @@ onBeforeUnmount(() => {
             {{ group }} / {{ previewLabel }}
           </span>
           <span class="registry__stage-state" :data-ready="canApply">
-            {{ canApply ? "maps to the outline set" : "preview only, no base glyph" }}
+            {{ canApply ? "computed drawing / can join the plan" : "computed drawing / preview only" }}
           </span>
           <span class="registry__stage-plan">
-            {{ !canApply ? "plan: no base glyph" : chosenName ? `plan: ${humanize(chosenName)}` : "plan: outline drawing" }}
+            {{ !canApply ? "plan: no base glyph" : chosenName ? `plan: ${humanize(chosenName)}` : "plan: no choice yet" }}
           </span>
           <div class="registry__stage-actions">
-            <button
-              v-if="chosenName"
-              class="btn btn--sm"
-              type="button"
-              :disabled="!canApply"
-              @click="clearChoice"
-            >
-              clear choice
-            </button>
             <span class="mono-note">
               <template v-if="error">the registry font failed: {{ error }}</template>
               <template v-else-if="building">updating the registry font…</template>
@@ -377,20 +363,6 @@ onBeforeUnmount(() => {
 
       <div class="registry__cards-scroll">
         <div class="registry__cards">
-          <button
-            v-if="canApply"
-            class="registry__card registry__card--default"
-            type="button"
-            :aria-pressed="chosenName === ''"
-            @click="clearChoice"
-          >
-            <span class="registry__card-glyph" :style="{ fontFamily: 'var(--built)' }">
-              {{ group }}
-            </span>
-            <span class="registry__card-name">outline's own drawing</span>
-            <span class="registry__card-mark">{{ chosenName === "" ? "●" : "" }}</span>
-          </button>
-
           <button
             v-for="name in shown"
             :key="name"

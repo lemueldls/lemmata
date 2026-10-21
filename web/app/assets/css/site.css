@@ -2459,26 +2459,92 @@ math {
 }
 
 .build-card__sample {
-  min-height: 108px;
+  display: block;
+  width: 100%;
+  min-height: 150px;
   padding: 12px;
   border: 1px solid var(--line);
   background: var(--bg);
+  color: var(--ink);
   overflow: auto;
   font-family: var(--preview, var(--built));
   font-size: 18px;
+  font-variant-ligatures: normal;
   line-height: 1.55;
   white-space: pre-wrap;
+  resize: vertical;
+  outline: 0;
+}
+
+.build-card__sample:focus-visible {
+  border-color: var(--accent);
 }
 
 .build-card__sample-foot {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   color: var(--faint);
   font-family: var(--mono);
   font-size: 8px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.text-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  color: var(--ink);
+}
+
+.build-card__features {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.build-card__features-label {
+  margin-right: 2px;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.feature {
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.feature:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.feature[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
 }
 
 .config-index {
@@ -2513,6 +2579,8 @@ math {
 }
 
 .build-card__foot {
+  display: grid;
+  gap: 10px;
   padding: 9px 12px;
   border-top: 1px solid var(--line);
 }
@@ -3142,135 +3210,6 @@ math {
   color: var(--accent);
 }
 
-/* Playground ----------------------------------------------------------- */
-
-.playground {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  border: 1px solid var(--line);
-  background: var(--panel);
-}
-
-.playground__controls {
-  display: grid;
-  align-content: start;
-  gap: 16px;
-  padding: 14px;
-  border-right: 1px solid var(--line);
-}
-
-.playground__control {
-  display: grid;
-  gap: 6px;
-}
-
-.playground__control > span {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--faint);
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.playground__control b {
-  color: var(--dim);
-  font-weight: 400;
-}
-
-.playground__control input[type="range"] {
-  width: 100%;
-  accent-color: var(--accent);
-}
-
-.playground__toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.playground__toggles button {
-  padding: 4px 7px;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--faint);
-  font-family: var(--mono);
-  font-size: 9px;
-  cursor: pointer;
-}
-
-.playground__toggles button[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--ink);
-}
-
-.playground__samples {
-  display: grid;
-  gap: 6px;
-}
-
-.playground__samples button {
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--faint);
-  font-family: var(--mono);
-  font-size: 9px;
-  text-align: left;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.playground__samples button:hover {
-  color: var(--ink);
-  border-color: var(--line-strong);
-}
-
-.playground__stage {
-  display: grid;
-  grid-template-rows: 1fr auto;
-  min-width: 0;
-}
-
-.playground__preview {
-  min-height: 260px;
-  margin: 0;
-  padding: 20px;
-  overflow: auto;
-  color: var(--ink);
-  font-family: var(--preview, var(--built));
-  font-size: 28px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.playground__edit {
-  border-top: 1px solid var(--line);
-}
-
-.playground__edit textarea {
-  display: block;
-  width: 100%;
-  min-height: 92px;
-  padding: 12px 14px;
-  border: 0;
-  background: var(--bg);
-  color: var(--dim);
-  font-family: var(--mono);
-  font-size: 11px;
-  line-height: 1.6;
-  resize: vertical;
-}
-
-.playground__edit textarea:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: -1px;
-}
-
 /* Config editor -------------------------------------------------------- */
 
 .editor {
@@ -3691,16 +3630,6 @@ math {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .playground {
-    grid-template-columns: 1fr;
-  }
-
-  .playground__controls {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-
   .math-editor {
     grid-template-columns: 1fr;
   }
@@ -3824,9 +3753,6 @@ math {
     grid-template-columns: 1fr;
   }
 
-  .playground__controls {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 520px) {

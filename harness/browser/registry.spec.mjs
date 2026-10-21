@@ -17,13 +17,24 @@ test("the registry selects a letter from the grid", async ({ page }) => {
   expect(await page.locator(".registry__letter").count()).toBeGreaterThan(5);
   expect(await page.locator(".registry__rail, .registry__select-trigger").count()).toBe(0);
 
-  // The second tile is b, in the lower-case-first order.
-  await page.locator(".registry__letter").nth(1).click();
+  // Select by the visible letter name, so a new ported letter does not move it.
+  const letter = (name) =>
+    page.locator(".registry__letter").filter({
+      has: page.locator(".registry__letter-name", {
+        hasText: new RegExp(`^${name}$`),
+      }),
+    });
+
+  await letter("b").click();
   await expect(page.locator(".registry__stage-kicker")).toContainText("b /");
   expect(await page.locator(".registry__card").count()).toBeGreaterThan(1);
 
   // The m group has enough drawings to need the card scroller.
-  await page.locator(".registry__letter").nth(5).click();
+  await letter("m").click();
+  await expect(page.locator(".registry__stage-kicker")).toContainText("m /");
+  await page.waitForFunction(
+    () => document.querySelectorAll(".registry__card").length > 50,
+  );
   const scroll = page.locator(".registry__cards-scroll");
   const sizes = await scroll.evaluate((element) => ({
     client: element.clientHeight,

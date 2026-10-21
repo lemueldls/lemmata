@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// The configurator: basics, the glyph registry, ligations, a playground and the
-// plan as text, with the build rail held beside them.
+// The configurator: basics, the glyph registry, ligations and the plan as
+// text, with the build rail held beside them.
 //
 // One plan lives on this page. A field, the registry and the text editor all
 // write the same object, so a build cannot read a different plan than the one a
@@ -51,8 +51,7 @@ const SECTIONS = [
   { id: "basics", index: "01", label: "basics" },
   { id: "registry", index: "02", label: "registry" },
   { id: "ligations", index: "03", label: "ligations" },
-  { id: "playground", index: "04", label: "playground" },
-  { id: "config-plan", index: "05", label: "plan" },
+  { id: "config-plan", index: "04", label: "plan" },
 ];
 
 const reading = computed<Reading | null>(() => {
@@ -299,25 +298,7 @@ onBeforeUnmount(() => {
           <LigatureList :preview="preview" />
         </PlusPlate>
 
-        <PlusPlate id="playground" index="04" label="playground" meta="edit / resize / compare">
-          <div class="section-intro section-intro--single">
-            <div>
-              <p class="eyebrow"><b>+</b> try it</p>
-              <h2 class="display" style="font-size: var(--step-3)">
-                Set a line, then set it again.
-              </h2>
-            </div>
-            <p class="prose">
-              The preview uses the site face until a build finishes, then it swaps
-              to the file you just made. Edit the text, move the size, and switch
-              the features.
-            </p>
-          </div>
-
-          <PlaygroundPanel :preview="preview" />
-        </PlusPlate>
-
-        <PlusPlate id="config-plan" index="05" label="plan" meta="json / live">
+        <PlusPlate id="config-plan" index="04" label="plan" meta="json / live">
           <div class="section-intro section-intro--single">
             <div>
               <p class="eyebrow"><b>+</b> the object</p>

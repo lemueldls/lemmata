@@ -18,10 +18,34 @@ const props = defineProps<{
 
 defineEmits<{ build: [] }>();
 
-const SAMPLE = `the quick brown fox
+const DEFAULT_SAMPLE = `the quick brown fox
 jumps over the lazy dog
 if (a <= b) return a
+-> => != <= >=
 0123456789 ():;,."'*`;
+
+const FEATURES = [
+  { id: "calt", label: "texture" },
+  { id: "liga", label: "ligatures" },
+  { id: "zero", label: "zero" },
+] as const;
+
+type FeatureId = (typeof FEATURES)[number]["id"];
+
+const sample = ref(DEFAULT_SAMPLE);
+const leading = ref(1.55);
+const features = reactive<Record<FeatureId, boolean>>({
+  calt: true,
+  liga: true,
+  zero: false,
+});
+
+const featureSettings = computed(
+  () =>
+    `"calt" ${features.calt ? 1 : 0}, "liga" ${features.liga ? 1 : 0}, "zero" ${
+      features.zero ? 1 : 0
+    }`,
+);
 
 const rows = computed(() => [
   ["bytes", props.bytes ? props.bytes.length.toLocaleString() : "—"],
@@ -29,6 +53,10 @@ const rows = computed(() => [
   ["glyphs", props.metrics?.drawn ?? "—"],
   ["advance", props.metrics?.advance ?? "—"],
 ]);
+
+function resetSample(): void {
+  sample.value = DEFAULT_SAMPLE;
+}
 </script>
 
 <template>
@@ -75,18 +103,40 @@ const rows = computed(() => [
         </div>
       </dl>
 
-      <div
+      <textarea
+        v-model="sample"
         class="build-card__sample"
+        rows="5"
+        aria-label="Editable specimen text"
         :style="{
           '--preview': preview,
           fontSize: `${Math.round(specimenSize * 0.72)}px`,
+          lineHeight: leading,
+          fontFeatureSettings: featureSettings,
         }"
-      >
-        {{ SAMPLE }}
-      </div>
+      />
+
       <div class="build-card__sample-foot">
-        <span>{{ bytes ? "built file" : "site face" }}</span>
-        <span>{{ specimenSize }} px</span>
+        <span>{{ bytes ? "built file" : "site face" }} / editable</span>
+        <button class="text-button" type="button" @click="resetSample">
+          reset text
+        </button>
+        <span>{{ specimenSize }} px / {{ leading.toFixed(2) }}</span>
+      </div>
+
+      <div class="build-card__features" role="group" aria-label="Preview features">
+        <span class="build-card__features-label">features</span>
+        <button
+          v-for="feature in FEATURES"
+          :key="feature.id"
+          class="feature"
+          type="button"
+          :title="feature.id"
+          :aria-pressed="features[feature.id]"
+          @click="features[feature.id] = !features[feature.id]"
+        >
+          {{ feature.label }}
+        </button>
       </div>
     </div>
 
@@ -97,6 +147,13 @@ const rows = computed(() => [
         unit="px"
         :min="12"
         :max="80"
+      />
+      <RangeControl
+        v-model="leading"
+        label="leading"
+        :min="1"
+        :max="2.2"
+        :step="0.05"
       />
     </div>
   </div>
