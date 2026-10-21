@@ -120,6 +120,8 @@ An assembly is how a renderer goes taller than that: it stacks a bottom piece, r
 
 The extender is a straight bar, not the band itself. The band decides where to cut and how wide the bar is; the bar is rebuilt from that ink, so a repeat cannot carry the band's residual curve. A repeated curve is what made the parenthesis look scalloped, one step per repeat. With the bar the seam is zero on every assembly.
 
+The hooks are drawn rather than cut. A cut band ends where the text outline's tangent is, and a straight bar cannot be tangent to that. `lemmata-build::delimiters` measures the glyph's stem and its tip, draws a cubic that leaves the tip horizontally and meets the stem vertically, and caps the tip with a round end at the glyph's own width. The bar continues from the vertical end. A paren and a bracket place the stem at their outer edge; a brace places it at the centre and the point at the outer edge.
+
 Every connector is that same minimum, so the pieces have no slack: a renderer reaches a target size by repeating the extender rather than by sliding the joints. A drawn extender with a long straight bar is what would give it that slack.
 
 The band is what makes a piece repeatable, so the derivation measures it: it slices the band at three heights and compares the ink's horizontal extent across them. Measuring only the two cut edges is not enough, and that is the trap. A brace's middle holds its point, so both ends sit on the stem and agree while the ink bulges out and back between them.
@@ -132,7 +134,7 @@ Four glyphs have no band that repeats and the test names them rather than giving
 
 The radical also needed a flat top. Iosevka's `sqrt` is a check mark whose long stroke ends in a point, with no horizontal bar, and a renderer draws the vinculum itself starting at the glyph's advance. The thin rule met the stroke at one point and left a notch. The build adds a bar of the rule's own thickness from the advance to the ink's right edge, so the rule starts on an edge instead of a point.
 
-The delimiter bases are ported in `crates/lemmata-glyphs/src/symbol/punctuation/brackets.rs`: parentheses, brackets, braces, angle brackets, floors and ceilings from `brackets.ptl`, gated against the capture. The drawn pieces at U+239B to U+23AD are still not built; the assembly derives its own bars for now.
+The delimiter bases are ported in `crates/lemmata-glyphs/src/symbol/punctuation/brackets.rs`: parentheses, brackets, braces, angle brackets, floors and ceilings from `brackets.ptl`, gated against the capture. The assembly's hooks and bars are drawn by `lemmata-build::delimiters`; the brace's point is still a slice of the text outline at the middle.
 
 `docs/divergences.md` is the ledger of every glyph the font has that upstream does not, and every upstream outline the build changes.
 

@@ -36,14 +36,16 @@ renderer needs.
 
 ## Interim drawings
 
-The delimiter size variants and assemblies are composed from the same derived
-pieces: a bottom hook, a straight bar of the stroke's cross-section, and a top
-hook. A brace uses five parts, with the point between two bars. The pieces are
-still cut from the text outline rather than drawn, so the joins are cuts and the
-hooks are the text glyph's own curves. Drawing the pieces at U+239B to U+23AD
-would remove the cut, and is the next change; those pieces do not exist
-upstream, so they will appear here as new drawings rather than as a
-modification.
+The delimiter size variants and assemblies are composed from the same pieces: a
+bottom hook, a straight bar of the stroke's cross-section, and a top hook. A
+brace uses five parts, with the point between two bars.
+
+The hooks and bars are drawn by `lemmata-build::delimiters`: the hook is a cubic
+from the glyph's measured tip to its measured stem, with a round cap at the tip
+and a vertical tangent where the bar begins. A paren's stem is its outer edge and
+a brace's is its centre. The brace's point is still cut from the text outline at
+the middle; it is a fixed part, never repeated, so the cut does not show as a
+seam.
 
 ## Not divergences
 
