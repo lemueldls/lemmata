@@ -185,7 +185,7 @@ pub fn constants(metrics: &Metrics, profile: &MathProfile) -> MathConstants {
 /// The stretchy constructions, one per glyph: the derived sizes a renderer
 /// picks from, and the assembly it builds when none is tall enough.
 #[must_use]
-pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
+pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> (MathVariants, Vec<GlyphId16>) {
     let stroke = metrics.underline_thickness.unsigned_abs();
     let (vert_ids, mut vert) = constructions(
         glyphs,
@@ -220,7 +220,21 @@ pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
         stroke,
     );
 
-    MathVariants {
+    // The coverage and the records are built from the same lists, so a derived
+    // size cannot be covered without being named by a construction.
+    let mut extended = Vec::new();
+    extended.extend(vert_ids.iter().copied());
+    extended.extend(horiz_ids.iter().copied());
+    for construction in vert.iter().chain(horiz.iter()) {
+        extended.extend(
+            construction
+                .math_glyph_variant_records
+                .iter()
+                .map(|record| record.variant_glyph),
+        );
+    }
+
+    let variants = MathVariants {
         // The pieces of an assembly join along this overlap, so it is the width
         // of a stroke: anything narrower leaves a seam and anything wider
         // doubles the ink where they meet.
@@ -233,7 +247,9 @@ pub fn variants(metrics: &Metrics, glyphs: &[GlyphData]) -> MathVariants {
             .into(),
         vert_glyph_constructions: vert.into_iter().map(Into::into).collect(),
         horiz_glyph_constructions: horiz.into_iter().map(Into::into).collect(),
-    }
+    };
+
+    (variants, extended)
 }
 
 /// The direction a construction grows in.
@@ -393,10 +409,11 @@ fn assembly(
 /// tables index into.
 #[must_use]
 pub fn table(metrics: &Metrics, profile: &MathProfile, glyphs: &[GlyphData]) -> Math {
+    let (variants, extended) = variants(metrics, glyphs);
     Math::new(
         constants(metrics, profile),
-        glyph_info(glyphs),
-        variants(metrics, glyphs),
+        glyph_info(glyphs, &extended),
+        variants,
     )
 }
 
@@ -542,52 +559,6 @@ fn top_kern(glyph: &GlyphData, left: bool) -> Option<MathKern> {
     })
 }
 
-/// The glyphs a renderer positions against their ink box rather than the
-/// baseline: the stretchy glyphs and the sizes derived from them.
-///
-/// This matters as soon as a glyph can be taller than the line. Beside a
-/// parenthesis grown to enclose a fraction, a superscript belongs on the line
-/// the rest of the equation sits on, not on the baseline the parenthesis
-/// happens to start at.
-fn extended_shapes(glyphs: &[GlyphData]) -> Vec<GlyphId16> {
-    // A large operator carries one more size than a delimiter, so the set the
-    // coverage names is the union rather than one glyph's list. A horizontal
-    // arrow has fewer sizes than either.
-    let vertical_steps = crate::variants::OPERATOR_SCALES
-        .len()
-        .max(crate::variants::SCALES.len());
-    let bases: Vec<&GlyphData> = glyphs
-        .iter()
-        .filter(|glyph| {
-            glyph.unicodes.iter().any(|code| {
-                crate::variants::STRETCHY.contains(code)
-                    || crate::variants::HORIZONTAL.contains(code)
-            })
-        })
-        .collect();
-    let mut ids = Vec::new();
-    for (index, glyph) in glyphs.iter().enumerate() {
-        let base = glyph.unicodes.iter().any(|code| {
-            crate::variants::STRETCHY.contains(code) || crate::variants::HORIZONTAL.contains(code)
-        });
-        let derived = bases.iter().any(|base| {
-            (0..vertical_steps).any(|step| {
-                crate::variants::variant_name(&base.name, step) == glyph.name
-                    || crate::variants::horizontal_variant_name(&base.name, step) == glyph.name
-            })
-        });
-        if !base && !derived {
-            continue;
-        }
-        let Ok(id) = u16::try_from(index + 1) else {
-            continue;
-        };
-        ids.push(GlyphId16::new(id));
-    }
-
-    ids
-}
-
 /// The per-glyph information: italic corrections and top accent attachments for
 /// the math letters, and the coverage of the glyphs a renderer may stretch.
 ///
@@ -596,7 +567,7 @@ fn extended_shapes(glyphs: &[GlyphData]) -> Vec<GlyphId16> {
 ///
 /// r[impl math.corrections]
 #[must_use]
-pub fn glyph_info(glyphs: &[GlyphData]) -> MathGlyphInfo {
+pub fn glyph_info(glyphs: &[GlyphData], extended: &[GlyphId16]) -> MathGlyphInfo {
     let mut ids = Vec::new();
     let mut corrections = Vec::new();
     let mut attachments = Vec::new();
@@ -612,7 +583,6 @@ pub fn glyph_info(glyphs: &[GlyphData]) -> MathGlyphInfo {
         attachments.push(value(top_accent_attachment(glyph)));
     }
     let coverage: CoverageTable = ids.iter().copied().collect();
-    let extended = extended_shapes(glyphs);
 
     let mut kern_ids = Vec::new();
     let mut kern_records = Vec::new();
@@ -652,7 +622,7 @@ pub fn glyph_info(glyphs: &[GlyphData]) -> MathGlyphInfo {
             })
             .into(),
         extended_shape_coverage: (!extended.is_empty())
-            .then(|| extended.into_iter().collect::<CoverageTable>())
+            .then(|| extended.iter().copied().collect::<CoverageTable>())
             .into(),
         math_kern_info: kern_info.into(),
     }
