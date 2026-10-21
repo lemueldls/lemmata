@@ -452,7 +452,12 @@ dotlessjBarHookTop.narrowBentHookSerifless,\
 dotlessjBarHookTop.narrowBentHookShortSerifed,\
 dotlessjBarHookTop.straightSerifless,\
 dotlessjBarHookTop.straightShortSerifed,dotlessjCurlyTail,\
-dotlessjCurlyTail.bentHookSerifed,dotlessjCurlyTail.bentHookSerifless'
+dotlessjCurlyTail.bentHookSerifed,dotlessjCurlyTail.bentHookSerifless,\
+V.curlyMotionSerifed,V.curlySerifed,V.curlySerifless,\
+V.straightMotionSerifed,V.straightSerifed,V.straightSerifless,\
+v.curlyMotionSerifed,v.curlySerifed,v.curlySerifless,v.cursiveSerifed,\
+v.cursiveSerifless,v.straightMotionSerifed,v.straightSerifed,\
+v.straightSerifless'
 npm run build -- ttf-unhinted::RefA
 ```
 

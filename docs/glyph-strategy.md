@@ -327,6 +327,12 @@ ported. The composed `j` is the dotless body plus the tittle, and the tittle's
 placement is still open, so only the dotless bodies are registered. The capture
 holds 22 of the 32 built, 414 knots, exact.
 
+`v.ptl` has two standard bodies (the straight bar and the curly V) over four
+serif settings, plus the two cursive forms. The serifs come from `SerifFrame`
+and the auto setting draws none at slab level 0. The capture holds 14 of the
+18, 226 knots, exact. The hooked and looped forms are not ported: they eject a
+tagged contour, and the port's tags carry no name to eject by.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
