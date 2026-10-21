@@ -71,6 +71,39 @@ fn the_sequence_joins_into_the_ligature_forms() {
     eprintln!("ligatures: -> shapes to {} glyphs", joined.len());
 }
 
+/// A join changes both glyphs. The left one extends into the next cell and the
+/// right one receives it, so a rule that only reaches the left half draws an
+/// overlap instead of a join.
+#[test]
+fn the_sequence_joins_at_both_ends() {
+    let Ok(capture) = fs::read(capture_path()) else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let bytes = lemmata_web::build(&capture, "").expect("build");
+    let blob: harfrust::font::Blob = bytes.into();
+    let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
+
+    for (text, first, second) in [
+        ("<=", "<", "="),
+        (">=", ">", "="),
+        ("->", "-", ">"),
+        ("=>", "=", ">"),
+    ] {
+        let (joined, _) = shape(&font, text);
+        let (plain_first, _) = shape(&font, first);
+        let (plain_second, _) = shape(&font, second);
+        assert_ne!(
+            joined[0], plain_first[0],
+            "{text}: the left glyph did not join"
+        );
+        assert_ne!(
+            joined[1], plain_second[0],
+            "{text}: the right glyph did not join"
+        );
+    }
+}
+
 /// The live preview is what the page sets the specimen in, so it has to join
 /// the same sequences the built file does. It carries only the rules the text
 /// can trigger and the glyphs those rules target, so the first run pays for the

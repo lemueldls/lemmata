@@ -25,8 +25,8 @@ if (a <= b) return a
 0123456789 ():;,."'*`;
 
 const FEATURES = [
-  { id: "calt", label: "texture" },
-  { id: "liga", label: "ligatures" },
+  { id: "calt", label: "ligatures" },
+  { id: "TXTR", label: "texture" },
   { id: "zero", label: "zero" },
 ] as const;
 
@@ -36,13 +36,13 @@ const sample = ref(DEFAULT_SAMPLE);
 const leading = ref(1.55);
 const features = reactive<Record<FeatureId, boolean>>({
   calt: true,
-  liga: true,
+  TXTR: true,
   zero: false,
 });
 
 const featureSettings = computed(
   () =>
-    `"calt" ${features.calt ? 1 : 0}, "liga" ${features.liga ? 1 : 0}, "zero" ${
+    `"calt" ${features.calt ? 1 : 0}, "TXTR" ${features.TXTR ? 1 : 0}, "zero" ${
       features.zero ? 1 : 0
     }`,
 );

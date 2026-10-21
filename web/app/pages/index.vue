@@ -66,8 +66,8 @@ const FEATURES = [
   },
   {
     name: "ligature sets",
-    note: "named in the plan, waiting for the lookups.",
-    state: "next" as const,
+    note: "Iosevka's chaining rules under calt, drawn by the same preview font.",
+    state: "ready" as const,
   },
   {
     name: "optical sizes",

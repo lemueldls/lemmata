@@ -407,7 +407,58 @@ pub fn read_rules(path: &str) -> Result<Vec<Rule>, String> {
     rules.sort();
     rules.dedup();
 
-    Ok(rules)
+    Ok(order_by_dependency(&rules))
+}
+
+/// Orders rules so one whose context names a glyph another rule produces runs
+/// after it. A shaper applies lookups in order and each substitution changes
+/// the buffer, so the right half of a pair only matches once the left half has
+/// become its join form.
+fn order_by_dependency(rules: &[Rule]) -> Vec<Rule> {
+    use std::collections::HashMap;
+
+    let mut producers: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (index, rule) in rules.iter().enumerate() {
+        producers
+            .entry(rule.target.as_str())
+            .or_default()
+            .push(index);
+    }
+    let mut visited = vec![false; rules.len()];
+    let mut out = Vec::with_capacity(rules.len());
+    for index in 0..rules.len() {
+        visit(index, rules, &producers, &mut visited, &mut out);
+    }
+
+    out
+}
+
+fn visit(
+    index: usize,
+    rules: &[Rule],
+    producers: &std::collections::HashMap<&str, Vec<usize>>,
+    visited: &mut [bool],
+    out: &mut Vec<Rule>,
+) {
+    if visited[index] {
+        return;
+    }
+    visited[index] = true;
+    let mut dependencies = BTreeSet::new();
+    for name in rules[index]
+        .backtrack
+        .iter()
+        .flatten()
+        .chain(rules[index].lookahead.iter().flatten())
+    {
+        if let Some(indices) = producers.get(name.as_str()) {
+            dependencies.extend(indices.iter().copied());
+        }
+    }
+    for dependency in dependencies {
+        visit(dependency, rules, producers, visited, out);
+    }
+    out.push(rules[index].clone());
 }
 
 fn collect_rules(
@@ -446,11 +497,16 @@ fn collect_rules(
         if segments.is_empty() || segments.iter().any(Vec::is_empty) {
             continue;
         }
+        // One context can carry several substitutions, which upstream applies
+        // at once. The port has no multi-position rule, so each becomes its own
+        // chaining rule. The context of the later one names what the earlier
+        // one produced, which is what the buffer holds when it runs.
+        let mut records: Vec<(usize, Vec<(GlyphId16, GlyphId16)>)> = Vec::new();
         for record in context.seq_lookup_records() {
             let position = usize::from(record.sequence_index());
-            let Some(inputs) = segments.get(position) else {
+            if segments.get(position).is_none() {
                 continue;
-            };
+            }
             let applied = lookups
                 .lookups()
                 .get(usize::from(record.lookup_list_index()))?;
@@ -462,23 +518,43 @@ fn collect_rules(
                 let single = single?;
                 pairs.extend(single_pairs(&single)?);
             }
-            // OpenType orders a backtrack array nearest first, so the positions
-            // before the input are reversed.
-            let mut before: Vec<Vec<String>> = segments[..position]
+            records.push((position, pairs));
+        }
+        records.sort_by_key(|(position, _)| *position);
+
+        for (position, pairs) in &records {
+            let inputs = &segments[*position];
+            let mut names: Vec<Vec<String>> = segments
                 .iter()
-                .rev()
                 .map(|coverage| coverage.iter().map(|glyph| reader.name(*glyph)).collect())
                 .collect();
+            for (earlier, earlier_pairs) in &records {
+                if earlier >= position {
+                    break;
+                }
+                let targets: BTreeSet<String> = segments[*earlier]
+                    .iter()
+                    .filter_map(|source| {
+                        earlier_pairs
+                            .iter()
+                            .find(|(from, _)| from == source)
+                            .map(|(_, to)| reader.name(*to))
+                    })
+                    .collect();
+                if !targets.is_empty() {
+                    names[*earlier] = targets.into_iter().collect();
+                }
+            }
+            // OpenType orders a backtrack array nearest first, so the positions
+            // before the input are reversed.
+            let mut before: Vec<Vec<String>> = names[..*position].iter().rev().cloned().collect();
             before.extend(
                 backtrack
                     .iter()
                     .rev()
                     .map(|glyph| vec![reader.name(*glyph)]),
             );
-            let mut after: Vec<Vec<String>> = segments[position + 1..]
-                .iter()
-                .map(|coverage| coverage.iter().map(|glyph| reader.name(*glyph)).collect())
-                .collect();
+            let mut after: Vec<Vec<String>> = names[position + 1..].to_vec();
             after.extend(lookahead.iter().map(|glyph| vec![reader.name(*glyph)]));
             for input in inputs {
                 let Some((_, target)) = pairs.iter().find(|(source, _)| source == input) else {
@@ -609,11 +685,15 @@ fn sample_rules(font_path: &str, parameters: &str) -> Result<Vec<Rule>, String> 
             if before == after {
                 continue;
             }
+            // The port writes one chaining rule per changed position. A rule
+            // runs after the ones to its left, so their context names are the
+            // joined forms, not the plain glyphs the reference matched.
             rules.push(Rule {
                 backtrack: plain[..index]
                     .iter()
+                    .zip(&joined[..index])
                     .rev()
-                    .map(|name| vec![name.clone()])
+                    .map(|(_, joined)| vec![joined.clone()])
                     .collect(),
                 input: before.clone(),
                 lookahead: plain[index + 1..]
@@ -631,7 +711,7 @@ fn sample_rules(font_path: &str, parameters: &str) -> Result<Vec<Rule>, String> 
     });
     rules.dedup();
 
-    Ok(rules)
+    Ok(order_by_dependency(&rules))
 }
 
 /// Writes the fixture, from the samples when a ligation set is given and from
