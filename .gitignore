@@ -1,5 +1,6 @@
 /.direnv
 /target
+/result
 /reference/spiro-oracle/node_modules
 /node_modules
 /test-results
