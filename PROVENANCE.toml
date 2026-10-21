@@ -52,6 +52,10 @@ ours = "crates/lemmata-glyphs/src/letter/latin/lower_il.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-il.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_j.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-j.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/lower_m.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-m.ptl"
 

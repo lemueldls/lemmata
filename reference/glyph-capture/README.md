@@ -431,7 +431,28 @@ opAsterisk.turnHex,opAsterisk.turnPenta,slavonicAsterisk,therefore,\
 therefore.round,therefore.square,asterisk/slashBot,Y.straightSerifless,\
 Y.curlySerifless,Y.straightBaseSerifed,Y.curlyBaseSerifed,\
 Y.straightMotionSerifed,Y.curlyMotionSerifed,Y.straightSerifed,\
-Y.curlySerifed'
+Y.curlySerifed,dotlessj,dotlessj.bentHookSerifed,\
+dotlessj.bentHookSerifless,dotlessj.diagonalTailedSerifed,\
+dotlessj.diagonalTailedSerifless,dotlessj.flatHookSerifed,\
+dotlessj.flatHookSerifless,dotlessj.narrowBentHookSerifed,\
+dotlessj.narrowBentHookSerifless,dotlessj.straightSerifed,\
+dotlessj.straightSerifless,dotlessjBar,dotlessjBar.bentHookSerifed,\
+dotlessjBar.bentHookSerifless,dotlessjBar.diagonalTailedSerifed,\
+dotlessjBar.diagonalTailedSerifless,dotlessjBar.flatHookSerifed,\
+dotlessjBar.flatHookSerifless,dotlessjBar.narrowBentHookSerifed,\
+dotlessjBar.narrowBentHookSerifless,dotlessjBar.straightSerifed,\
+dotlessjBar.straightSerifless,dotlessjBarHookTop,\
+dotlessjBarHookTop.bentHookSerifless,\
+dotlessjBarHookTop.bentHookShortSerifed,\
+dotlessjBarHookTop.diagonalTailedSerifless,\
+dotlessjBarHookTop.diagonalTailedShortSerifed,\
+dotlessjBarHookTop.flatHookSerifless,\
+dotlessjBarHookTop.flatHookShortSerifed,\
+dotlessjBarHookTop.narrowBentHookSerifless,\
+dotlessjBarHookTop.narrowBentHookShortSerifed,\
+dotlessjBarHookTop.straightSerifless,\
+dotlessjBarHookTop.straightShortSerifed,dotlessjCurlyTail,\
+dotlessjCurlyTail.bentHookSerifed,dotlessjCurlyTail.bentHookSerifless'
 npm run build -- ttf-unhinted::RefA
 ```
 

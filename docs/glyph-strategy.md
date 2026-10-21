@@ -318,6 +318,15 @@ middle of the body. All eight configs are ported, the curly and straight bodies
 across no, base, motion and all serifs. The capture holds all eight, 268 knots,
 exact.
 
+`lower-j.ptl` builds the dotless bodies: five shapes (bent hook, narrow bent
+hook, straight, flat hook and diagonal tail), three top serifs, the barred form
+of each, and two curly-tail forms. The barred form adds `LetterBarOverlay.m`,
+and the curly tail reuses `CurlyTail` with a straight body. The
+`dotlessjBarHookTop` forms need `TopHook.toRight.mBarOuter`, which is not
+ported. The composed `j` is the dotless body plus the tittle, and the tittle's
+placement is still open, so only the dotless bodies are registered. The capture
+holds 22 of the 32 built, 414 knots, exact.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.
