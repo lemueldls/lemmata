@@ -146,6 +146,34 @@ fn the_registry_font_maps_the_variants() {
 }
 
 #[test]
+fn the_registry_group_font_maps_one_group() {
+    let bytes = lemmata_web::registry_group("", "a").expect("group font");
+    let font = read_fonts::FontRef::new(&bytes).expect("reopen");
+    let cmap = font.cmap().expect("cmap");
+    for codepoint in [0xE000_u32, 0xE001, 0xE002] {
+        assert!(
+            cmap.map_codepoint(codepoint).is_some(),
+            "U+{codepoint:04X} is not mapped"
+        );
+    }
+    let bold = lemmata_web::registry_group(r#"{"weight": 700}"#, "a").expect("bold group font");
+    assert_ne!(bytes, bold, "the group font did not follow the plan");
+}
+
+#[test]
+fn the_registry_index_font_maps_each_letter() {
+    let bytes = lemmata_web::registry_index("").expect("index font");
+    let font = read_fonts::FontRef::new(&bytes).expect("reopen");
+    let cmap = font.cmap().expect("cmap");
+    for letter in ['a', 'b', 'd', 'D'] {
+        assert!(
+            cmap.map_codepoint(u32::from(letter)).is_some(),
+            "{letter} is not mapped"
+        );
+    }
+}
+
+#[test]
 fn a_preview_responds_to_the_plan() {
     let Ok(capture) = fs::read(dump_path()) else {
         eprintln!("skipping: no capture");

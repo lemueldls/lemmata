@@ -479,9 +479,9 @@ fn registry_advance(metrics: &Metrics) -> u16 {
 }
 
 /// Assembles a font from the registry glyphs the caller prepared.
-fn registry_build(plan: &Plan, glyphs: Vec<GlyphData>) -> Result<Vec<u8>, String> {
+fn registry_build(plan: &Plan, glyphs: &[GlyphData]) -> Result<Vec<u8>, String> {
     lemmata_build::font::build(
-        &glyphs,
+        glyphs,
         &plan.to_font_metrics(),
         &lemmata_build::font::Names::default(),
         &[],
@@ -532,7 +532,7 @@ pub fn registry_font(plan: &Plan) -> Result<Vec<u8>, String> {
         })
         .collect();
 
-    registry_build(plan, glyphs)
+    registry_build(plan, &glyphs)
 }
 
 /// A font with one private-use codepoint for every variant of one group.
@@ -576,7 +576,7 @@ pub fn registry_group_font(plan: &Plan, group: &str) -> Result<Vec<u8>, String> 
         })
         .collect();
 
-    registry_build(plan, glyphs)
+    registry_build(plan, &glyphs)
 }
 
 /// A font with one representative drawing per letter, mapped to the letter.
@@ -636,58 +636,7 @@ pub fn registry_index_font(plan: &Plan) -> Result<Vec<u8>, String> {
         })
         .collect();
 
-    registry_build(plan, glyphs)
-}
-
-#[cfg(test)]
-mod cache_tests {
-    use std::collections::BTreeSet;
-    use std::rc::Rc;
-
-    use lemmata_plan::Plan;
-
-    use super::{CONTOURS, fill, ported};
-
-    const NAME: &str = "a.doubleStoreySerifed";
-
-    #[test]
-    fn a_variant_choice_reuses_the_ported_glyphs() {
-        let base = Plan::default();
-        let first = ported(&base);
-        let mut variant = base;
-        variant
-            .variants
-            .push(("a".to_string(), "single-storey-serifless".to_string()));
-        let second = ported(&variant);
-        assert!(
-            Rc::ptr_eq(&first[NAME], &second[NAME]),
-            "a variant choice changed the derived metrics"
-        );
-
-        let heavier = Plan {
-            weight_class: 700,
-            ..Plan::default()
-        };
-        let third = ported(&heavier);
-        assert!(
-            !Rc::ptr_eq(&first[NAME], &third[NAME]),
-            "a weight change reused the old contours"
-        );
-    }
-
-    #[test]
-    fn a_preview_fills_only_the_glyphs_it_draws() {
-        let plan = Plan::default();
-        let mut only = BTreeSet::new();
-        only.insert("a.crossing".to_string());
-        fill(&plan, Some(&only));
-        let cached = CONTOURS.with(|cache| cache.borrow().len());
-        assert_eq!(cached, 1, "the preview computed {cached} glyphs");
-
-        fill(&plan, None);
-        let all = CONTOURS.with(|cache| cache.borrow().len());
-        assert!(all > 100, "the full fill covered {all} glyphs");
-    }
+    registry_build(plan, &glyphs)
 }
 
 /// The texture forms the port draws, by base glyph and form.
@@ -743,4 +692,55 @@ pub fn texture_forms(
     }
 
     out
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use std::collections::BTreeSet;
+    use std::rc::Rc;
+
+    use lemmata_plan::Plan;
+
+    use super::{CONTOURS, fill, ported};
+
+    const NAME: &str = "a.doubleStoreySerifed";
+
+    #[test]
+    fn a_variant_choice_reuses_the_ported_glyphs() {
+        let base = Plan::default();
+        let first = ported(&base);
+        let mut variant = base;
+        variant
+            .variants
+            .push(("a".to_string(), "single-storey-serifless".to_string()));
+        let second = ported(&variant);
+        assert!(
+            Rc::ptr_eq(&first[NAME], &second[NAME]),
+            "a variant choice changed the derived metrics"
+        );
+
+        let heavier = Plan {
+            weight_class: 700,
+            ..Plan::default()
+        };
+        let third = ported(&heavier);
+        assert!(
+            !Rc::ptr_eq(&first[NAME], &third[NAME]),
+            "a weight change reused the old contours"
+        );
+    }
+
+    #[test]
+    fn a_preview_fills_only_the_glyphs_it_draws() {
+        let plan = Plan::default();
+        let mut only = BTreeSet::new();
+        only.insert("a.crossing".to_string());
+        fill(&plan, Some(&only));
+        let cached = CONTOURS.with(|cache| cache.borrow().len());
+        assert_eq!(cached, 1, "the preview computed {cached} glyphs");
+
+        fill(&plan, None);
+        let all = CONTOURS.with(|cache| cache.borrow().len());
+        assert!(all > 100, "the full fill covered {all} glyphs");
+    }
 }
