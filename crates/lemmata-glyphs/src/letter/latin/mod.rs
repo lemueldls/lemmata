@@ -17,6 +17,7 @@ pub mod upper_e;
 pub mod upper_f;
 pub mod upper_h;
 pub mod upper_i;
+pub mod upper_j;
 pub mod upper_l;
 pub mod upper_m;
 pub mod upper_n;

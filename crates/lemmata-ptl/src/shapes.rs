@@ -27,6 +27,7 @@ use kurbo::Vec2;
 use lemmata_geom::{Geometry, KnotType};
 
 use crate::control::{Af, Amendment, Item, UserControlKnot};
+use crate::letter_model::DivFrame;
 use crate::metrics::Metrics;
 use crate::spiro_kit::{Direction, Dispiro, Family, Kit, Position};
 use crate::util::{boole, boole_pn, mix};
@@ -2710,6 +2711,67 @@ pub fn curly_tail(
     }
 
     items
+}
+
+/// `FlatHookDotlessJShape`: the flat hook shared by the lower-case and
+/// capital `j`. The optional serif sits at the bar's top, to its left.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn flat_hook_dotless_j(
+    kit: &Kit,
+    metrics: &Metrics,
+    design: &Design,
+    df: &DivFrame,
+    df_hook: &DivFrame,
+    top: f64,
+    bar_center: f64,
+    cross_left: f64,
+    serif: bool,
+) -> Geometry {
+    let mut parts = Vec::new();
+    if serif {
+        let length = metrics.jut.max(mix(
+            0.5 * metrics.stroke * metrics.hv_contrast,
+            metrics.long_jut,
+            df.adws(),
+        ));
+        parts.push(
+            hserif(
+                kit,
+                metrics,
+                HSerifSide::LeftTop,
+                bar_center,
+                top,
+                length,
+                metrics.stroke,
+                None,
+            )
+            .geometry(kurbo::Affine::IDENTITY),
+        );
+    }
+
+    let bar = bar_center + 0.5 * metrics.stroke * metrics.hv_contrast;
+    let hd = flat_hook_depth(metrics, df_hook.adws());
+    let terminal = (bar - hd.x - (metrics.stroke / 3.0).max(df.width / 6.0))
+        .min(cross_left - 2.0 * metrics.ox);
+    parts.push(
+        kit.dispiro(vec![
+            Item::Af(kit.widths_lhs(None)),
+            kit.knot(KnotType::Left, terminal, metrics.descender, Vec::new()),
+            kit.knot(KnotType::Right, bar - hd.x, metrics.descender, Vec::new()),
+            kit.archv(None, Some(design.tight_hook_superness)),
+            kit.knot(KnotType::Left, bar, metrics.descender + hd.y, Vec::new()),
+            kit.knot(
+                KnotType::Right,
+                bar,
+                top,
+                kit.heading(upward(metrics.hv_contrast)),
+            ),
+        ])
+        .geometry(kurbo::Affine::IDENTITY),
+    );
+
+    Geometry::Combine(parts)
 }
 
 /// `ArcStartSerifWidth`: the clamp the serif width is held to.

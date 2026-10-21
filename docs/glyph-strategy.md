@@ -333,6 +333,12 @@ and the auto setting draws none at slab level 0. The capture holds 14 of the
 18, 226 knots, exact. The hooked and looped forms are not ported: they eject a
 tagged contour, and the port's tags carry no name to eject by.
 
+`upper-j.ptl` has five bodies: the bent hook, the flat hook, the descending
+bent hook and the two descending flat hooks, over the top serifs they select.
+`FlatHookDotlessJShape` moved into the shared shapes layer because both `j`
+files draw it. The capture holds all 14 configs, 296 knots, exact.
+`JCurlyTail` and `mathbb/J` are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

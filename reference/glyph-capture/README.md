@@ -457,7 +457,13 @@ V.curlyMotionSerifed,V.curlySerifed,V.curlySerifless,\
 V.straightMotionSerifed,V.straightSerifed,V.straightSerifless,\
 v.curlyMotionSerifed,v.curlySerifed,v.curlySerifless,v.cursiveSerifed,\
 v.cursiveSerifless,v.straightMotionSerifed,v.straightSerifed,\
-v.straightSerifless'
+v.straightSerifless,J.bentHookSerifed,J.bentHookSerifedBothSides,\
+J.bentHookSerifedSymmetric,J.bentHookSerifless,\
+J.descendingBentHookSerifed,J.descendingBentHookSerifedBothSides,\
+J.descendingBentHookSerifedSymmetric,J.descendingBentHookSerifless,\
+J.descendingFlatHookSerifed,J.descendingFlatHookSerifless,\
+J.flatHookSerifed,J.flatHookSerifedBothSides,J.flatHookSerifedSymmetric,\
+J.flatHookSerifless'
 npm run build -- ttf-unhinted::RefA
 ```
 

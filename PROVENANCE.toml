@@ -96,6 +96,10 @@ ours = "crates/lemmata-glyphs/src/letter/latin/upper_i.rs"
 upstream = "packages/font-glyphs/src/letter/latin/upper-i.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/upper_j.rs"
+upstream = "packages/font-glyphs/src/letter/latin/upper-j.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/upper_l.rs"
 upstream = "packages/font-glyphs/src/letter/latin/upper-l.ptl"
 
