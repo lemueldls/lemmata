@@ -307,6 +307,15 @@ plan.
 variants. Ten of the twelve glyphs are in the capture, and their outlines match
 point for point. `mathCDotInner` has no codepoint and is not captured.
 
+`upper-y.ptl` builds the capital from two `HalfXStrand`s. The strand lives in
+`x.ptl` and is the only part of that file ported so far: either a straight pair
+of knots for the straight body, or a quadratic curve whose control knots come
+from `quadControls`. The serifed settings cut the strands with
+`WithSerifOverflowMask`, an intersection with two boxes that split at the
+middle of the body. All eight configs are ported, the curly and straight bodies
+across no, base, motion and all serifs. The capture holds all eight, 268 knots,
+exact.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

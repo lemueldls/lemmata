@@ -428,7 +428,10 @@ dualAsterisk.turnPentaSMid,flower,flower.high,flower.sMid,flower.ST,\
 mathCDot,mathCDot.round,mathCDot.square,mathcolon,mathcolon.round,\
 mathcolon.square,opAsterisk,opAsterisk.hex,opAsterisk.penta,\
 opAsterisk.turnHex,opAsterisk.turnPenta,slavonicAsterisk,therefore,\
-therefore.round,therefore.square,asterisk/slashBot'
+therefore.round,therefore.square,asterisk/slashBot,Y.straightSerifless,\
+Y.curlySerifless,Y.straightBaseSerifed,Y.curlyBaseSerifed,\
+Y.straightMotionSerifed,Y.curlyMotionSerifed,Y.straightSerifed,\
+Y.curlySerifed'
 npm run build -- ttf-unhinted::RefA
 ```
 

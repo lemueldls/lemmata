@@ -57,6 +57,7 @@ fn the_site_draws_the_ported_glyphs() {
         "fPalatalHook.serifless",
         "I.serifed",
         "L.serifless",
+        "Y.straightSerifless",
         "p.earedSerifless",
     ] {
         assert!(ported.contains_key(name), "{name} is not ported");

@@ -21,3 +21,5 @@ pub mod upper_m;
 pub mod upper_n;
 pub mod upper_p;
 pub mod upper_q;
+pub mod upper_y;
+pub mod x;

@@ -246,6 +246,19 @@ impl Kit {
         self.also_thru_them(rs, af, KnotType::G2)
     }
 
+    /// `quadControls`: the knots of a quadratic curve between the neighbours.
+    #[must_use]
+    pub fn quad_controls(&self, x1: f64, y1: f64, samples: usize, af: Af) -> Item {
+        self.bez_controls(
+            x1 * 2.0 / 3.0,
+            y1 * 2.0 / 3.0,
+            crate::util::mix(1.0, x1, 2.0 / 3.0),
+            crate::util::mix(1.0, y1, 2.0 / 3.0),
+            samples,
+            af,
+        )
+    }
+
     /// A list of controls resolved when the sequence is flattened.
     #[must_use]
     pub fn decor(&self, items: Vec<Item>) -> Item {

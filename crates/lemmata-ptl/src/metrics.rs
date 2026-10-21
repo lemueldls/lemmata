@@ -632,6 +632,13 @@ impl Metrics {
         )
     }
 
+    /// `AdviceStroke2(crwX, crwY, refH, adws)`.
+    #[must_use]
+    pub fn advice_stroke2(&self, crw_x: f64, crw_y: f64, ref_h: f64, adws: f64) -> f64 {
+        WeightControl::new(self.stroke, self.width, self.sb, self.hv_contrast)
+            .advice_stroke2(crw_x, crw_y, ref_h, adws)
+    }
+
     /// `ArchDepthAOf`.
     #[must_use]
     pub fn arch_depth_a_of(&self, arch_depth: f64, width: Option<f64>) -> f64 {
