@@ -280,10 +280,13 @@ tree keeps as a `Transformed` node. The diagonal-tailed ends use `DiagTail.L`:
 a superellipse turn sampled by `DiagTail.FArc`, with the superellipse's
 derivative giving the depth direction. `HCrossBar.top` and `HookStart` are the
 shared helpers; the counter serif, the down extension, the down hook and the
-diagonal tail are local to this file. The table names 105 glyphs. Forty-five are
-in the capture, the standard, narrow and flat-hook bodies at every hook and
-bar, 1296 knots, exact. The four CLC settings are drawn but the plan does not
-build them, so they are ungated.
+diagonal tail are local to this file. The table names 105 glyphs, and
+`fPalatalHook` derives 45 more by hanging the palatal hook from the `overlay`
+anchor. Where the counter end sets `palatalHookPos` the hook moves out to it,
+and where it does not, the part below the baseline and left of the stem is cut
+away. The capture holds 90 of the 210, the standard, narrow and flat-hook
+bodies at every hook and bar for both forms, 3087 knots, exact. The four CLC
+settings are drawn but the plan does not build them, so they are ungated.
 
 Two things the layer did not have and the port needed:
 

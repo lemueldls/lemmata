@@ -52,6 +52,7 @@ fn the_site_draws_the_ported_glyphs() {
         "E.serifless",
         "F.serifless",
         "f.serifless",
+        "fPalatalHook.serifless",
         "I.serifed",
         "L.serifless",
         "p.earedSerifless",

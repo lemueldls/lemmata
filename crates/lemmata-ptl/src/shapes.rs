@@ -2490,7 +2490,7 @@ fn x_link_stroke(
             x_link.min(x - half),
             x_link.max(x + half),
             y_attach,
-            Some(sw),
+            None,
         )
         .geometry(kurbo::Affine::IDENTITY),
     ]
@@ -2682,6 +2682,12 @@ pub fn curly_tail(
     }
 
     items
+}
+
+/// `ArcStartSerifWidth`: the clamp the serif width is held to.
+#[must_use]
+pub fn arc_start_serif_width(stroke: f64, v_jut_stroke: f64) -> f64 {
+    (stroke * 0.875).max(stroke).min(v_jut_stroke)
 }
 
 /// `HCrossBar.top`: the horizontal bar at a crossbar height.

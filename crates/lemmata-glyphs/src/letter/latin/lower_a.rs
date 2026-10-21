@@ -360,7 +360,7 @@ impl LowerA<'_> {
             cx,
             cy - depth,
             cy - metrics.d_toothless_rise,
-            arc_start_serif_width(stroke, metrics.v_jut_stroke),
+            shapes::arc_start_serif_width(stroke, metrics.v_jut_stroke),
         )
     }
 
@@ -1032,11 +1032,6 @@ impl LowerA<'_> {
 }
 
 /// `FlipAround` about the ring's centre, as a node the tree carries.
-/// `ArcStartSerifWidth`: `clamp(stroke * 0.875, stroke, VJutStroke)`.
-fn arc_start_serif_width(stroke: f64, v_jut_stroke: f64) -> f64 {
-    (stroke * 0.875).max(stroke).min(v_jut_stroke)
-}
-
 /// The double-storey bodies `DoubleStoreyConfig` selects.
 #[derive(Clone, Copy)]
 enum DoubleBody {

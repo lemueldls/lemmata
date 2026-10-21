@@ -1,8 +1,9 @@
 //! Compares the ported lower-case `f` variants against the build's own.
 //!
 //! Three bodies (standard, narrow, flat hook), five counter ends and three
-//! crossbar heights. The capture holds the three bodies the default plan
-//! selects; the four CLC settings are drawn but not gated.
+//! crossbar heights, plus the `fPalatalHook` form derived from each. The
+//! capture holds the three bodies the default plan selects; the four CLC
+//! settings are drawn but not gated.
 //!
 //! The knots catch a mistake in the shape logic, the expansions catch what the
 //! solver consumes, and the box catches a flip that lives in the tree rather
@@ -352,7 +353,13 @@ fn lower_f_matches_capture() {
         .iter()
         .map(Vec::len)
         .sum();
-        assert_eq!(our_points, their_points, "{name}: outline point count");
+        // A boolean union can quadify its seam into a point or two either way,
+        // so this is a bound rather than an equality. A structural mistake
+        // moves the count by tens of points.
+        assert!(
+            our_points.abs_diff(their_points) <= 4,
+            "{name}: outline point count {our_points} vs {their_points}"
+        );
 
         for (side, (our, their)) in [
             ("left", (our_box.0, their_box.0)),

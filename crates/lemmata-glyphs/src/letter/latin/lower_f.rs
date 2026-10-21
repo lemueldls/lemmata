@@ -5,10 +5,10 @@
 //! settings that widen the hook and the crossbar. Each body takes five counter
 //! ends and three crossbar heights.
 //!
-//! `MarkSet.b`/`bp`, `LeaningAnchor.Above.Hook`, the overlay and palatal hook
-//! anchors place marks or other glyphs rather than geometry, so they are not
-//! drawn here. `fPalatalHook`, `fHookBottom`, `fLenis` and `mathbb/f` are
-//! derived from this file's shapes and are not ported yet.
+//! `MarkSet.b`/`bp` and `LeaningAnchor.Above.Hook` place marks rather than
+//! geometry, so they are not drawn here. `fPalatalHook` is built from the
+//! `overlay` and `palatalHookPos` anchors the bodies set. `fHookBottom`,
+//! `fLenis`, the accented compositions and `mathbb/f` are not ported yet.
 
 // The arithmetic mirrors upstream's expression order and stays clear of fused
 // multiply-add, which would round differently from JavaScript.
@@ -16,6 +16,7 @@
 
 use lemmata_geom::{Geometry, KnotType};
 use lemmata_ptl::control::{Item, UserControlKnot};
+use lemmata_ptl::glyph;
 use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::metrics::Metrics;
 use lemmata_ptl::shapes::{self, Design, HookArgs, HookParams, downward, upward};
@@ -118,6 +119,107 @@ impl LowerF<'_> {
         };
 
         mix(self.metrics.sb, self.right_sb(), at) - self.hsw_to_v(ink * self.metrics.stroke)
+    }
+
+    /// The crossbar mix the hook selects.
+    const fn side_mix(body: Body, hook: Hook) -> f64 {
+        match hook {
+            Hook::Tailed | Hook::DiagonalTailed => 1.0,
+            _ => {
+                if matches!(body, Body::Standard) {
+                    0.95
+                } else {
+                    mix(1.0, ADVANCE_SCALE_F, 1.5)
+                }
+            }
+        }
+    }
+
+    /// The crossbar height the table selects.
+    fn bar_height(&self, crossbar: Crossbar) -> f64 {
+        match crossbar {
+            Crossbar::Default => self.small_f_bar_pos(),
+            Crossbar::XHeight => self.metrics.xh,
+            Crossbar::HalfAscenderHeight => {
+                mix(0.0, self.metrics.ascender, 0.5) + self.metrics.half_stroke
+            }
+        }
+    }
+
+    /// The stem's bar edges for a body and counter end.
+    fn bar_layout(&self, body: Body, hook: Hook, m: f64) -> (DivFrame, f64, f64) {
+        let metrics = self.metrics;
+        let df = match body {
+            Body::Standard => self.df_n(),
+            _ => self.df_f(),
+        };
+        let at_center = matches!(hook, Hook::Tailed | Hook::DiagonalTailed);
+        let left = match body {
+            Body::Standard => self.bar_left(at_center),
+            Body::Narrow => {
+                let (at, ink) = if at_center {
+                    (0.45, 0.45)
+                } else {
+                    (0.35, 0.25)
+                };
+                mix(df.left_sb(), df.right_sb(), at) - self.hsw_to_v(ink * metrics.stroke)
+            }
+            _ => {
+                if at_center {
+                    df.middle() - self.hsw_to_v(0.5 * metrics.stroke)
+                } else {
+                    let cross_left = mix(0.0, df.left_sb(), m);
+                    let cross_right = mix(df.width, df.right_sb(), m);
+
+                    mix(cross_left, cross_right, 0.42) - self.hsw_to_v(0.375 * metrics.stroke)
+                }
+            }
+        };
+
+        (df, left, left + self.hsw_to_v(metrics.stroke))
+    }
+
+    /// `palatalHookPos`, when the counter end sets it.
+    fn palatal_hook_pos(
+        &self,
+        body: Body,
+        hook: Hook,
+        df: &DivFrame,
+        bar_left: f64,
+    ) -> Option<(f64, f64)> {
+        let metrics = self.metrics;
+        match hook {
+            Hook::Serifless => Some((
+                bar_left
+                    + self
+                        .hsw_to_v(metrics.stroke + metrics.v_jut_stroke.max(metrics.width / 12.0)),
+                0.0,
+            )),
+            Hook::Serifed => {
+                let x = match body {
+                    Body::FlatHook
+                    | Body::FlatHookClc1
+                    | Body::FlatHookClc2
+                    | Body::FlatHookClc3
+                    | Body::FlatHookClc4 => {
+                        let jut = metrics.mid_jut_center.max(mix(
+                            self.hsw_to_v(metrics.half_stroke),
+                            metrics.long_jut,
+                            df.adws(),
+                        ));
+
+                        df.middle() + jut + 0.5 * metrics.stroke * metrics.tan_slope
+                    }
+                    _ => {
+                        mix(df.left_sb(), df.right_sb(), 0.875)
+                            + 0.5 * metrics.stroke * metrics.tan_slope
+                    }
+                };
+
+                Some((x, 0.0))
+            }
+            _ => None,
+        }
     }
 
     /// `StdFShapeT`: the stem, its hook, and the crossbar's left edge.
@@ -389,14 +491,19 @@ impl LowerF<'_> {
     }
 
     /// `StandardFShape`.
-    fn standard(&self, df: &DivFrame, m: f64, bh: f64, hook: Hook) -> Geometry {
+    fn standard(
+        &self,
+        df: &DivFrame,
+        m: f64,
+        bh: f64,
+        hook: Hook,
+        bar_left: f64,
+        bar_right: f64,
+    ) -> Geometry {
         let metrics = self.metrics;
-        let bar_at_center = matches!(hook, Hook::Tailed | Hook::DiagonalTailed);
         let cross_right = mix(df.width, df.right_sb(), m);
         let bar_right_x = mix(df.left_sb(), df.right_sb(), m);
         let bar_left_0 = self.bar_left_0();
-        let bar_left = self.bar_left(bar_at_center);
-        let bar_right = bar_left + self.hsw_to_v(metrics.stroke);
 
         let stem = Geometry::Transformed {
             tf: kurbo::Affine::translate((bar_left - bar_left_0, 0.0)),
@@ -417,18 +524,19 @@ impl LowerF<'_> {
     }
 
     /// `NarrowStdFShape`.
-    fn narrow_std(&self, df: &DivFrame, m: f64, bh: f64, hook: Hook) -> Geometry {
+    fn narrow_std(
+        &self,
+        df: &DivFrame,
+        m: f64,
+        bh: f64,
+        hook: Hook,
+        bar_left: f64,
+        bar_right: f64,
+    ) -> Geometry {
         let metrics = self.metrics;
-        let bar_at_center = matches!(hook, Hook::Tailed | Hook::DiagonalTailed);
         let cross_right = mix(df.width, df.right_sb(), m);
         let bar_left_0 =
             mix(df.left_sb(), df.right_sb(), 0.35) - self.hsw_to_v(0.25 * metrics.stroke);
-        let bar_left = if bar_at_center {
-            mix(df.left_sb(), df.right_sb(), 0.45) - self.hsw_to_v(0.45 * metrics.stroke)
-        } else {
-            mix(df.left_sb(), df.right_sb(), 0.35) - self.hsw_to_v(0.25 * metrics.stroke)
-        };
-        let bar_right = bar_left + self.hsw_to_v(metrics.stroke);
 
         let stem = Geometry::Transformed {
             tf: kurbo::Affine::translate((bar_left - bar_left_0, 0.0)),
@@ -463,7 +571,17 @@ impl LowerF<'_> {
     }
 
     /// `NarrowFShape`, with the CLC widening the style selects.
-    fn narrow(&self, df: &DivFrame, m: f64, bh: f64, hook: Hook, clc: Option<u8>) -> Geometry {
+    #[allow(clippy::too_many_arguments)]
+    fn narrow(
+        &self,
+        df: &DivFrame,
+        m: f64,
+        bh: f64,
+        hook: Hook,
+        clc: Option<u8>,
+        bar_left: f64,
+        bar_right: f64,
+    ) -> Geometry {
         let metrics = self.metrics;
         let top_hook_ext = match clc {
             Some(1) => metrics.width,
@@ -475,15 +593,8 @@ impl LowerF<'_> {
             Some(1 | 2 | 4) => metrics.jut,
             _ => 0.0,
         };
-        let bar_at_center = matches!(hook, Hook::Tailed | Hook::DiagonalTailed);
         let cross_left = mix(0.0, df.left_sb(), m);
         let cross_right = mix(df.width, df.right_sb(), m);
-        let bar_left = if bar_at_center {
-            df.middle() - self.hsw_to_v(0.5 * metrics.stroke)
-        } else {
-            mix(cross_left, cross_right, 0.42) - self.hsw_to_v(0.375 * metrics.stroke)
-        };
-        let bar_right = bar_left + self.hsw_to_v(metrics.stroke);
         let hd = shapes::flat_hook_depth(metrics, df.adws());
 
         let stem = self.kit.dispiro(vec![
@@ -534,36 +645,74 @@ impl LowerF<'_> {
     /// One `f.<suffix>`.
     #[must_use]
     pub fn glyph(&self, body: Body, hook: Hook, crossbar: Crossbar) -> Geometry {
-        let metrics = self.metrics;
-        let df = match body {
-            Body::Standard => self.df_n(),
-            _ => self.df_f(),
-        };
-        let m = match hook {
-            Hook::Tailed | Hook::DiagonalTailed => 1.0,
-            _ => {
-                if matches!(body, Body::Standard) {
-                    0.95
-                } else {
-                    mix(1.0, ADVANCE_SCALE_F, 1.5)
-                }
-            }
-        };
-        let bh = match crossbar {
-            Crossbar::Default => self.small_f_bar_pos(),
-            Crossbar::XHeight => metrics.xh,
-            Crossbar::HalfAscenderHeight => mix(0.0, metrics.ascender, 0.5) + metrics.half_stroke,
-        };
+        let m = Self::side_mix(body, hook);
+        let bh = self.bar_height(crossbar);
+        let (df, bar_left, bar_right) = self.bar_layout(body, hook, m);
 
         match body {
-            Body::Standard => self.standard(&df, m, bh, hook),
-            Body::Narrow => self.narrow_std(&df, m, bh, hook),
-            Body::FlatHook => self.narrow(&df, m, bh, hook, None),
-            Body::FlatHookClc1 => self.narrow(&df, m, bh, hook, Some(1)),
-            Body::FlatHookClc2 => self.narrow(&df, m, bh, hook, Some(2)),
-            Body::FlatHookClc3 => self.narrow(&df, m, bh, hook, Some(3)),
-            Body::FlatHookClc4 => self.narrow(&df, m, bh, hook, Some(4)),
+            Body::Standard => self.standard(&df, m, bh, hook, bar_left, bar_right),
+            Body::Narrow => self.narrow_std(&df, m, bh, hook, bar_left, bar_right),
+            Body::FlatHook => self.narrow(&df, m, bh, hook, None, bar_left, bar_right),
+            Body::FlatHookClc1 => self.narrow(&df, m, bh, hook, Some(1), bar_left, bar_right),
+            Body::FlatHookClc2 => self.narrow(&df, m, bh, hook, Some(2), bar_left, bar_right),
+            Body::FlatHookClc3 => self.narrow(&df, m, bh, hook, Some(3), bar_left, bar_right),
+            Body::FlatHookClc4 => self.narrow(&df, m, bh, hook, Some(4), bar_left, bar_right),
         }
+    }
+
+    /// `fPalatalHook.<suffix>`: the base with the palatal hook under the stem.
+    ///
+    /// The hook hangs from the `overlay` anchor. A counter end that sets
+    /// `palatalHookPos` also moves the hook out to it, and where it does not,
+    /// the part below the baseline and left of the stem is cut away.
+    #[must_use]
+    pub fn palatal_hook(&self, body: Body, hook: Hook, crossbar: Crossbar) -> Geometry {
+        let metrics = self.metrics;
+        let m = Self::side_mix(body, hook);
+        let (df, bar_left, _) = self.bar_layout(body, hook, m);
+        let base = self.glyph(body, hook, crossbar);
+        let attach_x = bar_left + self.hsw_to_v(0.5 * metrics.stroke);
+        let pos = self.palatal_hook_pos(body, hook, &df, bar_left);
+        let ref_sw = metrics.advice_stroke(if pos.is_some() { 2.0 } else { 3.0 }, 1.0, 1.0);
+        let sw = shapes::arc_start_serif_width(ref_sw, metrics.v_jut_stroke);
+        let x = pos.map_or_else(
+            || attach_x + (self.right_sb() - metrics.sb) / 2.0,
+            |(x, _)| x,
+        ) - self.hsw_to_v(0.5 * sw);
+        let y = pos.map_or(0.0, |(_, y)| y);
+        let hook = glyph::union(shapes::palatal_hook(
+            self.kit,
+            metrics,
+            x,
+            y,
+            Some(attach_x),
+            y,
+            0.0,
+            sw,
+        ));
+        let hook = if pos.is_some() {
+            hook
+        } else {
+            let mask = glyph::intersection(vec![
+                spiro_geometry(shapes::rect(
+                    self.kit,
+                    0.0,
+                    -metrics.very_far,
+                    -metrics.very_far,
+                    metrics.very_far,
+                )),
+                spiro_geometry(shapes::rect(
+                    self.kit,
+                    metrics.very_far,
+                    -metrics.very_far,
+                    -metrics.very_far,
+                    attach_x + self.hsw_to_v(metrics.half_stroke),
+                )),
+            ]);
+            glyph::difference(vec![hook, mask])
+        };
+
+        Geometry::Combine(vec![base, hook])
     }
 
     /// Every glyph this definition builds, by name.
@@ -573,15 +722,26 @@ impl LowerF<'_> {
         for (body_key, body) in BODIES {
             for (hook_key, hook) in HOOKS {
                 for (bar_key, bar) in BARS {
+                    let suffix = weave(&[body_key, hook_key, bar_key]);
+                    out.push((format!("f.{suffix}"), self.glyph(*body, *hook, *bar)));
                     out.push((
-                        format!("f.{}", weave(&[body_key, hook_key, bar_key])),
-                        self.glyph(*body, *hook, *bar),
+                        format!("fPalatalHook.{suffix}"),
+                        self.palatal_hook(*body, *hook, *bar),
                     ));
                 }
             }
         }
 
         out
+    }
+}
+
+/// A spiro outline as a geometry node.
+fn spiro_geometry(outline: lemmata_ptl::spiro_kit::SpiroOutline) -> Geometry {
+    Geometry::Spiro {
+        gizmo: kurbo::Affine::IDENTITY,
+        closed: outline.closed,
+        knots: outline.knots,
     }
 }
 
