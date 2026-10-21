@@ -344,6 +344,13 @@ serifed. The crossbar is two `HBar.t` halves, the top serifs are `VSerif.dr`
 and `.dl`, and the bottom serif is `HSerif.mb`. The capture holds all three, 28
 knots, exact. The hooked, Cyrillic and turned forms are not ported.
 
+`u.ptl` has five bodies (toothed, tailed, flat bottom, toothless corner and
+toothless rounded) over the serif settings each case selects. The bowl is a
+`dispiro` with `Arch.rhs` or `Arch.lhs` resolved through the port's `arch`
+helper; the flat bottom is the corner bowl with its rise set to zero. The
+capture holds 36 of the 50 built, 670 knots, exact. The hooked, short-leg,
+tailed-stem, Greek and Cyrillic forms are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

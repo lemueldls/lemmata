@@ -463,7 +463,23 @@ J.descendingBentHookSerifed,J.descendingBentHookSerifedBothSides,\
 J.descendingBentHookSerifedSymmetric,J.descendingBentHookSerifless,\
 J.descendingFlatHookSerifed,J.descendingFlatHookSerifless,\
 J.flatHookSerifed,J.flatHookSerifedBothSides,J.flatHookSerifedSymmetric,\
-J.flatHookSerifless,T.motionSerifed,T.serifed,T.serifless'
+J.flatHookSerifless,T.motionSerifed,T.serifed,T.serifless,\
+U.flatBottomBottomRightSerifed,U.flatBottomMotionSerifed,\
+U.flatBottomSerifed,U.flatBottomSerifless,U.tailedMotionSerifed,\
+U.tailedSerifed,U.tailedSerifless,U.toothedBottomRightSerifed,\
+U.toothedMotionSerifed,U.toothedSerifed,U.toothedSerifless,\
+U.toothlessCornerBilateralMotionSerifed,U.toothlessCornerMotionSerifed,\
+U.toothlessCornerSerifed,U.toothlessCornerSerifless,\
+U.toothlessRoundedBilateralMotionSerifed,\
+U.toothlessRoundedMotionSerifed,U.toothlessRoundedSerifed,\
+U.toothlessRoundedSerifless,u.flatBottomBottomRightSerifed,\
+u.flatBottomMotionSerifed,u.flatBottomSerifed,u.flatBottomSerifless,\
+u.tailedMotionSerifed,u.tailedSerifed,u.tailedSerifless,\
+u.toothedBottomRightSerifed,u.toothedMotionSerifed,u.toothedSerifed,\
+u.toothedSerifless,u.toothlessCornerMotionSerifed,\
+u.toothlessCornerSerifed,u.toothlessCornerSerifless,\
+u.toothlessRoundedMotionSerifed,u.toothlessRoundedSerifed,\
+u.toothlessRoundedSerifless'
 npm run build -- ttf-unhinted::RefA
 ```
 

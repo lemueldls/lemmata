@@ -11,6 +11,7 @@ pub mod lower_m;
 pub mod lower_n;
 pub mod lower_p;
 pub mod o;
+pub mod u;
 pub mod upper_b;
 pub mod upper_d;
 pub mod upper_e;
