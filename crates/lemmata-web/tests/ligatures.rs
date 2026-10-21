@@ -104,6 +104,33 @@ fn the_sequence_joins_at_both_ends() {
     }
 }
 
+/// The reference fixture holds an outline for every target, but the port draws
+/// the ones it can at the plan's metrics. A weight change has to reach them, or
+/// a bold font keeps thin arrows.
+#[test]
+fn the_ligature_outlines_follow_the_plan() {
+    let regular = lemmata_plan::Plan::default();
+    let bold = lemmata_plan::from_json(r#"{"weight": 700}"#).expect("bold plan");
+    let regular_glyphs = lemmata_source::ligature_glyphs(&regular);
+    let bold_glyphs = lemmata_source::ligature_glyphs(&bold);
+    assert!(!regular_glyphs.is_empty(), "no ligature glyphs were drawn");
+
+    let target = ".g29150.join-r";
+    let find = |glyphs: &[lemmata_build::font::GlyphData]| {
+        glyphs
+            .iter()
+            .find(|glyph| glyph.name == target)
+            .unwrap_or_else(|| panic!("{target} is not drawn"))
+            .contours
+            .clone()
+    };
+    assert_ne!(
+        format!("{:?}", find(&regular_glyphs)),
+        format!("{:?}", find(&bold_glyphs)),
+        "the rod did not follow the weight"
+    );
+}
+
 /// The live preview is what the page sets the specimen in, so it has to join
 /// the same sequences the built file does. It carries only the rules the text
 /// can trigger and the glyphs those rules target, so the first run pays for the

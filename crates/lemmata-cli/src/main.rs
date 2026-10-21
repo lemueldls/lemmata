@@ -226,6 +226,7 @@ fn build_font(build: Build) -> Result<(), String> {
     // The glyph source is shared with the browser build, so a plan draws the
     // same outlines in both front ends.
     let mut glyphs = lemmata_source::glyphs(&plan, &captured);
+    glyphs.extend(lemmata_source::ligature_glyphs(&plan));
 
     // The restriction runs on the input rather than on the built font, so the
     // MATH table is assembled over the glyphs that are left and its ids stay

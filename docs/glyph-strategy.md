@@ -381,4 +381,19 @@ A reference build with `inherits = "default-calt"` settles what a ligature is in
 
 `lemmata_layout` now carries both shapes: `Effect::Contextual` with one coverage per position, which is what the ligation rules need, and `Effect::Ligature` for a type-4 lookup a future definition may prefer. `Rule`'s backtrack and lookahead are per position rather than one flattened coverage, so a two-character context is expressible.
 
-`cargo xtask ligations <font> <out.json> --rules` walks the `calt` feature and reports every rule by glyph name, with the glyph set they reference: 229 rules over 161 glyphs for the reference build. The remaining work is the fixture: dump those glyphs, embed the rules, and add them to the build's `calt` alongside texture healing.
+The fixture is embedded now. `reference/ligatures.json` holds the rules and the
+outlines of every target, and `lemmata_build::ligatures` adds both to the font
+under `calt`. The extractor writes one chaining rule per changed position, and
+each later rule names the joined form the earlier one produced, so `<=`, `>=`,
+`->` and `=>` join at both ends. A rule that kept the plain context drew the
+left glyph's extension over an unchanged right glyph.
+
+The outlines come from the reference build, so they are fixed at its plan.
+`symbol/ligation.ptl` is ported for the arrow bars: `plus`, `hyphen`, `equal`
+and `ident`, both notch settings, across every left and right join class.
+`reference/ligature-sources.json` maps the targets whose captured outline
+matches a candidate exactly (21 of the 143) back to the source name, and
+`lemmata-source` draws those at the plan's metrics, so a bold or slanted plan
+gets a matching rod. The comparison angles, the arrow heads, the waves and the
+bracket joins are separate shapes and stay on the fixture until they are
+ported.

@@ -24,6 +24,7 @@ use lemmata_plan::{Plan, Spacing};
 use lemmata_ptl::metrics::{Metrics, Para};
 use lemmata_ptl::param::{self, Shape};
 use lemmata_ptl::shapes::Design;
+use lemmata_ptl::spiro_kit::Kit;
 
 /// The parameter files the port's metrics are derived from. They are upstream's
 /// own, read verbatim, and together they are about twenty kilobytes.
@@ -151,6 +152,51 @@ pub fn fill(plan: &Plan, only: Option<&BTreeSet<String>>) {
 #[must_use]
 pub fn contours_of(name: &str) -> Option<Rc<Contours>> {
     CONTOURS.with(|cache| cache.borrow().get(name).cloned())
+}
+
+/// The ligature glyphs the port draws, named for the targets the rules use.
+///
+/// The fixture keeps the reference outline of every target so a target the port
+/// cannot draw still renders. A target in the source map is drawn here instead,
+/// at the plan's own metrics.
+#[must_use]
+pub fn ligature_glyphs(plan: &Plan) -> Vec<GlyphData> {
+    let Some(metrics) = metrics(plan) else {
+        return Vec::new();
+    };
+    let design = Design::default();
+    let kit = Kit::new(
+        metrics.stroke,
+        design.superness,
+        metrics.contrast,
+        metrics.tiny,
+    );
+    let ligation = lemmata_glyphs::symbol::ligation::Ligation {
+        metrics: &metrics,
+        kit: &kit,
+        design: &design,
+    };
+    let drawn: BTreeMap<String, Geometry> = ligation.glyphs().into_iter().collect();
+    let advance = u16::try_from(metrics.width.round() as i64).unwrap_or(0);
+    let mut out = Vec::new();
+    for (target, source) in lemmata_build::ligatures::sources() {
+        let Some(geometry) = drawn.get(source) else {
+            continue;
+        };
+        let contours = Geometry::Simplify {
+            gizmo: kurbo::Affine::IDENTITY,
+            geom: Box::new(geometry.clone()),
+        }
+        .to_contours();
+        out.push(GlyphData {
+            name: target.to_string(),
+            unicodes: Vec::new(),
+            advance,
+            contours,
+        });
+    }
+
+    out
 }
 
 /// The glyphs the port draws, as contours, by name.

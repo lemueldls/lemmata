@@ -18,7 +18,30 @@ use crate::font::{GlyphData, Ligature};
 /// The fixture, generated from the reference build.
 const FIXTURE: &str = include_str!("../../../reference/ligatures.json");
 
+/// The reference targets the port can draw itself, by source name.
+const SOURCES: &str = include_str!("../../../reference/ligature-sources.json");
+
 type Fixture = (Vec<Ligature>, Vec<GlyphData>);
+
+/// The source glyph the port draws for a captured target, when it has one.
+#[must_use]
+pub fn source_of(target: &str) -> Option<&'static str> {
+    static MAP: OnceLock<std::collections::BTreeMap<String, String>> = OnceLock::new();
+    let map =
+        MAP.get_or_init(|| serde_json::from_str(SOURCES).expect("the ligature source map parses"));
+
+    map.get(target).map(String::as_str)
+}
+
+/// Every target the port can draw, with its source name.
+pub fn sources() -> impl Iterator<Item = (&'static str, &'static str)> {
+    static MAP: OnceLock<std::collections::BTreeMap<String, String>> = OnceLock::new();
+    let map =
+        MAP.get_or_init(|| serde_json::from_str(SOURCES).expect("the ligature source map parses"));
+
+    map.iter()
+        .map(|(target, source)| (target.as_str(), source.as_str()))
+}
 
 fn fixture() -> &'static Fixture {
     static PARSED: OnceLock<Fixture> = OnceLock::new();

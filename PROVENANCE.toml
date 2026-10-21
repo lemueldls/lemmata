@@ -16,6 +16,10 @@ ours = "crates/lemmata-glyphs/src/symbol/math/dots_and_colons.rs"
 upstream = "packages/font-glyphs/src/symbol/math/dots-and-colons.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/ligation.rs"
+upstream = "packages/font-glyphs/src/symbol/ligation.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/symbol/punctuation/asterisk.rs"
 upstream = "packages/font-glyphs/src/symbol/punctuation/asterisk.ptl"
 

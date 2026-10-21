@@ -1,0 +1,23 @@
+{
+  ".g28773.join-r": "plus.lig.fc.withoutNotch",
+  ".g29069.join-l": "plus.lig.cf.withoutNotch",
+  ".g29097.join-m": "plus.lig.cc.withoutNotch",
+  ".g29150.join-r": "hyphen.lig.fr.withoutNotch",
+  ".g29154.join-r": "hyphen.lig.fr1.withoutNotch",
+  ".g29157.join-r": "hyphen.lig.fm.withNotch",
+  ".g29162.join-r": "hyphen.lig.fj.withoutNotch",
+  ".g29166.join-r": "hyphen.lig.fj1.withoutNotch",
+  ".g29169.join-r": "hyphen.lig.fc.withNotch",
+  ".g29174.join-r": "hyphen.lig.fz.withoutNotch",
+  ".g29250.join-l": "hyphen.lig.lf.withoutNotch",
+  ".g29258.join-m": "hyphen.lig.lr.withoutNotch",
+  ".g29278.join-m": "hyphen.lig.lc.withoutNotch",
+  ".g29286.join-l": "hyphen.lig.l1f.withoutNotch",
+  ".g29394.join-l": "hyphen.lig.jf.withoutNotch",
+  ".g29430.join-l": "hyphen.lig.j1f.withoutNotch",
+  ".g29465.join-l": "hyphen.lig.cf.withNotch",
+  ".g29474.join-m": "hyphen.lig.cr.withoutNotch",
+  ".g29493.join-m": "hyphen.lig.cc.withNotch",
+  ".g29502.join-l": "hyphen.lig.zf.withoutNotch",
+  ".g29530.join-m": "hyphen.lig.zc.withoutNotch"
+}

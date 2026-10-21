@@ -27,6 +27,7 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
     let metrics = plan.to_font_metrics();
     let captured = lemmata_capture::load(capture)?;
     let mut glyphs = lemmata_source::glyphs(&plan, &captured);
+    glyphs.extend(lemmata_source::ligature_glyphs(&plan));
     let rules = lemmata_build::ligatures::add(&mut glyphs);
     let drawn = lemmata_source::texture_forms(&plan, &captured);
 
@@ -66,6 +67,7 @@ pub fn build_preview(capture: &[u8], plan: &str, text: &str) -> Result<Vec<u8>, 
     let metrics = plan.to_font_metrics();
     let captured = lemmata_capture::load(capture)?;
     let mut glyphs = lemmata_source::preview_glyphs(&plan, &captured, text);
+    glyphs.extend(lemmata_source::ligature_glyphs(&plan));
     let wanted: std::collections::BTreeSet<u32> = text.chars().map(u32::from).collect();
     let text_names: std::collections::BTreeSet<String> = captured
         .iter()
