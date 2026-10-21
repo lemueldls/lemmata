@@ -70,3 +70,25 @@ fn the_sequence_joins_into_the_ligature_forms() {
 
     eprintln!("ligatures: -> shapes to {} glyphs", joined.len());
 }
+
+/// The live preview is what the page sets the specimen in, so it has to join
+/// the same sequences the built file does. It carries only the rules the text
+/// can trigger and the glyphs those rules target, so the first run pays for the
+/// fixture and later runs stay cheap.
+#[test]
+fn the_preview_joins_the_sequences_too() {
+    let Ok(capture) = fs::read(capture_path()) else {
+        eprintln!("skipping: no capture");
+        return;
+    };
+    let bytes = lemmata_web::build_preview(&capture, "", "-> => /* */").expect("preview");
+    let blob: harfrust::font::Blob = bytes.into();
+    let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
+
+    for text in ["->", "=>", "/*"] {
+        let (plain_a, _) = shape(&font, &text[..1]);
+        let (plain_b, _) = shape(&font, &text[1..]);
+        let (joined, _) = shape(&font, text);
+        assert_ne!(joined, vec![plain_a[0], plain_b[0]], "{text} did not join");
+    }
+}

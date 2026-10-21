@@ -111,3 +111,45 @@ pub fn add(glyphs: &mut Vec<GlyphData>) -> &'static [Ligature] {
 
     rules
 }
+
+/// The rules that can fire in a run whose glyph names are `text_names`, and
+/// the glyphs they target.
+///
+/// A preview is rebuilt on every text change, so carrying the whole fixture
+/// there costs more than it saves. A run with no ligature trigger gets no
+/// rules and no extra glyphs.
+#[must_use]
+pub fn add_for(
+    glyphs: &mut Vec<GlyphData>,
+    text_names: &std::collections::BTreeSet<String>,
+) -> Vec<Ligature> {
+    let (rules, extra) = fixture();
+    let relevant: Vec<Ligature> = rules
+        .iter()
+        .filter(|rule| {
+            text_names.contains(&rule.input)
+                && rule
+                    .lookahead
+                    .iter()
+                    .flatten()
+                    .all(|name| text_names.contains(name))
+                && rule
+                    .backtrack
+                    .iter()
+                    .flatten()
+                    .all(|name| text_names.contains(name))
+        })
+        .cloned()
+        .collect();
+    let targets: std::collections::BTreeSet<&str> =
+        relevant.iter().map(|rule| rule.target.as_str()).collect();
+    for glyph in extra {
+        if targets.contains(glyph.name.as_str())
+            && !glyphs.iter().any(|existing| existing.name == glyph.name)
+        {
+            glyphs.push(glyph.clone());
+        }
+    }
+
+    relevant
+}

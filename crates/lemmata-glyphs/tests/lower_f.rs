@@ -3,7 +3,7 @@
 //! Three bodies (standard, narrow, flat hook), five counter ends and three
 //! crossbar heights, plus the `fPalatalHook` form derived from each. The
 //! capture holds the three bodies the default plan selects; the four CLC
-//! settings are drawn but not gated.
+//! ligature bodies are built on request and are not in this list.
 //!
 //! The knots catch a mistake in the shape logic, the expansions catch what the
 //! solver consumes, and the box catches a flip that lives in the tree rather

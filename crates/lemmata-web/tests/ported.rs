@@ -137,6 +137,18 @@ fn a_plan_can_choose_a_variant_the_capture_never_held() {
 }
 
 #[test]
+fn the_registry_lists_no_ligature_components() {
+    // The four CLC bodies widen an `f` for a ligature's left half. They are not
+    // selectable variants, so the registry leaves them out and the ligature
+    // machinery asks for them through `LowerF::ligature_glyphs`.
+    let names = lemmata_web::registry_names();
+    assert!(
+        !names.lines().any(|name| name.contains("flatHookCLC")),
+        "the registry lists a ligature component"
+    );
+}
+
+#[test]
 fn the_registry_font_maps_the_variants() {
     let bytes = lemmata_web::registry_font("").expect("registry font");
     let font = read_fonts::FontRef::new(&bytes).expect("reopen");

@@ -54,7 +54,8 @@ pub fn build_font(capture: &[u8], plan: &str) -> Result<Vec<u8>, JsValue> {
 ///
 /// The font is whole, so the page can swap it under the specimen without
 /// changing anything else. The ported glyphs the text does not use keep the
-/// capture's outline, which is the reference plan's drawing.
+/// capture's outline, which is the reference plan's drawing. The ligature rules
+/// the text can trigger are included, so the preview joins like the built file.
 ///
 /// # Errors
 ///
@@ -64,9 +65,16 @@ pub fn build_preview(capture: &[u8], plan: &str, text: &str) -> Result<Vec<u8>, 
     let plan = lemmata_plan::from_json(plan)?;
     let metrics = plan.to_font_metrics();
     let captured = lemmata_capture::load(capture)?;
-    let glyphs = lemmata_source::preview_glyphs(&plan, &captured, text);
+    let mut glyphs = lemmata_source::preview_glyphs(&plan, &captured, text);
+    let wanted: std::collections::BTreeSet<u32> = text.chars().map(u32::from).collect();
+    let text_names: std::collections::BTreeSet<String> = captured
+        .iter()
+        .filter(|glyph| glyph.unicodes.iter().any(|code| wanted.contains(code)))
+        .map(|glyph| glyph.name.clone())
+        .collect();
+    let rules = lemmata_build::ligatures::add_for(&mut glyphs, &text_names);
 
-    lemmata_build::font::build(&glyphs, &metrics, &Names::default(), &plan.variants)
+    lemmata_build::font::build_with(&glyphs, &metrics, &Names::default(), &plan.variants, &rules)
 }
 
 /// The preview, for the page.

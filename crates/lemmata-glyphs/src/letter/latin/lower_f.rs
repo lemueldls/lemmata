@@ -715,11 +715,36 @@ impl LowerF<'_> {
         Geometry::Combine(vec![base, hook])
     }
 
-    /// Every glyph this definition builds, by name.
+    /// The variants the plan can select, by name.
+    ///
+    /// The four CLC bodies are the left parts of the `f` ligatures rather than
+    /// selectable variants, so they are not here. Upstream's cleaned store only
+    /// keeps them as ligature parts too.
     #[must_use]
     pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        self.build_glyphs(false)
+    }
+
+    /// The ligature components, by name.
+    ///
+    /// The four CLC bodies widen the hook and the crossbar for a ligature's
+    /// left half. The ligature machinery asks for them when it composes a
+    /// sequence.
+    #[must_use]
+    pub fn ligature_glyphs(&self) -> Vec<(String, Geometry)> {
+        self.build_glyphs(true)
+    }
+
+    fn build_glyphs(&self, ligatures: bool) -> Vec<(String, Geometry)> {
         let mut out = Vec::new();
         for (body_key, body) in BODIES {
+            let is_ligature = matches!(
+                body,
+                Body::FlatHookClc1 | Body::FlatHookClc2 | Body::FlatHookClc3 | Body::FlatHookClc4
+            );
+            if is_ligature != ligatures {
+                continue;
+            }
             for (hook_key, hook) in HOOKS {
                 for (bar_key, bar) in BARS {
                     let suffix = weave(&[body_key, hook_key, bar_key]);

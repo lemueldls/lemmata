@@ -286,7 +286,9 @@ anchor. Where the counter end sets `palatalHookPos` the hook moves out to it,
 and where it does not, the part below the baseline and left of the stem is cut
 away. The capture holds 90 of the 210, the standard, narrow and flat-hook
 bodies at every hook and bar for both forms, 3087 knots, exact. The four CLC
-settings are drawn but the plan does not build them, so they are ungated.
+settings are the left halves of the `f` ligatures. They are built on request by
+`ligature_glyphs`, not listed as registry variants, and are ungated because
+upstream's cleaned store keeps only their ligature instances.
 
 `symbol/punctuation/asterisk.ptl` builds the asterisk family from one
 generator: a ring of petals, each a two-knot di-spiro tapering from the centre
