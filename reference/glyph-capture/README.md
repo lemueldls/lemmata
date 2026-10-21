@@ -507,7 +507,33 @@ z.straightSerifedWithCrossBar,z.straightSerifedWithHorizontalCrossBar,\
 z.straightSerifless,z.straightSeriflessWithCrossBar,\
 z.straightSeriflessWithHorizontalCrossBar,z.straightTopSerifed,\
 z.straightTopSerifedWithCrossBar,\
-z.straightTopSerifedWithHorizontalCrossBar'
+z.straightTopSerifedWithHorizontalCrossBar,\
+X.curlyBilateralMotionSerifed,X.curlyDescendingBilateralMotionSerifed,\
+X.curlyDescendingSerifed,X.curlyDescendingSerifless,\
+X.curlyDescendingUnilateralMotionSerifed,X.curlySerifed,\
+X.curlySerifless,X.curlyUnilateralMotionSerifed,\
+X.straightBilateralMotionSerifed,\
+X.straightDescendingBilateralMotionSerifed,X.straightDescendingSerifed,\
+X.straightDescendingSerifless,\
+X.straightDescendingUnilateralMotionSerifed,X.straightSerifed,\
+X.straightSerifless,X.straightUnilateralMotionSerifed,x.chancery,\
+x.chanceryDescending,x.curlyBilateralMotionSerifed,\
+x.curlyDescendingBilateralMotionSerifed,\
+x.curlyDescendingGrekLowerChiSerifed,x.curlyDescendingSerifed,\
+x.curlyDescendingSerifless,x.curlyDescendingUnilateralMotionSerifed,\
+x.curlyGrekLowerChiSerifed,x.curlySerifed,x.curlySerifless,\
+x.curlyUnilateralMotionSerifed,x.cursive,x.cursiveDescending,\
+x.semiChanceryCurlyDescendingSerifed,\
+x.semiChanceryCurlyDescendingSerifless,x.semiChanceryCurlySerifed,\
+x.semiChanceryCurlySerifless,x.semiChanceryStraightDescendingSerifed,\
+x.semiChanceryStraightDescendingSerifless,x.semiChanceryStraightSerifed,\
+x.semiChanceryStraightSerifless,x.straightBilateralMotionSerifed,\
+x.straightDescendingBilateralMotionSerifed,\
+x.straightDescendingGrekLowerChiSerifed,x.straightDescendingSerifed,\
+x.straightDescendingSerifless,\
+x.straightDescendingUnilateralMotionSerifed,\
+x.straightGrekLowerChiSerifed,x.straightSerifed,x.straightSerifless,\
+x.straightUnilateralMotionSerifed'
 npm run build -- ttf-unhinted::RefA
 ```
 

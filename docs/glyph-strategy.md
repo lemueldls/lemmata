@@ -358,6 +358,13 @@ outline; the curly one is `XStrand`; the lower-case straight middle is an
 cursive body, the crossbar overlays, the hooked and swash forms, `Z.PLK` and
 the Cyrillic forms are not ported.
 
+`x.ptl` builds the straight and curly bodies over the two heights and the
+serif settings, for both cases. Each diagonal is an `XStrand`; the full and
+Greek-chi settings cut the strands with `WithSerifOverflowMask`, which compares
+the body box plus the serif's overflow. The mask moved into the shared shapes
+layer because `upper-y.ptl` uses it too. The capture holds all 36 built, 2232
+knots, exact. The chancery, semi-chancery and cursive forms are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

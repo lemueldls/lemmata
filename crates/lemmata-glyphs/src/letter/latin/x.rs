@@ -14,7 +14,7 @@
 
 use lemmata_geom::Geometry;
 use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{diag_cor, downward, upward};
+use lemmata_ptl::shapes::{Design, diag_cor, downward, upward};
 use lemmata_ptl::spiro_kit::Kit;
 use lemmata_ptl::util::mix;
 
@@ -210,3 +210,191 @@ pub fn x_strand(
 
     Geometry::Combine(vec![left, right])
 }
+
+/// The body of `X` and `x`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Body {
+    Straight,
+    Curly,
+}
+
+/// The serif setting.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Serif {
+    Serifless,
+    UnilateralMotion,
+    BilateralMotion,
+    Full,
+    GrekLowerChi,
+}
+
+/// The `X` and `x` families this module builds.
+pub struct LetterX<'a> {
+    pub metrics: &'a Metrics,
+    pub kit: &'a Kit,
+    pub design: &'a Design,
+}
+
+impl LetterX<'_> {
+    fn df(&self) -> lemmata_ptl::letter_model::DivFrame {
+        lemmata_ptl::letter_model::DivFrame::new(self.metrics.clone(), Some(1.0), Some(2.0), None)
+    }
+
+    /// `XLetterForm.base`, for the straight and curly strokes.
+    fn base(
+        &self,
+        df: &lemmata_ptl::letter_model::DivFrame,
+        body: Body,
+        top: f64,
+        bot: f64,
+        tension: f64,
+        f_slab: bool,
+    ) -> Geometry {
+        let metrics = self.metrics;
+        let straight = body == Body::Straight;
+        let slab = f_slab;
+        let first = x_strand(
+            self.kit,
+            metrics,
+            straight,
+            slab,
+            df.left_sb(),
+            bot,
+            df.right_sb(),
+            top,
+            0.1,
+            0.4,
+            tension,
+            None,
+        );
+        let second = x_strand(
+            self.kit,
+            metrics,
+            straight,
+            slab,
+            df.left_sb(),
+            top,
+            df.right_sb(),
+            bot,
+            0.1,
+            0.4,
+            tension,
+            None,
+        );
+
+        Geometry::Combine(vec![first, second])
+    }
+
+    /// `XSerifs`.
+    fn serif(
+        &self,
+        df: &lemmata_ptl::letter_model::DivFrame,
+        serif: Serif,
+        top: f64,
+        bot: f64,
+    ) -> Option<Geometry> {
+        let metrics = self.metrics;
+        let sf = lemmata_ptl::serif::SerifFrame::from_df(metrics, df, top, bot, None, None, false);
+        Some(match serif {
+            Serif::Serifless => return None,
+            Serif::UnilateralMotion => sf.lt_outer(self.kit, metrics),
+            Serif::BilateralMotion => Geometry::Combine(vec![
+                sf.lt_outer(self.kit, metrics),
+                sf.rb_outer(self.kit, metrics),
+            ]),
+            Serif::Full => Geometry::Combine(vec![
+                sf.lt_full(self.kit, metrics),
+                sf.rt_full(self.kit, metrics),
+                sf.lb_full(self.kit, metrics),
+                sf.rb_full(self.kit, metrics),
+            ]),
+            Serif::GrekLowerChi => Geometry::Combine(vec![
+                sf.lt_outer(self.kit, metrics),
+                sf.rt_full(self.kit, metrics),
+                sf.lb_full(self.kit, metrics),
+                sf.rb_outer(self.kit, metrics),
+            ]),
+        })
+    }
+
+    /// One `X.<suffix>` or `x.<suffix>`.
+    #[must_use]
+    pub fn glyph(&self, body: Body, serif: Serif, capital: bool, descending: bool) -> Geometry {
+        let df = self.df();
+        let top = if capital {
+            self.metrics.cap
+        } else {
+            self.metrics.xh
+        };
+        let bot = if descending {
+            self.metrics.descender
+        } else {
+            0.0
+        };
+        let tension = if capital { 0.28 } else { 0.20 };
+        let mask = matches!(serif, Serif::Full | Serif::GrekLowerChi);
+        let base = lemmata_ptl::shapes::with_serif_overflow_mask(
+            self.kit,
+            self.metrics,
+            mask,
+            top,
+            bot,
+            df.left_sb(),
+            df.right_sb(),
+            self.base(&df, body, top, bot, tension, mask),
+        );
+        let mut parts = vec![base];
+        if let Some(serif) = self.serif(&df, serif, top, bot) {
+            parts.push(serif);
+        }
+
+        Geometry::Combine(parts)
+    }
+
+    /// Every glyph this definition builds, by name.
+    #[must_use]
+    pub fn glyphs(&self) -> Vec<(String, Geometry)> {
+        let mut out = Vec::new();
+        for (body_key, body) in BODIES {
+            for (height_key, descending) in HEIGHTS {
+                for (serif_key, serif) in SERIFS {
+                    out.push((
+                        format!("X.{body_key}{height_key}{serif_key}"),
+                        self.glyph(*body, *serif, true, *descending),
+                    ));
+                }
+                for (serif_key, serif) in X_SERIFS {
+                    out.push((
+                        format!("x.{body_key}{height_key}{serif_key}"),
+                        self.glyph(*body, *serif, false, *descending),
+                    ));
+                }
+            }
+        }
+
+        out
+    }
+}
+
+/// The body suffixes.
+pub const BODIES: &[(&str, Body)] = &[("straight", Body::Straight), ("curly", Body::Curly)];
+
+/// The height suffixes.
+pub const HEIGHTS: &[(&str, bool)] = &[("", false), ("Descending", true)];
+
+/// The capital serif suffixes.
+pub const SERIFS: &[(&str, Serif)] = &[
+    ("Serifless", Serif::Serifless),
+    ("UnilateralMotionSerifed", Serif::UnilateralMotion),
+    ("BilateralMotionSerifed", Serif::BilateralMotion),
+    ("Serifed", Serif::Full),
+];
+
+/// The lower-case serif suffixes, which add the Greek chi form.
+pub const X_SERIFS: &[(&str, Serif)] = &[
+    ("Serifless", Serif::Serifless),
+    ("UnilateralMotionSerifed", Serif::UnilateralMotion),
+    ("BilateralMotionSerifed", Serif::BilateralMotion),
+    ("Serifed", Serif::Full),
+    ("GrekLowerChiSerifed", Serif::GrekLowerChi),
+];

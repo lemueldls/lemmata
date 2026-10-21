@@ -9,7 +9,6 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::glyph;
 use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::metrics::Metrics;
 use lemmata_ptl::serif::SerifFrame;
@@ -43,10 +42,6 @@ pub struct UpperY<'a> {
 }
 
 impl UpperY<'_> {
-    fn hsw_to_v(&self, value: f64) -> f64 {
-        value * self.metrics.hv_contrast
-    }
-
     /// `YCrossPos`.
     const fn cross_pos(top: f64, bot: f64) -> f64 {
         mix(bot, top, 0.4)
@@ -56,9 +51,8 @@ impl UpperY<'_> {
         DivFrame::new(self.metrics.clone(), Some(1.0), None, None)
     }
 
-    /// `WithSerifOverflowMask`: cut the strand to the body box, widened by the
-    /// serif's overflow, and split at the middle so the two halves keep their
-    /// own shift.
+    /// `WithSerifOverflowMask`: cut the strand to the body box plus the
+    /// serif's overflow.
     fn with_serif_overflow_mask(
         &self,
         enabled: bool,
@@ -66,33 +60,18 @@ impl UpperY<'_> {
         bot: f64,
         geom: Geometry,
     ) -> Geometry {
-        if !enabled {
-            return geom;
-        }
-        let metrics = self.metrics;
         let df = self.df();
-        let left_center = df.left_sb() + self.hsw_to_v(metrics.half_stroke);
-        let right_center = df.right_sb() - self.hsw_to_v(metrics.half_stroke);
-        let mid = mix(top, bot, 0.5);
-        let shift = metrics.serif_shift_s;
-        let mask = glyph::union(vec![
-            spiro_geometry(shapes::rect(
-                self.kit,
-                top,
-                mid,
-                left_center - metrics.jut,
-                right_center + metrics.jut - shift,
-            )),
-            spiro_geometry(shapes::rect(
-                self.kit,
-                mid,
-                bot,
-                left_center - metrics.jut + shift,
-                right_center + metrics.jut,
-            )),
-        ]);
 
-        glyph::intersection(vec![geom, mask])
+        shapes::with_serif_overflow_mask(
+            self.kit,
+            self.metrics,
+            enabled,
+            top,
+            bot,
+            df.left_sb(),
+            df.right_sb(),
+            geom,
+        )
     }
 
     /// `YShape`: the two strands and the stem.
@@ -187,15 +166,6 @@ impl UpperY<'_> {
         }
 
         out
-    }
-}
-
-/// A spiro outline as a geometry node.
-fn spiro_geometry(outline: lemmata_ptl::spiro_kit::SpiroOutline) -> Geometry {
-    Geometry::Spiro {
-        gizmo: kurbo::Affine::IDENTITY,
-        closed: outline.closed,
-        knots: outline.knots,
     }
 }
 

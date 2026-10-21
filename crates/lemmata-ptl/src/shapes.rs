@@ -2936,3 +2936,54 @@ pub fn diag_tail_l(
 
     items
 }
+
+/// `WithSerifOverflowMask`: cut a strand to the body box plus the serif's
+/// overflow, split at the middle so each half keeps its own shift.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn with_serif_overflow_mask(
+    kit: &Kit,
+    metrics: &Metrics,
+    enabled: bool,
+    top: f64,
+    bot: f64,
+    left: f64,
+    right: f64,
+    geom: Geometry,
+) -> Geometry {
+    if !enabled {
+        return geom;
+    }
+    let left_center = left + metrics.half_stroke * metrics.hv_contrast;
+    let right_center = right - metrics.half_stroke * metrics.hv_contrast;
+    let mid = mix(top, bot, 0.5);
+    let shift = metrics.serif_shift_s;
+    let upper = rect(
+        kit,
+        top,
+        mid,
+        left_center - metrics.jut,
+        right_center + metrics.jut - shift,
+    );
+    let lower = rect(
+        kit,
+        mid,
+        bot,
+        left_center - metrics.jut + shift,
+        right_center + metrics.jut,
+    );
+    let mask = crate::glyph::union(vec![
+        Geometry::Spiro {
+            gizmo: kurbo::Affine::IDENTITY,
+            closed: upper.closed,
+            knots: upper.knots,
+        },
+        Geometry::Spiro {
+            gizmo: kurbo::Affine::IDENTITY,
+            closed: lower.closed,
+            knots: lower.knots,
+        },
+    ]);
+
+    crate::glyph::intersection(vec![geom, mask])
+}
