@@ -339,6 +339,11 @@ bent hook and the two descending flat hooks, over the top serifs they select.
 files draw it. The capture holds all 14 configs, 296 knots, exact.
 `JCurlyTail` and `mathbb/J` are not ported.
 
+`upper-t.ptl` builds the three `T` configs: serifless, motion-serifed and
+serifed. The crossbar is two `HBar.t` halves, the top serifs are `VSerif.dr`
+and `.dl`, and the bottom serif is `HSerif.mb`. The capture holds all three, 28
+knots, exact. The hooked, Cyrillic and turned forms are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

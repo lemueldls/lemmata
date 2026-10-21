@@ -146,6 +146,10 @@ ours = "crates/lemmata-ptl/src/store.rs"
 upstream = "packages/glyph/src/store.mjs"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/upper_t.rs"
+upstream = "packages/font-glyphs/src/letter/latin/upper-t.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/upper_y.rs"
 upstream = "packages/font-glyphs/src/letter/latin/upper-y.ptl"
 

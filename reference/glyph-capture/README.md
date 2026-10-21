@@ -463,7 +463,7 @@ J.descendingBentHookSerifed,J.descendingBentHookSerifedBothSides,\
 J.descendingBentHookSerifedSymmetric,J.descendingBentHookSerifless,\
 J.descendingFlatHookSerifed,J.descendingFlatHookSerifless,\
 J.flatHookSerifed,J.flatHookSerifedBothSides,J.flatHookSerifedSymmetric,\
-J.flatHookSerifless'
+J.flatHookSerifless,T.motionSerifed,T.serifed,T.serifless'
 npm run build -- ttf-unhinted::RefA
 ```
 
