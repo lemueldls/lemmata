@@ -12,6 +12,14 @@ commit = "2487637bb71f41b2a66134afd9faa6c316e5a438"
 
 # Ported glyph definitions, one entry per file in `lemmata-glyphs`.
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/math/dots_and_colons.rs"
+upstream = "packages/font-glyphs/src/symbol/math/dots-and-colons.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/asterisk.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/asterisk.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/letter/latin/lower_a.rs"
 upstream = "packages/font-glyphs/src/letter/latin/lower-a.ptl"
 

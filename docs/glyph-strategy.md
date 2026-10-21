@@ -288,6 +288,21 @@ away. The capture holds 90 of the 210, the standard, narrow and flat-hook
 bodies at every hook and bar for both forms, 3087 knots, exact. The four CLC
 settings are drawn but the plan does not build them, so they are ungated.
 
+`symbol/punctuation/asterisk.ptl` builds the asterisk family from one
+generator: a ring of petals, each a two-knot di-spiro tapering from the centre
+to the tip. Nine rows vary the side count, the rotation and the stroke, and the
+`high`, `slashTop`, `halfXH` and `slashBot` forms translate the same drawing.
+`dualAsterisk` stacks two copies, and `asterism` stacks three at the width kind
+it is built for, scaled about the symbol's middle. Thirty-seven of the
+forty-one glyphs this module builds are in the capture, 680 knots, exact. The four
+half-height forms are not built by the plan, and `slavonicAsterisk` is not
+ported because it is a different drawing.
+
+`symbol/math/dots-and-colons.ptl` builds `therefore`, `because`, `mathcolon`,
+`coloncolon` and `mathCDot` from a shared dot radius, in the round and square
+variants. Ten of the twelve glyphs are in the capture, and their outlines match
+point for point. `mathCDotInner` has no codepoint and is not captured.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

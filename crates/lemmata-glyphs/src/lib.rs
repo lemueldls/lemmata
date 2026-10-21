@@ -21,3 +21,4 @@
 
 pub mod letter;
 pub mod registry;
+pub mod symbol;

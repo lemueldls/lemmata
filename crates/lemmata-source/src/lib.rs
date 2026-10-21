@@ -313,15 +313,16 @@ pub fn advance_to_u16(advance: f64) -> u16 {
 
 /// The advance the plan gives a glyph.
 ///
-/// A normal-spacing face has one advance for every glyph, and the plan's width
-/// is it. The capture's advance is the width the capture was drawn at, which is
-/// the same only when the plan asks for the default. A quasi-proportional
-/// capture carries an advance per letter class, so the plan keeps the capture's
-/// and the width reaches the ported outlines only.
+/// A normal-spacing face draws a one-cell glyph at the plan's width. Two-cell
+/// glyphs and combining marks are not one-cell: a wide symbol keeps the
+/// capture's advance so its drawing does not overlap the next character, and a
+/// mark keeps its zero advance so it adds no space between its base and what
+/// follows. A quasi-proportional capture carries an advance per letter class,
+/// so every glyph keeps the capture's there.
 fn advance_of(plan: &Plan, glyph: &lemmata_capture::Glyph) -> u16 {
     match plan.spacing {
-        Spacing::Normal => advance_to_u16(plan.width),
-        Spacing::QuasiProportional => advance_to_u16(glyph.advance),
+        Spacing::Normal if (glyph.advance - plan.width).abs() < 0.5 => advance_to_u16(plan.width),
+        Spacing::Normal | Spacing::QuasiProportional => advance_to_u16(glyph.advance),
     }
 }
 

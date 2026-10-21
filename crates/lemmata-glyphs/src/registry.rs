@@ -17,6 +17,8 @@ use crate::letter::latin::{
     lower_a, lower_b, lower_d, lower_f, lower_h, lower_il, lower_m, lower_n, lower_p, upper_b,
     upper_d, upper_e, upper_f, upper_h, upper_i, upper_l, upper_m, upper_n, upper_p, upper_q,
 };
+use crate::symbol::math::dots_and_colons::DotsAndColons;
+use crate::symbol::punctuation::asterisk::Asterisk;
 
 /// Every glyph the ported definitions build, by name.
 #[must_use]
@@ -40,6 +42,15 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
         metrics.tiny,
     );
     let mut out = Vec::new();
+    out.extend(
+        Asterisk {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(DotsAndColons { metrics, kit: &kit }.glyphs());
     out.extend(
         lower_a::LowerA {
             df: &df,
