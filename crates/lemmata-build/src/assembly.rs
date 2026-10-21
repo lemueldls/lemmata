@@ -225,9 +225,77 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
             piece.unicodes = vec![code];
             pieces.push(piece.clone());
         }
+
+        let bottom = piece_height(&pieces_of[0]);
+        let extender = piece_height(&pieces_of[1]);
+        let top = piece_height(&pieces_of[2]);
+        let operator = glyph
+            .unicodes
+            .iter()
+            .any(|code| crate::variants::OPERATORS.contains(code));
+        for (step, scale) in crate::variants::scales(operator).iter().enumerate() {
+            let available = height * scale - bottom - top;
+            if available < extender {
+                continue;
+            }
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let repeats = (available / extender).round().max(1.0) as usize;
+            let name = crate::variants::variant_name(&glyph.name, step);
+            let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
+            pieces.push(compose(
+                glyph,
+                &pieces_of,
+                &[(0, 1), (1, repeats), (2, 1)],
+                name,
+                code,
+            ));
+        }
     }
 
     pieces
+}
+
+/// The height of a grounded piece.
+fn piece_height(piece: &GlyphData) -> f64 {
+    y_range(&piece.contours).map_or(0.0, |(low, high)| high - low)
+}
+
+/// A size variant assembled from pieces. The layout pairs a piece index with
+/// how many times it repeats, bottom to top.
+fn compose(
+    base: &GlyphData,
+    pieces: &[GlyphData],
+    layout: &[(usize, usize)],
+    name: String,
+    code: u32,
+) -> GlyphData {
+    let mut contours = Vec::new();
+    let mut y = 0.0;
+    for (index, count) in layout {
+        let piece = &pieces[*index];
+        let h = piece_height(piece);
+        for _ in 0..*count {
+            for contour in &piece.contours {
+                contours.push(
+                    contour
+                        .iter()
+                        .map(|point| QuadifyPoint {
+                            y: point.y + y,
+                            ..*point
+                        })
+                        .collect(),
+                );
+            }
+            y += h;
+        }
+    }
+
+    GlyphData {
+        name,
+        unicodes: vec![code],
+        advance: base.advance,
+        contours,
+    }
 }
 
 /// The pieces of a horizontally stretched glyph.
@@ -559,6 +627,37 @@ pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec
             let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
             piece.unicodes = vec![code];
             pieces.push(piece.clone());
+        }
+
+        let lower = piece_height(&pieces_of[0]);
+        let lower_bar = piece_height(&pieces_of[1]);
+        let point = piece_height(&pieces_of[2]);
+        let upper_bar = piece_height(&pieces_of[3]);
+        let upper = piece_height(&pieces_of[4]);
+        for (step, scale) in crate::variants::scales(false).iter().enumerate() {
+            let available = height * scale - lower - point - upper;
+            if available < 2.0 * lower_bar.min(upper_bar) {
+                continue;
+            }
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let lower_repeats = (available / 2.0 / lower_bar).round().max(1.0) as usize;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let upper_repeats = (available / 2.0 / upper_bar).round().max(1.0) as usize;
+            let name = crate::variants::variant_name(&glyph.name, step);
+            let code = first_code + u32::try_from(pieces.len()).unwrap_or(0);
+            pieces.push(compose(
+                glyph,
+                &pieces_of,
+                &[
+                    (0, 1),
+                    (1, lower_repeats),
+                    (2, 1),
+                    (3, upper_repeats),
+                    (4, 1),
+                ],
+                name,
+                code,
+            ));
         }
     }
 

@@ -56,6 +56,14 @@ pub const HORIZONTAL: &[u32] = &[
 /// The scales a horizontal glyph is derived at, beyond its own size.
 pub const HORIZONTAL_SCALES: &[f64] = &[2.0, 3.0];
 
+/// The glyphs whose sizes are composed from assembly pieces rather than scaled.
+///
+/// A delimiter has no straight stem to scale. Scaling y stretches its curve and
+/// thickens every horizontal stroke, so the size variants are built from the
+/// same pieces the assembly repeats. An operator is meant to be set bigger, so
+/// it still scales.
+pub const COMPOSED: &[u32] = &[0x0028, 0x0029, 0x005B, 0x005D, 0x007B, 0x007D, 0x222B];
+
 /// The scales a glyph is derived at.
 #[must_use]
 pub const fn scales(operator: bool) -> &'static [f64] {
@@ -108,6 +116,9 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
     let mut derived = Vec::new();
     for glyph in glyphs {
         if !glyph.unicodes.iter().any(|code| STRETCHY.contains(code)) {
+            continue;
+        }
+        if glyph.unicodes.iter().any(|code| COMPOSED.contains(code)) {
             continue;
         }
         let operator = glyph.unicodes.iter().any(|code| OPERATORS.contains(code));

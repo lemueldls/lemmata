@@ -36,17 +36,14 @@ renderer needs.
 
 ## Interim drawings
 
-The delimiter assemblies currently repeat a straight bar derived from the base
-outline. Its width now comes from the stroke's cross-section at the band's
-midpoint rather than the band's bounding box, which removed the extra weight
-the bar carried. It is still a cut, not a drawn join: the text paren has no
-straight stem, so the bar cannot be tangent to the curve at both ends, and a
-curve that is only tangent at one point cannot give a long straight middle.
-
-The replacement is to draw the pieces at U+239B to U+23AD (upper hook,
-extension, lower hook, and the brace's point and bars) and compose both the
-size variants and the assembly from them. Those pieces do not exist upstream,
-so they will appear here as new drawings rather than as a modification.
+The delimiter size variants and assemblies are composed from the same derived
+pieces: a bottom hook, a straight bar of the stroke's cross-section, and a top
+hook. A brace uses five parts, with the point between two bars. The pieces are
+still cut from the text outline rather than drawn, so the joins are cuts and the
+hooks are the text glyph's own curves. Drawing the pieces at U+239B to U+23AD
+would remove the cut, and is the next change; those pieces do not exist
+upstream, so they will appear here as new drawings rather than as a
+modification.
 
 ## Not divergences
 
