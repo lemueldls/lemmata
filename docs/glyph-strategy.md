@@ -293,10 +293,14 @@ generator: a ring of petals, each a two-knot di-spiro tapering from the centre
 to the tip. Nine rows vary the side count, the rotation and the stroke, and the
 `high`, `slashTop`, `halfXH` and `slashBot` forms translate the same drawing.
 `dualAsterisk` stacks two copies, and `asterism` stacks three at the width kind
-it is built for, scaled about the symbol's middle. Thirty-seven of the
-forty-one glyphs this module builds are in the capture, 680 knots, exact. The four
-half-height forms are not built by the plan, and `slavonicAsterisk` is not
-ported because it is a different drawing.
+it is built for, scaled about the symbol's middle. `slavonicAsterisk` is the one
+drawing the generator does not make: it is the difference of two six-pointed
+stars, each the union of two three-corner spiro outlines. The module also builds
+the copies the character map selects, so `asterisk/slashBot`, `dualAsterisk`,
+`flower`, `opAsterisk` and `slavonicAsterisk` carry ported outlines under their
+own names. Forty-two of the forty-six glyphs the module builds are in the
+capture, 736 knots, exact. The four half-height forms are not built by the
+plan.
 
 `symbol/math/dots-and-colons.ptl` builds `therefore`, `because`, `mathcolon`,
 `coloncolon` and `mathCDot` from a shared dot radius, in the round and square

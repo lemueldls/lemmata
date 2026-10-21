@@ -10,8 +10,9 @@
 //! to the width kind it is built for. The selected `asterisk` and the bare
 //! `asterism.NWID`/`WWID` names are copies of the default penta shape.
 //!
-//! `slavonicAsterisk` is not ported: it is a different drawing built from two
-//! three-corner spiro outlines and a boolean difference.
+//! `slavonicAsterisk` is the one drawing that does not use the petal
+//! generator: it is the difference of two six-pointed stars, each the union of
+//! two three-corner spiro outlines.
 
 // The arithmetic mirrors upstream's expression order and stays clear of fused
 // multiply-add, which would round differently from JavaScript.
@@ -292,12 +293,21 @@ impl Asterisk<'_> {
         let (y_high, y_high_dt, y_low, y_low_dt) = self.heights();
         let mut out = Vec::new();
         let mut default_base = None;
+        let mut penta_base = None;
+        let mut flower_base = None;
+        let mut op_base = None;
         for kind in KINDS {
             let base = self.base(kind);
             let smid = format!("{}.{}", kind.name, kind.smid);
             out.push((smid, base.clone()));
             if kind.smid == DEFAULT_SMID {
                 default_base = Some(base.clone());
+            }
+            if kind.name == "asterisk" && kind.smid == DEFAULT_SMID {
+                penta_base = Some(base.clone());
+            }
+            if kind.name == "opAsterisk" && kind.smid == "penta" {
+                op_base = Some(base.clone());
             }
             for (suffix, dy) in [
                 (kind.high, 2.0 * (y_high - metrics.symbol_mid)),
@@ -306,10 +316,11 @@ impl Asterisk<'_> {
                 (kind.sb, y_low - metrics.symbol_mid),
             ] {
                 if let Some(suffix) = suffix {
-                    out.push((
-                        format!("{}.{suffix}", kind.name),
-                        self.translated(&base, dy),
-                    ));
+                    let variant = self.translated(&base, dy);
+                    if kind.name == "flower" && Some(suffix) == kind.high {
+                        flower_base = Some(variant.clone());
+                    }
+                    out.push((format!("{}.{suffix}", kind.name), variant));
                 }
             }
             if let Some(dual) = kind.dual {
@@ -336,7 +347,63 @@ impl Asterisk<'_> {
                 out.push((format!("asterism.{suffix}"), self.triple(&base, wide)));
             }
         }
+        if let Some(penta) = penta_base {
+            out.push((
+                "asterisk/slashBot".to_string(),
+                self.translated(&penta, y_low - metrics.symbol_mid),
+            ));
+            out.push((
+                "dualAsterisk".to_string(),
+                Geometry::Combine(vec![
+                    self.translated(&penta, y_high_dt - metrics.symbol_mid),
+                    self.translated(&penta, y_low_dt - metrics.symbol_mid),
+                ]),
+            ));
+        }
+        if let Some(flower) = flower_base {
+            out.push(("flower".to_string(), flower));
+        }
+        if let Some(op) = op_base {
+            out.push(("opAsterisk".to_string(), op));
+        }
+        out.push(("slavonicAsterisk".to_string(), self.slavonic()));
 
         out
+    }
+
+    /// `slavonicAsterisk`: the difference of a six-pointed star and a smaller
+    /// copy of it.
+    fn slavonic(&self) -> Geometry {
+        let metrics = self.metrics;
+        let cx = metrics.width / 2.0;
+        let cy = mix(metrics.symbol_mid, self.heights().0, 2.0);
+        let radius = metrics.long_jut * 1.2;
+        let stroke = metrics.geometry_stroke;
+        let r_diff = stroke * 3.0_f64.sqrt();
+        let star = |r: f64| -> Geometry {
+            let at = |degrees: f64| {
+                let angle = (degrees + 90.0) * std::f64::consts::PI / 180.0;
+                self.kit.knot(
+                    KnotType::Corner,
+                    cx + r * angle.cos(),
+                    cy + r * angle.sin(),
+                    Vec::new(),
+                )
+            };
+            let triangle = |a: f64, b: f64, c: f64| {
+                let outline = self.kit.spiro_outline(vec![at(a), at(b), at(c)]);
+                Geometry::Spiro {
+                    gizmo: kurbo::Affine::IDENTITY,
+                    closed: outline.closed,
+                    knots: outline.knots,
+                }
+            };
+            lemmata_ptl::glyph::union(vec![
+                triangle(0.0, 120.0, 240.0),
+                triangle(60.0, 180.0, 300.0),
+            ])
+        };
+
+        lemmata_ptl::glyph::difference(vec![star(radius), star(radius - r_diff)])
     }
 }
