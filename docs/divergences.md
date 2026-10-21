@@ -27,12 +27,12 @@ drawing is not changed without an entry here and a test that pins the change.
 
 | glyph | change | reason | pinned by |
 | --- | --- | --- | --- |
-| `sqrt` (U+221A) | a bar of the rule thickness at the top, from the advance to the ink's right edge | a renderer's vinculum starts at the advance and met the check mark's point at one spot, leaving a notch | `crates/lemmata-cli/tests/math.rs::the_radical_has_a_flat_vinculum_edge` |
+| `sqrt` (U+221A) | a drawn hook and a vertical stem against the advance, with a flat top, replacing the check mark | a renderer's vinculum starts at the advance and met the check mark's point at one spot; the stem gives the content a straight edge and the rule a flat top | `crates/lemmata-cli/tests/math.rs::the_radical_has_a_vertical_stem` |
 
-The radical is the first upstream outline the build changes. It is changed in
-`lemmata-build::font::radical_vinculum`, not in the ported source: the ported
-`sqrt` remains the faithful drawing, and the build adds the edge a math
-renderer needs.
+The radical is the first upstream outline the build replaces. It is replaced in
+`lemmata-build::font::radical_glyphs`, not in the ported source: the captured
+`sqrt` remains the faithful drawing, and the math font gets the hook and stem a
+renderer's vinculum needs. The size variants are replaced the same way.
 
 ## Interim drawings
 

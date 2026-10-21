@@ -719,14 +719,14 @@ fn stretchy_glyphs_have_assemblies() {
     );
 }
 
-/// The radical's top is flat from its advance to the ink's right edge.
+/// The radical is a hook and a vertical stem, not a scaled check mark.
 ///
-/// A renderer draws the vinculum itself, starting at the radical's advance. If
-/// the glyph ends in a point there, the rule meets it at one spot and leaves a
-/// notch. The bar this build adds gives the rule an edge to overlap.
+/// A renderer draws the vinculum itself, starting at the radical's advance. The
+/// stem's right edge is that advance and its top is flat, so the rule meets a
+/// corner rather than the point of a diagonal.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 #[test]
-fn the_radical_has_a_flat_vinculum_edge() {
+fn the_radical_has_a_vertical_stem() {
     let Some((bytes, captured)) = build_math_font() else {
         eprintln!("skipping: no math capture");
         return;
@@ -758,33 +758,37 @@ fn the_radical_has_a_flat_vinculum_edge() {
     let ReadGlyph::Simple(simple) = read else {
         panic!("the radical is a simple glyph");
     };
-    let y_max = simple
+    let points: Vec<(i32, i32)> = simple
         .points()
-        .map(|point| i32::from(point.y))
-        .max()
-        .expect("the radical has points");
-    let top: Vec<i32> = simple
-        .points()
-        .filter(|point| i32::from(point.y) == y_max)
-        .map(|point| i32::from(point.x))
+        .map(|point| (i32::from(point.x), i32::from(point.y)))
         .collect();
     let advance = i32::try_from(glyph.advance.round() as u32).expect("advance");
+    let top = points.iter().map(|(_, y)| *y).max().expect("points");
+    let right = points.iter().map(|(x, _)| *x).max().expect("points");
+    let left = points.iter().map(|(x, _)| *x).min().expect("points");
+    let at_top: Vec<i32> = points
+        .iter()
+        .filter(|(_, y)| *y == top)
+        .map(|(x, _)| *x)
+        .collect();
+
+    assert_eq!(right, advance, "the stem's right edge is the advance");
     assert!(
-        top.iter().any(|x| *x <= advance + 1),
-        "the radical's top does not reach its advance {advance}: {top:?}"
+        left < advance - 40,
+        "the hook reaches left of the stem: {left}"
     );
     assert!(
-        top.iter().any(|x| *x > advance + 20),
-        "the radical's top does not extend past its advance: {top:?}"
+        at_top.iter().any(|x| *x == advance),
+        "the stem does not reach the top: {at_top:?}"
     );
-    eprintln!(
-        "radical: top edge from {} to {} at {y_max}, advance {advance}",
-        top.iter().min().copied().unwrap_or(0),
-        top.iter().max().copied().unwrap_or(0)
+    assert!(
+        at_top.iter().any(|x| *x < advance),
+        "the top is not flat across the stem: {at_top:?}"
     );
+    eprintln!("radical: hook from {left}, stem to {right}, top {top}, advance {advance}");
 }
 
-/// `r[math.stretch]`: a horizontal arrow grows along x, by lengthening its
+/// `r[math.stretch]`: a horizontal arrow grows along x/// `r[math.stretch]`: a horizontal arrow grows along x, by lengthening its
 /// shaft rather than by scaling the head with the cell.
 #[test]
 fn horizontal_arrows_have_assemblies() {

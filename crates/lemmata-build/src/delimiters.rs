@@ -185,3 +185,49 @@ pub fn drawn_hook(
     let contours = hook(p0, c0, c1, p1, width, stub, top);
     (!contours.is_empty()).then_some(contours)
 }
+
+/// A drawn radical: the bottom hook, a vertical stem, and a flat top at the
+/// stem's right edge where the renderer starts its vinculum.
+///
+/// `height` is the ink height and `advance` the cell the content starts at. The
+/// stem is one rule thick and sits against the advance, so the content does not
+/// touch it.
+#[must_use]
+pub fn radical(advance: f64, height: f64, rule: f64) -> Vec<Vec<QuadifyPoint>> {
+    let stem = advance - rule / 2.0;
+    let hook = hook(
+        (rule / 2.0, height * 0.45),
+        (rule / 2.0 + advance * 0.18, height * 0.45),
+        (stem, height * 0.15),
+        (stem, rule / 2.0),
+        rule,
+        0.0,
+        true,
+    );
+
+    let mut contours = hook;
+    contours.push(vec![
+        QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: advance - rule,
+            y: 0.0,
+        },
+        QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: advance,
+            y: 0.0,
+        },
+        QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: advance,
+            y: height,
+        },
+        QuadifyPoint {
+            kind: QuadifyKind::Corner,
+            x: advance - rule,
+            y: height,
+        },
+    ]);
+
+    contours
+}

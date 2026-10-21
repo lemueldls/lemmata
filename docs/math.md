@@ -132,7 +132,7 @@ A brace needs a shape of its own. Its point cannot repeat, so it gets five parts
 
 Four glyphs have no band that repeats and the test names them rather than giving them an assembly that stacks a feature: a summation's middle holds its crossbar, an angle bracket's holds its vertex, and a radical's is a diagonal. They need a drawn extender. The other twelve are the parentheses, brackets, braces, ceilings, floors, integral and product.
 
-The radical also needed a flat top. Iosevka's `sqrt` is a check mark whose long stroke ends in a point, with no horizontal bar, and a renderer draws the vinculum itself starting at the glyph's advance. The thin rule met the stroke at one point and left a notch. The build adds a bar of the rule's own thickness from the advance to the ink's right edge, so the rule starts on an edge instead of a point.
+The radical is drawn rather than scaled. Iosevka's `sqrt` is a check mark: the long stroke ends in a point at the top right and there is no horizontal bar, so a renderer's vinculum met it at one spot and left a notch. The build replaces it with a hook and a vertical stem one rule thick against the advance, with a flat top at the stem's right edge. The content starts at the advance, beside the stem, and the rule begins at the same corner. The size variants are drawn the same way at their own heights.
 
 The delimiter bases are ported in `crates/lemmata-glyphs/src/symbol/punctuation/brackets.rs`: parentheses, brackets, braces, angle brackets, floors and ceilings from `brackets.ptl`, gated against the capture. The assembly's hooks and bars are drawn by `lemmata-build::delimiters`; the brace's point is still a slice of the text outline at the middle.
 
@@ -243,4 +243,4 @@ The bottom corner kerns are not derived. A descender can overhang below the base
 
 The horizontal braces at U+23DE and U+23DF are not in the source at all, so `\overbrace` needs a drawing before a construction can reach it. The long arrows are in the source but not in the capture, which is a set to widen rather than a shape to draw.
 
-The radical is still a scaled check mark with a flat top. A proper display radical has a vertical stem beside the content, as the reference fonts draw it; no such shape exists upstream, so it would be a new drawing rather than a port.
+The radical has no assembly. Its drawn sizes cover a display fraction, but a radical taller than the 2x variant stops there. A vertical extender would be a small addition to the same drawing.
