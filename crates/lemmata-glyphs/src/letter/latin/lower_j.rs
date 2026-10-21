@@ -17,7 +17,7 @@ use lemmata_geom::{Geometry, KnotType};
 use lemmata_ptl::control::{Item, UserControlKnot};
 use lemmata_ptl::letter_model::DivFrame;
 use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, HSerifSide, HookArgs, HookParams, downward, upward};
+use lemmata_ptl::shapes::{self, Design, HSerifSide, HookArgs, HookParams, downward};
 use lemmata_ptl::spiro_kit::Kit;
 use lemmata_ptl::util::mix;
 
@@ -194,30 +194,17 @@ impl LowerJ<'_> {
         bar_center: f64,
         cross_left: f64,
     ) -> Geometry {
-        let metrics = self.metrics;
-        let bar = bar_center + self.hsw_to_v(metrics.half_stroke);
-        let hd = shapes::flat_hook_depth(metrics, df_hook.adws());
-        let terminal = (bar - hd.x - (metrics.stroke / 3.0).max(df.width / 6.0))
-            .min(cross_left - 2.0 * metrics.ox);
-
-        self.kit
-            .dispiro(vec![
-                Item::Af(self.kit.widths_lhs(None)),
-                self.kit
-                    .knot(KnotType::Left, terminal, metrics.descender, Vec::new()),
-                self.kit
-                    .knot(KnotType::Right, bar - hd.x, metrics.descender, Vec::new()),
-                self.kit.archv(None, Some(self.design.tight_hook_superness)),
-                self.kit
-                    .knot(KnotType::Left, bar, metrics.descender + hd.y, Vec::new()),
-                self.kit.knot(
-                    KnotType::Right,
-                    bar,
-                    top,
-                    self.kit.heading(upward(metrics.hv_contrast)),
-                ),
-            ])
-            .geometry(kurbo::Affine::IDENTITY)
+        shapes::flat_hook_dotless_j(
+            self.kit,
+            self.metrics,
+            self.design,
+            df,
+            df_hook,
+            top,
+            bar_center,
+            cross_left,
+            false,
+        )
     }
 
     /// `JBody.DiagonalTailed`.
