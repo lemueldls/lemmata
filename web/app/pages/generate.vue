@@ -272,7 +272,7 @@ onBeforeUnmount(() => {
             <p class="prose">
               The registry lists every drawing the port builds. Choose a letter,
               compare the shapes at size, and send one into the plan. A letter
-              appears here once its definition is ported, so the rail grows with
+              appears here once its definition is ported, so the grid grows with
               the port rather than waiting for it.
             </p>
           </div>
