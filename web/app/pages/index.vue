@@ -5,10 +5,12 @@
 // Every number in the readouts comes from the font file the page loads, never
 // from a table written here.
 import { useLemmataFont } from "~/composables/font";
+import { useHeroVariants } from "~/composables/hero";
 
 useHead({ title: "Specimen" });
 
 const font = useLemmataFont();
+const { family: heroFamily, label: heroLabel } = useHeroVariants();
 
 /// The reference plan, which is what the builder uses when a key is absent.
 const PLAN = {
@@ -104,10 +106,10 @@ const readings = computed(() => {
       <div class="hero__inner">
         <div class="hero__main">
           <p class="eyebrow">
-            <b>+</b> specimen 001 <i>/</i> live from the font
+            <b>+</b> specimen 001 <i>/</i> {{ heroLabel }}
           </p>
 
-          <h1 class="hero__word">lemmata</h1>
+          <h1 class="hero__word" :style="{ fontFamily: heroFamily }">lemmata</h1>
 
           <div class="hero__rule">
             <span>one plan</span>
