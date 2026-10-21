@@ -3,11 +3,12 @@
 // they stand for.
 //
 // The build has Iosevka's chaining rules for `calt`, so a row whose glyphs
-// the font holds draws joined. The logic and powerline rows need a pipe the
-// page's capture does not hold yet, so they stay labelled rather than pretending.
+// the font holds draws joined. A sequence with no rule stays as typed. The
+// logic and powerline rows need a pipe the page's capture does not hold yet,
+// so they stay labelled rather than pretending.
 const SETS = [
   { name: "arrows", seq: "-> --> <- <-> =>", state: "on" },
-  { name: "comparison", seq: "!= == <= >= =/", state: "on" },
+  { name: "comparison", seq: "!= == <= >=", state: "on" },
   { name: "logic", seq: "&& || ^^ ~~ !!", state: "next" },
   { name: "marks", seq: "// /* */ ###", state: "on" },
   { name: "powerline", seq: ">_ |_ _|", state: "next" },

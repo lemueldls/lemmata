@@ -128,7 +128,7 @@ watch(built, async (font) => {
 // The letters a plan change has to reach for the specimen to move. A preview
 // recomputes only these, so it lands in a few milliseconds.
 const PREVIEW_TEXT =
-  "the quick brown fox jumps over the lazy dog 0123456789 ()[]{} <>=+-*/";
+  "the quick brown fox jumps over the lazy dog 0123456789 ()[]{} <>=+-*/!&|^~_#%";
 
 let previewTimer: ReturnType<typeof setTimeout> | null = null;
 

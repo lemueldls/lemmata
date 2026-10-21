@@ -87,6 +87,7 @@ fn the_sequence_joins_at_both_ends() {
     for (text, first, second) in [
         ("<=", "<", "="),
         (">=", ">", "="),
+        ("!=", "!", "="),
         ("->", "-", ">"),
         ("=>", "=", ">"),
     ] {
@@ -141,7 +142,7 @@ fn the_preview_joins_the_sequences_too() {
         eprintln!("skipping: no capture");
         return;
     };
-    let bytes = lemmata_web::build_preview(&capture, "", "-> => <= >= /* */").expect("preview");
+    let bytes = lemmata_web::build_preview(&capture, "", "-> => <= >= != /* */").expect("preview");
     let blob: harfrust::font::Blob = bytes.into();
     let font = harfrust::Font::new(blob, 0).expect("the shaper reads the font");
 
@@ -150,6 +151,7 @@ fn the_preview_joins_the_sequences_too() {
         ("=>", "=", ">"),
         ("<=", "<", "="),
         (">=", ">", "="),
+        ("!=", "!", "="),
     ] {
         let (joined, _) = shape(&font, text);
         let (plain_first, _) = shape(&font, first);
