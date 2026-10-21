@@ -2,6 +2,8 @@
 
 Glyph outlines come from upstream's glyph definitions, replayed through `lemmata-geom`. That is the seam the glyph strategy chose: the definitions stay where upstream maintains them, the geometry is ours.
 
+The font also carries forms upstream does not, and changes one upstream outline. `docs/divergences.md` is the ledger of both, so a new drawing is never mistaken for a port that drifted.
+
 ## Capture
 
 A patched Iosevka build writes, for each selected glyph:

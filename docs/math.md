@@ -134,6 +134,8 @@ The radical also needed a flat top. Iosevka's `sqrt` is a check mark whose long 
 
 The delimiter bases are ported in `crates/lemmata-glyphs/src/symbol/punctuation/brackets.rs`: parentheses, brackets, braces, angle brackets, floors and ceilings from `brackets.ptl`, gated against the capture. The drawn pieces at U+239B to U+23AD are still not built; the assembly derives its own bars for now.
 
+`docs/divergences.md` is the ledger of every glyph the font has that upstream does not, and every upstream outline the build changes.
+
 ## Horizontal constructions
 
 A horizontal arrow grows the other way, and `MathVariants` carries a second coverage and construction list for it. The same record serves both: two scales, here 2 and 3 times the base, and an assembly for a length beyond them.
