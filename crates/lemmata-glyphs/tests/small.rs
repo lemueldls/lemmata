@@ -130,6 +130,8 @@ fn small_matches_capture() {
         let captured_name = match name.as_str() {
             "period.round" => "period",
             "colon.round" => "colon",
+            "comma.round" => "comma",
+            "semicolon.round" => "semicolon",
             _ => continue,
         };
         let Some(glyph) = glyphs.iter().find(|glyph| glyph.name == captured_name) else {

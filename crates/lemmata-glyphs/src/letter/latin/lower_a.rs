@@ -990,6 +990,7 @@ impl LowerA<'_> {
                     lhs: false,
                     rtl: true,
                     at_bot: true,
+                    knot_ty: None,
                 },
                 &params,
             ),
@@ -1018,6 +1019,7 @@ impl LowerA<'_> {
                 lhs: false,
                 rtl: false,
                 at_bot: false,
+                knot_ty: None,
             },
             &params,
         ));

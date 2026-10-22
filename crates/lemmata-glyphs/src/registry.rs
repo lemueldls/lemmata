@@ -12,15 +12,27 @@ use lemmata_ptl::{letter_model::DivFrame, metrics::Metrics, shapes::Design, spir
 
 use crate::{
     letter::latin::{
-        lower_a, lower_b, lower_d, lower_f, lower_h, lower_il, lower_j, lower_m, lower_n, lower_p,
-        u, upper_b, upper_d, upper_e, upper_f, upper_h, upper_i, upper_j, upper_l, upper_m,
-        upper_n, upper_p, upper_q, upper_t, upper_y, v, x, z,
+        lower_a, lower_b, lower_c, lower_d, lower_e, lower_f, lower_g, lower_h, lower_il, lower_j,
+        lower_k, lower_m, lower_n, lower_p, lower_r, lower_s, lower_t, lower_w, lower_y, o, u,
+        upper_b, upper_d, upper_e, upper_f, upper_h, upper_i, upper_j, upper_l, upper_m, upper_n,
+        upper_p, upper_q, upper_t, upper_y, v, x, z,
     },
     symbol::{
-        math::dots_and_colons::DotsAndColons,
+        math::{arith::Arith, dots_and_colons::DotsAndColons, relation::Relation},
         punctuation::{
-            asterisk::Asterisk, brackets::Brackets, bullets::Bullets, dashes::Dashes,
-            interpuncts::Interpuncts, percentages::Percentages, small::Small,
+            ampersand::Ampersand,
+            asterisk::Asterisk,
+            at::At,
+            brackets::Brackets,
+            bullets::Bullets,
+            dashes::Dashes,
+            emotion::{Exclam, Question},
+            interpuncts::Interpuncts,
+            number_sign::NumberSign,
+            percentages::Percentages,
+            quotes::Quotes,
+            slashes::Slashes,
+            small::Small,
         },
     },
 };
@@ -48,6 +60,22 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
     );
     let mut out = Vec::new();
     out.extend(
+        Ampersand {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        At {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
         Asterisk {
             metrics,
             kit: &kit,
@@ -55,7 +83,23 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
         }
         .glyphs(),
     );
+    out.extend(
+        Arith {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
     out.extend(DotsAndColons { metrics, kit: &kit }.glyphs());
+    out.extend(
+        Relation {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
     out.extend(
         Bullets {
             metrics,
@@ -73,6 +117,38 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
         .glyphs(),
     );
     out.extend(
+        Slashes {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        Exclam {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        Question {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        Quotes {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
         Small {
             metrics,
             kit: &kit,
@@ -82,6 +158,14 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
     );
     out.extend(
         Dashes {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        NumberSign {
             metrics,
             kit: &kit,
             design,
@@ -124,6 +208,14 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
         .glyphs(),
     );
     out.extend(
+        lower_c::LowerC {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
         lower_d::LowerD {
             df: &df,
             metrics,
@@ -133,7 +225,23 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
         .glyphs(),
     );
     out.extend(
+        lower_e::LowerE {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
         lower_f::LowerF {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_g::LowerG {
             metrics,
             kit: &kit,
             design,
@@ -160,6 +268,14 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
     );
     out.extend(
         lower_j::LowerJ {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_k::LowerK {
             metrics,
             kit: &kit,
             design,
@@ -209,6 +325,22 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
         .glyphs(),
     );
     out.extend(
+        lower_w::LowerW {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_y::LowerY {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
         upper_y::UpperY {
             metrics,
             kit: &kit,
@@ -234,6 +366,39 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
     );
     out.extend(
         v::LowerV {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_t::LowerT {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_r::LowerR {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_s::LowerS {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        o::LatinO {
+            df: &df,
             metrics,
             kit: &kit,
             design,

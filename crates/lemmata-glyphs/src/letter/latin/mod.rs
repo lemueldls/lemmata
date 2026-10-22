@@ -2,14 +2,23 @@
 
 pub mod lower_a;
 pub mod lower_b;
+pub mod lower_c;
 pub mod lower_d;
+pub mod lower_e;
 pub mod lower_f;
+pub mod lower_g;
 pub mod lower_h;
 pub mod lower_il;
 pub mod lower_j;
+pub mod lower_k;
 pub mod lower_m;
 pub mod lower_n;
 pub mod lower_p;
+pub mod lower_r;
+pub mod lower_s;
+pub mod lower_t;
+pub mod lower_w;
+pub mod lower_y;
 pub mod o;
 pub mod u;
 pub mod upper_b;

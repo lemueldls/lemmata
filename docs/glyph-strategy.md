@@ -382,11 +382,99 @@ bullet and the white bullet. `symbol/punctuation/interpuncts.ptl` supplies the
 round and square interpuncts. The capture holds the round bullet and the round
 interpunct, which match the port; the other three are built but ungated.
 
+The o family is wired into the registry: `O`, `smcpO`, `o`, `OSlash`, `oSlash`,
+`OBar`, `oBar` and the two blackboard forms, all nine against the capture at
+268 knots.
+
+The lowercase `w` is ported in its straight serifless form and matches the
+capture at 8 knots. Its four strokes share the `DiagCorDs` correction, a
+four-step fixpoint over `DiagCor`; the inner pair meets at 0.72 of the
+x-height. The remaining bodies and their serifs are not ported.
+
+The lowercase `y` is ported in its straight serifless form and matches the
+capture at 8 knots. The right half and the left half are clipped by split masks
+whose high side depends on the half; swapped masks pass the knot check but the
+mask comparison catches it. The curly body, the turn and loop bottoms, the
+serifs and the cursive forms are not ported.
+
+The lowercase `k` is ported in its straight serifless form and matches the
+capture at 6 knots. The legs are one arm plus a lower leg cut from the same
+mask; the lower leg was missing on the first pass and the gate counted the
+nodes.
+
+The lowercase `l` is gated through the existing `lower-il` table: the plan's
+serifed form matches the capture at 6 knots. The lowercase `r` is ported in its
+standard serifless form and matches at 70 knots; the flat-top, earless,
+hookless, corner-hooked and narrow bodies are not.
+
+The lowercase `c`, `e`, `g`, `s` and `t` are ported in the forms the sans plan
+selects: serifless for `c` and `s`, flat-crossbar for `e`, the single-storey
+bent hook for `g`, and the balanced bent hook at the ascender for `t`. They
+match the capture at 52, 43, 57, 55 and 29 knots. The `s` neck showed
+that upstream delays the two outer `alsoThru` knots so they resolve against the
+middle one; resolving all three against the same pair put them in the wrong
+places. The serifed forms, the reversed letters and the accented compositions
+are not ported. Their tests compare the rendered capture tree to the port's
+outline rather than the side contour file, which is produced by a later pass
+and trims the open ends of these glyphs. For `c` the two boolean engines trim
+the caps two units apart, so the shipped face keeps the captured outline until
+that difference closes.
+
+`symbol/punctuation/ampersand.ptl` is ported for the closed form, which the
+default sans plan selects. It matches the capture at 33 knots. The lead, its
+two masks and the upper loop are all present; the open, tailed and et forms are
+not ported.
+
 `symbol/punctuation/small.ptl` is ported for the period and the colon in their
 round and square forms. The plan selects the round drawings for `.` and `:`,
 which the capture holds; both match, and the square forms are built but
 ungated. The comma, semicolon, raised and stacked forms and the three-dot
 punctuation are not ported.
+
+`symbol/punctuation/quotes-and-primes.ptl` is ported for the straight ASCII
+single quote and the double quote that repeats it either side of the middle.
+The capture holds both, 9 knots, exact. The curly, low, reversed and prime
+forms, the selectors and the stress marks are not ported.
+
+`symbol/punctuation/slashes-and-number-sign.ptl` is ported for `slash`,
+`backslash`, the two joining halves and `doubleSlash`. The capture holds
+`slash`, which matches at 0 knots (a closed outline). The number sign, the big
+forms, the overbars and the reverse halves are not ported.
+
+The number sign in the same file is ported upright: closed and open bars at
+the normal and tall heights. The plan selects the upright form, which matches
+the capture at 8 knots. The slanted configs, the joining form and the cap
+height selector are not ported.
+
+`symbol/math/relation.ptl` is ported for `equal`, `less` and `greater`. The
+capture holds all three, 12 knots, exact. `less` and `greater` are the two
+strokes `LessShape`/`GreaterShape` union, with the expansion factor that bends
+each end. The negated, subset and ligature forms are not ported.
+
+`symbol/punctuation/small.ptl` is ported for the period, colon, comma and
+semicolon in their round and square forms. The plan selects the round comma and
+semicolon, which match the capture; the whole module now covers 4 of its 10
+cases and 74 knots. The comma's fill and tail are one `union`, and the tail's
+quadratic segment uses 12 samples. The raised, stacked, reversed and multi-dot
+forms are not ported.
+
+`symbol/punctuation/emotion.ptl` is ported for the question mark with the
+smooth hook and the exclamation, each in the round and square dot forms. The
+plan selects the round dot, which matches the capture at 29 knots for the
+question and 2 for the exclamation. The straight and hooked question hooks, the
+reversed and down questions, the interrobang and the turned exclamations are
+not ported.
+
+`symbol/punctuation/at.ptl` is ported for the normal-height threefold form,
+which the plan selects. It matches the capture at 46 knots. The tall,
+solid-inner, fourfold and compact forms are not ported. The arch and centered
+arch take their stroke widths from different defaults upstream, and the gate
+caught the mix-up.
+
+`symbol/math/arith.ptl` is ported for `plus`, which matches the capture at 4
+knots. Its vertical bar runs from `PlusTop` to `PlusBot`, the opposite order
+from most bars, which flips the side its widths attach to. The minus, the
+Hebrew plus, the enclosures and the derived signs are not ported.
 
 Two things the layer did not have and the port needed:
 

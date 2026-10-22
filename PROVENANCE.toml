@@ -12,6 +12,42 @@ commit = "2487637bb71f41b2a66134afd9faa6c316e5a438"
 
 # Ported glyph definitions, one entry per file in `lemmata-glyphs`.
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_e.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-e.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_g.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-g.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_t.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-t.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_k.rs"
+upstream = "packages/font-glyphs/src/letter/latin/k.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_y.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-y.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_w.rs"
+upstream = "packages/font-glyphs/src/letter/latin/w.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_r.rs"
+upstream = "packages/font-glyphs/src/letter/latin/lower-r.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_c.rs"
+upstream = "packages/font-glyphs/src/letter/latin/c.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/letter/latin/lower_s.rs"
+upstream = "packages/font-glyphs/src/letter/latin/s.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/symbol/math/dots_and_colons.rs"
 upstream = "packages/font-glyphs/src/symbol/math/dots-and-colons.ptl"
 
@@ -34,6 +70,38 @@ upstream = "packages/font-glyphs/src/symbol/punctuation/interpuncts.ptl"
 [[glyph]]
 ours = "crates/lemmata-glyphs/src/symbol/punctuation/small.rs"
 upstream = "packages/font-glyphs/src/symbol/punctuation/small.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/quotes.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/quotes-and-primes.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/slashes.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/slashes-and-number-sign.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/number_sign.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/slashes-and-number-sign.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/math/arith.rs"
+upstream = "packages/font-glyphs/src/symbol/math/arith.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/math/relation.rs"
+upstream = "packages/font-glyphs/src/symbol/math/relation.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/emotion.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/emotion.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/ampersand.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/ampersand.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/at.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/at.ptl"
 
 [[glyph]]
 ours = "crates/lemmata-glyphs/src/symbol/punctuation/dashes.rs"

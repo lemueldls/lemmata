@@ -59,6 +59,9 @@ pub struct Design {
     pub brace_curly_m1: f64,
     pub brace_curly_m2: f64,
     pub brace_overshoot: f64,
+    pub equal_wideness: f64,
+    pub e_bar_pos: f64,
+    pub r_hook_superness: f64,
 }
 
 impl Default for Design {
@@ -86,6 +89,9 @@ impl Default for Design {
             brace_curly_m1: 0.6,
             brace_curly_m2: 0.45,
             brace_overshoot: 0.02,
+            equal_wideness: 0.075,
+            e_bar_pos: 0.5,
+            r_hook_superness: 2.35,
         }
     }
 }
@@ -503,6 +509,8 @@ pub struct CenterAtArgs {
     pub lhs: bool,
     pub rtl: bool,
     pub at_bot: bool,
+    /// `knot-ty`: a plain `flat` or `curl` knot instead of the directed pair.
+    pub knot_ty: Option<KnotType>,
 }
 
 /// `Arch.lhs.centerAt` / `Arch.rhs.centerAt`.
@@ -526,16 +534,22 @@ pub fn center_at(kit: &Kit, args: &CenterAtArgs, params: &ArchParams) -> Item {
         kit.widths_rhs_heading(Some(args.sw), heading)
     };
 
+    let x = args.x + italic_adj;
+    let y = args.y + overshoot;
+    if let Some(ty) = args.knot_ty {
+        return kit.knot(ty, x, y, af);
+    }
+
     kit.pair(
-        Family::G2,
+        if args.compact { Family::G4 } else { Family::G2 },
         if args.rtl {
             Direction::Left
         } else {
             Direction::Right
         },
         Position::Mid,
-        args.x + italic_adj,
-        args.y + overshoot,
+        x,
+        y,
         af,
     )
 }
@@ -1636,6 +1650,7 @@ fn oshape_items(
                 lhs: true,
                 rtl,
                 at_bot,
+                knot_ty: None,
             },
             &params,
         )
