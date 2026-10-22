@@ -33,3 +33,24 @@ the native toolchain that produces them.
 The plans live in `web/shared/presets.json`. Change a plan or a capture, then
 rebuild the files with `pnpm --dir web presets:write`. The plain
 `pnpm --dir web presets` only fills in missing files.
+
+## GitHub Actions
+
+`.github/workflows/deploy.yml` builds a pull request and deploys a push to
+`main`. A manual run on `main` deploys too.
+
+The job uses the Nix shell because the site build needs `cargo`: the preset
+fonts are generated from the capture, and the browser package is built before
+`pnpm` resolves the workspace. It also fetches the `vendor/Iosevka` submodule,
+which holds the parameter files the build reads.
+
+Set two repository secrets:
+
+| Secret | Value |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | A token with Workers Scripts:Edit and Account Settings:Read |
+| `CLOUDFLARE_ACCOUNT_ID` | The Cloudflare account id |
+
+The workflow caches the Cargo target, the Cargo registry and the pnpm store. A
+pull request builds the worker and runs `wrangler deploy --dry-run`; it does not
+need the Cloudflare secrets.
