@@ -24,6 +24,12 @@ width = 600
 spacing = "normal"
 serifs = "sans"
 
+[family.cjk]
+source = "target/cjk/SarasaMonoSC-Regular.ttf"
+scale = 2.0
+ranges = "U+4E00-U+9FFF"
+label = "CN"
+
 [family.instances.regular]
 weight = 400
 slope = 0
@@ -41,6 +47,11 @@ slope = 12
 weight = 700
 slope = 12
 ```
+
+`family.cjk` is optional. It bundles one CJK source into every face, with the
+advance scaled by `scale` times the Latin cell. `label` appends a charset label
+to the family name, which is what a build split by charset uses. `docs/cjk.md`
+covers the source and the widths.
 
 Build it with:
 

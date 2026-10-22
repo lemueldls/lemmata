@@ -1,4 +1,10 @@
 export default defineNuxtConfig({
+  runtimeConfig: {
+    public: {
+      // Set NUXT_PUBLIC_CJK_BASE to the R2 mirror root at deploy time.
+      cjkBase: process.env.NUXT_PUBLIC_CJK_BASE ?? "",
+    },
+  },
   compatibilityDate: "2026-10-18",
   modules: ["@nuxt/fonts"],
   css: ["~/assets/css/site.css"],
@@ -14,6 +20,12 @@ export default defineNuxtConfig({
         name: "Lemmata Math",
         src: "/fonts/lemmata-math.woff2",
         global: true,
+        preload: false,
+      },
+      {
+        name: "Lemmata CJK Sample",
+        src: "/fonts/lemmata-cjk-sample.woff2",
+        global: false,
         preload: false,
       },
     ],

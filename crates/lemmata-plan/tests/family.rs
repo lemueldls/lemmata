@@ -170,3 +170,53 @@ fn a_capture_path_is_relative_to_the_document() {
         Some(Path::new("/tmp/lemmata-family/captures/regular.bin"))
     );
 }
+
+#[test]
+fn a_cjk_source_resolves_and_can_split_the_family_name() {
+    // r[verify cjk.family]
+    let document = family_from_json(
+        r#"{
+          "family": {
+            "name": "Lemmata",
+            "out": "dist",
+            "base": { "width": 500, "spacing": "normal", "serifs": "sans" },
+            "cjk": {
+              "source": "SarasaMonoSC-Regular.ttf",
+              "scale": 2.0,
+              "ranges": "U+4E00-U+9FFF",
+              "label": "CN"
+            },
+            "instances": { "regular": {} }
+          }
+        }"#,
+    )
+    .expect("parse the family");
+    let resolved = document
+        .family
+        .resolve(Path::new("/tmp/lemmata"))
+        .expect("resolve the family");
+    let cjk = resolved[0].cjk.as_ref().expect("a CJK source");
+    assert_eq!(
+        cjk.source,
+        Path::new("/tmp/lemmata/SarasaMonoSC-Regular.ttf")
+    );
+    assert_eq!(cjk.scale, 2.0);
+    assert_eq!(resolved[0].legacy_family, "Lemmata CN");
+    assert_eq!(resolved[0].postscript_name, "LemmataCN-Regular");
+}
+
+#[test]
+fn a_cjk_scale_must_be_positive() {
+    let document = family_from_json(
+        r#"{
+          "family": {
+            "name": "Lemmata",
+            "base": { "width": 600, "spacing": "normal", "serifs": "sans" },
+            "cjk": { "source": "SarasaMonoSC-Regular.ttf", "scale": 0.0 },
+            "instances": { "regular": {} }
+          }
+        }"#,
+    )
+    .expect("parse the family");
+    assert!(document.family.resolve(Path::new(".")).is_err());
+}

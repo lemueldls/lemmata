@@ -37,6 +37,9 @@ const live = computed(() => {
         <NuxtLink class="site-nav__link" to="/math/">
           <span>03</span> equations
         </NuxtLink>
+        <NuxtLink class="site-nav__link" to="/cjk/">
+          <span>04</span> cjk
+        </NuxtLink>
       </nav>
 
       <div class="site-head__tools">

@@ -433,6 +433,16 @@ fn is_letter(code: u32) -> bool {
     char::from_u32(code).is_some_and(char::is_alphabetic)
 }
 
+/// Whether a glyph belongs in the math table's letter coverage.
+///
+/// Every Latin, Greek and Cyrillic letter is covered, so a plain `x` gets the
+/// same correction as U+1D465. A CJK ideograph is alphabetic too, and covering
+/// tens of thousands of them would make the MATH offsets overflow for a use
+/// that math does not need. They are named `cjk/` by the source that adds them.
+fn is_math_letter(glyph: &GlyphData) -> bool {
+    !glyph.name.starts_with("cjk/") && glyph.unicodes.iter().any(|code| is_letter(*code))
+}
+
 /// A glyph's ink split at its midline: the horizontal extent of the upper half
 /// and of the lower half.
 ///
@@ -577,7 +587,7 @@ pub fn glyph_info(glyphs: &[GlyphData], extended: &[GlyphId16]) -> MathGlyphInfo
     let mut corrections = Vec::new();
     let mut attachments = Vec::new();
     for (index, glyph) in glyphs.iter().enumerate() {
-        if !glyph.unicodes.iter().any(|code| is_letter(*code)) {
+        if !is_math_letter(glyph) {
             continue;
         }
         let Ok(id) = u16::try_from(index + 1) else {
@@ -592,7 +602,7 @@ pub fn glyph_info(glyphs: &[GlyphData], extended: &[GlyphId16]) -> MathGlyphInfo
     let mut kern_ids = Vec::new();
     let mut kern_records = Vec::new();
     for (index, glyph) in glyphs.iter().enumerate() {
-        if !glyph.unicodes.iter().any(|code| is_letter(*code)) {
+        if !is_math_letter(glyph) {
             continue;
         }
         let right = top_kern(glyph, false);

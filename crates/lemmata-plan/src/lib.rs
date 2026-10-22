@@ -357,7 +357,38 @@ pub struct Family {
     /// The plan keys every instance starts from.
     #[serde(default)]
     pub base: Value,
+    /// A CJK source to bundle into every face.
+    #[serde(default)]
+    pub cjk: Option<FamilyCjk>,
     pub instances: BTreeMap<String, FamilyInstance>,
+}
+
+/// A CJK source shared by a family's faces.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FamilyCjk {
+    /// A TrueType font to take CJK glyphs from.
+    pub source: String,
+    /// How many Latin cells a full-width CJK glyph occupies.
+    #[serde(default = "default_cjk_scale")]
+    pub scale: f64,
+    /// Unicode ranges to take. Defaults to the CN set.
+    #[serde(default)]
+    pub ranges: Option<String>,
+    /// A label appended to the family name when the faces are split by charset.
+    #[serde(default)]
+    pub label: Option<String>,
+}
+
+const fn default_cjk_scale() -> f64 {
+    2.0
+}
+
+/// A CJK source with its path resolved against the family document.
+#[derive(Clone, Debug)]
+pub struct ResolvedCjk {
+    pub source: std::path::PathBuf,
+    pub scale: f64,
+    pub ranges: Option<String>,
 }
 
 /// One face in a family.
@@ -402,6 +433,7 @@ pub struct ResolvedInstance {
     pub typographic_family: String,
     pub typographic_subfamily: String,
     pub postscript_name: String,
+    pub cjk: Option<ResolvedCjk>,
 }
 
 /// What a family build does when a glyph is not ported.
@@ -458,6 +490,7 @@ impl Family {
     ///
     /// Returns a message for a bad plan value, a duplicate style name, or an
     /// output name that Iosevka reserves.
+    // r[impl cjk.family]
     pub fn resolve(&self, config_dir: &Path) -> Result<Vec<ResolvedInstance>, String> {
         if self.name.trim().is_empty() {
             return Err("the family needs a name".to_string());
@@ -470,6 +503,33 @@ impl Family {
         } else {
             self.base.clone()
         };
+        let display_name = self
+            .cjk
+            .as_ref()
+            .and_then(|cjk| cjk.label.as_deref())
+            .map_or_else(
+                || self.name.clone(),
+                |label| format!("{} {label}", self.name),
+            );
+        let cjk = self
+            .cjk
+            .as_ref()
+            .map(|cjk| {
+                if !cjk.scale.is_finite() || cjk.scale <= 0.0 {
+                    return Err("family cjk scale must be positive".to_string());
+                }
+                let path = Path::new(&cjk.source);
+                Ok(ResolvedCjk {
+                    source: if path.is_absolute() {
+                        path.to_path_buf()
+                    } else {
+                        config_dir.join(path)
+                    },
+                    scale: cjk.scale,
+                    ranges: cjk.ranges.clone(),
+                })
+            })
+            .transpose()?;
         let mut resolved = Vec::with_capacity(self.instances.len());
         let mut styles: BTreeMap<(String, String), String> = BTreeMap::new();
         let mut typographic_styles: BTreeMap<(String, String), String> = BTreeMap::new();
@@ -521,11 +581,11 @@ impl Family {
 
             let default_legacy_family = if ribbi_weight {
                 width.map_or_else(
-                    || self.name.clone(),
-                    |width| format!("{} {width}", self.name),
+                    || display_name.clone(),
+                    |width| format!("{display_name} {width}"),
                 )
             } else {
-                let mut parts = vec![self.name.clone()];
+                let mut parts = vec![display_name.clone()];
                 if let Some(width) = width {
                     parts.push(width.to_string());
                 }
@@ -568,7 +628,7 @@ impl Family {
             let typographic_family = instance
                 .typographic_family
                 .clone()
-                .unwrap_or_else(|| self.name.clone());
+                .unwrap_or_else(|| display_name.clone());
             let typographic_subfamily = instance
                 .typographic
                 .clone()
@@ -636,6 +696,7 @@ impl Family {
                 typographic_family,
                 typographic_subfamily,
                 postscript_name,
+                cjk: cjk.clone(),
             });
         }
 

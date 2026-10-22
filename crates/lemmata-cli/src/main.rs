@@ -98,6 +98,22 @@ struct Build {
     /// Spacing to draw.
     #[facet(args::named, default)]
     spacing: Option<String>,
+
+    /// A TrueType font to take CJK glyphs from.
+    #[facet(args::named, default)]
+    cjk: Option<String>,
+
+    /// How many Latin cells a full-width CJK glyph occupies.
+    #[facet(args::named, default)]
+    cjk_scale: Option<f64>,
+
+    /// Unicode ranges to take from the CJK font. Defaults to the CN set.
+    #[facet(args::named, default)]
+    cjk_ranges: Option<String>,
+
+    /// A label appended to the family name when the CJK face is split by charset.
+    #[facet(args::named, default)]
+    cjk_label: Option<String>,
 }
 
 fn main() -> ExitCode {
@@ -172,7 +188,7 @@ fn build_font(build: Build) -> Result<(), String> {
     let Build {
         glyphs,
         out,
-        name,
+        mut name,
         family,
         only,
         plan,
@@ -183,6 +199,10 @@ fn build_font(build: Build) -> Result<(), String> {
         slope,
         serifs,
         spacing,
+        cjk,
+        cjk_scale,
+        cjk_ranges,
+        cjk_label,
     } = build;
 
     if let Some(family) = family {
@@ -194,7 +214,11 @@ fn build_font(build: Build) -> Result<(), String> {
             || width.is_some()
             || slope.is_some()
             || serifs.is_some()
-            || spacing.is_some();
+            || spacing.is_some()
+            || cjk.is_some()
+            || cjk_scale.is_some()
+            || cjk_ranges.is_some()
+            || cjk_label.is_some();
         if single_face_option {
             return Err(
                 "face options apply to one face; put them in the family document".to_string(),
@@ -232,6 +256,37 @@ fn build_font(build: Build) -> Result<(), String> {
         plan.spacing = Spacing::from_name(&spacing)?;
     }
 
+    let cjk = match cjk {
+        Some(path) => {
+            let source = fs::read(&path)
+                .map_err(|error| format!("reading the CJK source {path}: {error}"))?;
+            let ranges = match cjk_ranges {
+                Some(text) => parse_ranges(&text)?,
+                None => lemmata_cjk::CN_RANGES.to_vec(),
+            };
+            let scale = cjk_scale.unwrap_or(2.0);
+            if !scale.is_finite() || scale <= 0.0 {
+                return Err("--cjk-scale must be positive".to_string());
+            }
+            Some(CjkRequest {
+                source,
+                ranges,
+                scale,
+            })
+        }
+        None => {
+            if cjk_scale.is_some() || cjk_ranges.is_some() || cjk_label.is_some() {
+                return Err("--cjk-scale, --cjk-ranges and --cjk-label need --cjk".to_string());
+            }
+            None
+        }
+    };
+    if let Some(label) = cjk_label {
+        if !label.trim().is_empty() {
+            name = format!("{name} {label}");
+        }
+    }
+
     let glyphs_path = if shaped {
         let shape = lemmata_source::shape_of(&plan);
         let codes = match codepoints {
@@ -250,7 +305,7 @@ fn build_font(build: Build) -> Result<(), String> {
     // is the truth about the shape, so the plan follows it.
     plan.italic_angle = capture_angle(&captured, plan.italic_angle);
     let names = single_names(&name, &plan);
-    let result = build_face(&plan, &data, &names, subset.as_deref())?;
+    let result = build_face(&plan, &data, &names, subset.as_deref(), cjk.as_ref())?;
 
     let out_path = PathBuf::from(&out);
     let compressed = out_path
@@ -263,13 +318,14 @@ fn build_font(build: Build) -> Result<(), String> {
     };
     write_file(&out_path, &bytes)?;
     println!(
-        "{}: {} glyphs, {} bytes, {} ({} ported, {} captured)",
+        "{}: {} glyphs, {} bytes, {} ({} ported, {} captured, {} CJK)",
         out_path.display(),
         result.glyphs,
         bytes.len(),
         names.subfamily.to_lowercase(),
         result.coverage.ported,
-        result.coverage.captured
+        result.coverage.captured,
+        result.cjk
     );
 
     Ok(())
@@ -280,6 +336,14 @@ struct FaceResult {
     bytes: Vec<u8>,
     glyphs: usize,
     coverage: Coverage,
+    cjk: usize,
+}
+
+/// A CJK source read once for one face.
+struct CjkRequest {
+    source: Vec<u8>,
+    ranges: Vec<(u32, u32)>,
+    scale: f64,
 }
 
 fn build_face(
@@ -287,10 +351,26 @@ fn build_face(
     capture: &[u8],
     names: &Names,
     subset: Option<&str>,
+    cjk: Option<&CjkRequest>,
 ) -> Result<FaceResult, String> {
     let captured = lemmata_capture::load(capture)?;
     let (mut glyphs, coverage) = lemmata_source::glyphs_reported(plan, &captured);
     glyphs.extend(lemmata_source::ligature_glyphs(plan));
+    let cjk = cjk
+        .map(|request| {
+            lemmata_cjk::glyphs(
+                &request.source,
+                &request.ranges,
+                plan.width,
+                request.scale,
+                f64::from(plan.units_per_em),
+            )
+        })
+        .transpose()?;
+    let cjk_count = cjk.as_ref().map_or(0, Vec::len);
+    if let Some(cjk) = cjk {
+        glyphs.extend(cjk);
+    }
 
     // The restriction runs on the input rather than on the built font, so the
     // MATH table is assembled over the glyphs that are left and its ids stay
@@ -313,6 +393,7 @@ fn build_face(
         bytes,
         glyphs: total,
         coverage,
+        cjk: cjk_count,
     })
 }
 
@@ -402,6 +483,25 @@ fn build_family(
     let family = document.family;
     let config_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
     let resolved = family.resolve(config_dir)?;
+
+    let cjk = resolved
+        .iter()
+        .find_map(|instance| instance.cjk.as_ref())
+        .map(|cjk| -> Result<CjkRequest, String> {
+            let source = fs::read(&cjk.source).map_err(|error| {
+                format!("reading the CJK source {}: {error}", cjk.source.display())
+            })?;
+            let ranges = match &cjk.ranges {
+                Some(text) => parse_ranges(text)?,
+                None => lemmata_cjk::CN_RANGES.to_vec(),
+            };
+            Ok(CjkRequest {
+                source,
+                ranges,
+                scale: cjk.scale,
+            })
+        })
+        .transpose()?;
 
     let out_dir = out.map_or_else(|| resolve_path(config_dir, &family.out), PathBuf::from);
     fs::create_dir_all(&out_dir)
@@ -504,7 +604,7 @@ fn build_family(
             version: family.version.clone(),
             vendor,
         };
-        let result = build_face(&instance.plan, &data, &names, subset)?;
+        let result = build_face(&instance.plan, &data, &names, subset, cjk.as_ref())?;
         match family.policy {
             CoveragePolicy::Strict
                 if result.coverage.captured > 0 || result.coverage.missing > 0 =>
@@ -551,14 +651,15 @@ fn build_family(
             out_dir.join(&woff2)
         };
         println!(
-            "{}: {} glyphs, {} bytes, {} ({} ported, {} captured, {} missing)",
+            "{}: {} glyphs, {} bytes, {} ({} ported, {} captured, {} missing, {} CJK)",
             shown.display(),
             result.glyphs,
             result.bytes.len(),
             instance.legacy_subfamily.to_lowercase(),
             result.coverage.ported,
             result.coverage.captured,
-            result.coverage.missing
+            result.coverage.missing,
+            result.cjk
         );
         instances.push(InstanceManifest {
             id: instance.id.clone(),

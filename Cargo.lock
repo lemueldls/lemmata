@@ -652,6 +652,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "lemmata-cjk"
+version = "0.1.0"
+dependencies = [
+ "lemmata-build",
+ "lemmata-geom",
+ "read-fonts",
+ "skrifa",
+]
+
+[[package]]
 name = "lemmata-cli"
 version = "0.1.0"
 dependencies = [
@@ -660,6 +670,7 @@ dependencies = [
  "harfrust",
  "lemmata-build",
  "lemmata-capture",
+ "lemmata-cjk",
  "lemmata-geom",
  "lemmata-host",
  "lemmata-plan",
