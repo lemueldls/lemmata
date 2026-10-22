@@ -189,13 +189,20 @@ fn param_derives_the_same_metrics() {
     };
     let value: Value = serde_json::from_str(&text).expect("parse metrics");
     let expected = &value["metrics"];
+    // The capture is drawn at whatever width its plan asked for. Read it from
+    // the metrics rather than pinning one here, so a capture at another grade
+    // still checks the chain.
+    let width = expected
+        .get("Width")
+        .and_then(Value::as_f64)
+        .unwrap_or(500.0);
 
     let data = load_data(PARAMETERS, WEIGHTS, WIDTHS, SLOPES).expect("load the parameter data");
     let shape = Shape {
         serifs: Some("sans".to_string()),
         spacing: Some("normal".to_string()),
         weight: 400.0,
-        width: 500.0,
+        width,
         slope_angle: 0.0,
         slope: "Upright".to_string(),
     };

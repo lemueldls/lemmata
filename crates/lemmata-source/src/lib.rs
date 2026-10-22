@@ -233,6 +233,7 @@ pub fn capture_map(captured: &[lemmata_capture::Glyph]) -> ContoursByGlyph {
     if CAPTURE_KEY.with(|cached| *cached.borrow() != Some(key)) {
         let map = captured
             .iter()
+            .filter(|glyph| !lemmata_capture::UNREPLAYABLE.contains(&glyph.name.as_str()))
             .map(|glyph| {
                 (
                     glyph.name.clone(),
@@ -388,8 +389,8 @@ fn cell_width(captured: &[lemmata_capture::Glyph]) -> Option<f64> {
 /// A wider plan adds the space to the sidebearings, so the drawing moves half
 /// the difference. Left where the capture put it, the ink would sit against the
 /// left edge of a wider advance.
-fn centred(plan: &Plan, glyph: &lemmata_capture::Glyph, contours: &Contours) -> Contours {
-    let dx = (plan.width - glyph.advance) / 2.0;
+fn centred(plan: &Plan, contours: &Contours, cell_width: f64) -> Contours {
+    let dx = (plan.width - cell_width) / 2.0;
     if plan.spacing != Spacing::Normal || dx.abs() < 0.5 {
         return contours.clone();
     }
@@ -447,6 +448,7 @@ pub fn glyphs_reported(
     let mut coverage = Coverage::default();
     let mut glyphs: Vec<GlyphData> = captured
         .iter()
+        .filter(|glyph| !lemmata_capture::UNREPLAYABLE.contains(&glyph.name.as_str()))
         .map(|glyph| {
             let drawn = bases
                 .get(&glyph.name)
@@ -457,7 +459,7 @@ pub fn glyphs_reported(
                     coverage.captured += 1;
                     capture
                         .get(&glyph.name)
-                        .map_or_else(Vec::new, |contours| centred(plan, glyph, contours))
+                        .map_or_else(Vec::new, |contours| centred(plan, contours, cell))
                 },
                 |contours| {
                     coverage.ported += 1;
@@ -544,6 +546,7 @@ pub fn preview_glyphs(
 
     let mut glyphs: Vec<GlyphData> = captured
         .iter()
+        .filter(|glyph| !lemmata_capture::UNREPLAYABLE.contains(&glyph.name.as_str()))
         .map(|glyph| {
             let drawn = bases
                 .get(&glyph.name)
@@ -554,7 +557,7 @@ pub fn preview_glyphs(
                 || {
                     capture
                         .get(&glyph.name)
-                        .map_or_else(Vec::new, |contours| centred(plan, glyph, contours))
+                        .map_or_else(Vec::new, |contours| centred(plan, contours, cell))
                 },
                 |contours| contours.as_ref().clone(),
             );

@@ -168,6 +168,9 @@ fn write_rendering_svg() {
 
     let mut all = Vec::new();
     for (glyph, expected) in glyphs.iter().zip(reference) {
+        if lemmata_capture::UNREPLAYABLE.contains(&glyph.name.as_str()) {
+            continue;
+        }
         let mut ours = BezPath::new();
         for contour in lemmata_capture::contours(glyph) {
             ours.extend(contour_path(&contour).iter());

@@ -7,7 +7,6 @@
 
 use lemmata_build::font::GlyphData;
 use lemmata_capture::dump_path;
-use lemmata_plan::Plan;
 
 fn captured() -> Option<Vec<lemmata_capture::Glyph>> {
     let data = std::fs::read(dump_path()).ok()?;
@@ -76,7 +75,10 @@ fn an_unported_outline_moves_into_the_wider_frame() {
         eprintln!("skipping: no capture");
         return;
     };
-    let narrow = lemmata_source::glyphs(&Plan::default(), &captured);
+    let narrow = lemmata_source::glyphs(
+        &lemmata_plan::from_json(r#"{"width": 500}"#).expect("parse"),
+        &captured,
+    );
     let wide = lemmata_source::glyphs(
         &lemmata_plan::from_json(r#"{"width": 600}"#).expect("parse"),
         &captured,

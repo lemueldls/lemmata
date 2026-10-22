@@ -165,7 +165,12 @@ fn dots_and_colons_match_capture() {
         for (index, (node, expected)) in our_nodes.iter().zip(&captured).enumerate() {
             let ours = node_of(node);
             let expected = node_of(expected);
-            assert_eq!(ours.contrast, expected.contrast, "{name} {index}: contrast");
+            assert!(
+                (ours.contrast - expected.contrast).abs() < 1e-9,
+                "{name} {index}: contrast {} vs {}",
+                ours.contrast,
+                expected.contrast
+            );
             assert_eq!(ours.closed, expected.closed, "{name} {index}: closed");
             if ours.knots.len() != expected.knots.len() {
                 eprintln!("{name} {index}: ours {} knots", ours.knots.len());

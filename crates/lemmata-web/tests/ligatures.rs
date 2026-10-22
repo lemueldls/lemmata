@@ -59,7 +59,8 @@ fn the_sequence_joins_into_the_ligature_forms() {
         "-> did not join"
     );
     // The joined form still occupies the two cells the characters did.
-    assert_eq!(advance, 1000, "-> does not keep its two advances");
+    let (_, cell) = shape(&font, " ");
+    assert_eq!(advance, cell * 2, "-> does not keep its two advances");
 
     for text in ["->", "<-", "<->", "=>", "==", "!=", "<=", ">=", "/*", "*/"] {
         let (plain_a, _) = shape(&font, &text[..1]);

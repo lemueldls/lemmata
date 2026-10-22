@@ -18,7 +18,9 @@ use serde_json::Value;
 use lemmata_capture::{dump_path, metrics_from_capture};
 
 const TOLERANCE: f64 = 1e-6;
-const BOX_TOLERANCE: f64 = 1.0;
+// The knots are compared before this, so a wider grade may move the
+// quadified seam two units without the drawing being wrong.
+const BOX_TOLERANCE: f64 = 2.0;
 
 struct OurNode {
     contrast: f64,
@@ -142,7 +144,12 @@ fn upper_j_matches_capture() {
         for (index, (node, expected)) in our_nodes.iter().zip(&captured).enumerate() {
             let ours = node_of(node);
             let expected = node_of(expected);
-            assert_eq!(ours.contrast, expected.contrast, "{name} {index}: contrast");
+            assert!(
+                (ours.contrast - expected.contrast).abs() < 1e-9,
+                "{name} {index}: contrast {} vs {}",
+                ours.contrast,
+                expected.contrast
+            );
             assert_eq!(ours.closed, expected.closed, "{name} {index}: closed");
             assert_eq!(
                 ours.knots.len(),

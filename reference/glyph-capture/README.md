@@ -22,7 +22,7 @@ punctuation the other suites walk. A capture missing one of them fails
 ```sh
 IOSEVKA_BUILD_DIR=/tmp/opencode/iosevka-build
 LEMMATA_GLYPH_DUMP=/tmp/opencode/glyphs.bin
-LEMMATA_GLYPH_WIDTH=500
+LEMMATA_GLYPH_WIDTH=600
 LEMMATA_GLYPH_SLOPE=0
 LEMMATA_GLYPH_SET='a,a.crossing,a.doubleStoreyFlatBottomSerifed,\
 a.doubleStoreyFlatBottomSerifless,\
@@ -549,7 +549,7 @@ A third capture carries the letters and every spelling of each, which is what
 `crates/lemmata-cli/tests/combinations.rs` walks:
 
 ```
-LEMMATA_GLYPH_DUMP=target/variants.bin LEMMATA_GLYPH_WIDTH=500 \
+LEMMATA_GLYPH_DUMP=target/variants.bin LEMMATA_GLYPH_WIDTH=600 \
 LEMMATA_GLYPH_SET=$(python3 -c "print(','.join(n for n in open('target/glyphs.bin.names') if n.split('.')[0] in set('abcdefghijklmnopqrstuvwxyz') and ('.' not in n or n.split('.')[1].isalnum())))") \
 npm run build -- ttf-unhinted::RefA
 ```
@@ -566,7 +566,7 @@ so it is a second build rather than a second set of advances:
 `docs/plan.md` records what changes.
 
 The plan must hold only the upright slope. `reference/private-build-plans.toml`
-gives RefA an italic slope too, both are 500 units wide, and both pass the width
+gives RefA an italic slope too, both are 600 units wide, and both pass the width
 guard, so the dump lands on whichever the build writes last. Build a plan with
 the italic slope removed.
 

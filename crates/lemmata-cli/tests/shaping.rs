@@ -259,7 +259,8 @@ fn reference_path() -> PathBuf {
             },
             PathBuf::from,
         )
-        .join("RefA-Regular.ttf")
+        // The capture is the 600 grade, which Iosevka ships as Extended.
+        .join("RefA-Extended.ttf")
 }
 
 /// `r[drift.shaping]`: the prose corpus advances the way the oracle font does.

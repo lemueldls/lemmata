@@ -28,7 +28,7 @@ pub fn build(capture: &[u8], plan: &str) -> Result<Vec<u8>, String> {
     let captured = lemmata_capture::load(capture)?;
     let mut glyphs = lemmata_source::glyphs(&plan, &captured);
     glyphs.extend(lemmata_source::ligature_glyphs(&plan));
-    let rules = lemmata_build::ligatures::add(&mut glyphs);
+    let rules = lemmata_build::ligatures::add(&mut glyphs, plan.width);
     let drawn = lemmata_source::texture_forms(&plan, &captured);
     let names = names_for(&plan);
 
@@ -84,7 +84,7 @@ pub fn build_preview(capture: &[u8], plan: &str, text: &str) -> Result<Vec<u8>, 
         .filter(|glyph| glyph.unicodes.iter().any(|code| wanted.contains(code)))
         .map(|glyph| glyph.name.clone())
         .collect();
-    let rules = lemmata_build::ligatures::add_for(&mut glyphs, &text_names);
+    let rules = lemmata_build::ligatures::add_for(&mut glyphs, &text_names, plan.width);
     let names = names_for(&plan);
 
     lemmata_build::font::build_with(&glyphs, &metrics, &names, &plan.variants, &rules)

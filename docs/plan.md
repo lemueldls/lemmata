@@ -4,7 +4,7 @@ What a caller chooses about the font, and how far that reaches today.
 
 ## What exists
 
-`lemmata-plan` carries the values the writer puts in `head`, `hhea` and `OS/2`: the em size, the vertical metrics, the x-height and cap height, the underline and strikeout positions, the weight class, the width in font units, the width class and the italic angle. `Plan::default` is Iosevka's vertical metrics at 1000 units per em, so an empty plan reproduces the font this project built before the plan existed. `tests/default.rs` pins that, along with a changed field reaching the tables.
+`lemmata-plan` carries the values the writer puts in `head`, `hhea` and `OS/2`: the em size, the vertical metrics, the x-height and cap height, the underline and strikeout positions, the weight class, the width in font units, the width class and the italic angle. `Plan::default` is Iosevka's vertical metrics at 1000 units per em and its 600 width grade, so an empty plan is the normal face the project ships. `tests/default.rs` pins that, along with a changed field reaching the tables.
 
 `width` is the drawing width, which for normal spacing is also the advance. Iosevka grades it at 416, 456, 500, 547, 600, 657 and 720 and blends between them, so any value in that span is a coherent frame: 580 is a wider normal rather than an error. The OS/2 class follows from the nearest grade unless a plan sets `widthClass` on its own. A plan written with the old class scale, `"width": 6`, is rejected rather than read as six units.
 
@@ -24,16 +24,16 @@ Measured against the monospace build of the same set:
 
 | glyph | advance | ink | outline |
 | --- | --- | --- | --- |
-| `i`, `l` | 500 → 333 | 350 → 259 | redrawn |
-| `m` | 500 → 750 | 398 → 622 | redrawn |
-| `M`, `W` | 500 → 667 | 398 → 539 | redrawn |
-| `x`, `a` | 500 → 500 | unchanged | byte-identical |
-| `period` | 500 → 333 | 156 → 156 | advance only |
-| `space` | 500 → 292 | — | — |
+| `i`, `l` | 600 → 400 | 402 → 296 | redrawn |
+| `m` | 600 → 900 | 470 → 724 | redrawn |
+| `M`, `W` | 600 → 800 | — | redrawn |
+| `x`, `a` | 600 → 600 | unchanged | byte-identical |
+| `period` | 600 → 400 | 156 → 156 | advance only |
+| `space` | 600 → 350 | — | — |
 
-The class ratios come from `params/parameters.toml`'s `spacing-quasi-proportional` table: `advanceScaleMM` 1.5, `M` 1.333, `T` 1.167, `F` 0.833, `I` 0.667, `II` 0.5, `Sp` 0.583. A plan chooses the preset and not the ratios. `metricOverride` is the only way to move one, and its documented table lists just `advanceScaleSp` of the seven: setting `advanceScaleSp = 1.0` moves `space` from 292 to 500, and setting `advanceScaleM` or `advanceScaleI` does nothing at all, silently, whether it is written as a plan key or under `metricOverride`.
+The class ratios come from `params/parameters.toml`'s `spacing-quasi-proportional` table: `advanceScaleMM` 1.5, `M` 1.333, `T` 1.167, `F` 0.833, `I` 0.667, `II` 0.5, `Sp` 0.583. A plan chooses the preset and not the ratios. `metricOverride` is the only way to move one, and its documented table lists just `advanceScaleSp` of the seven: setting `advanceScaleSp = 1.0` moves `space` from 350 to 600, and setting `advanceScaleM` or `advanceScaleI` does nothing at all, silently, whether it is written as a plan key or under `metricOverride`.
 
-So a page offers the two presets and cannot offer a slider. `web/public/glyphs-quasi.bin` is the same set drawn at the second preset, and `lemmata-web`'s test asserts the classes: `i` at 333 and `m` at 750 against 500 for both.
+So a page offers the two presets and cannot offer a slider. `web/public/glyphs-quasi.bin` is the same set drawn at the second preset, and `lemmata-web`'s test asserts the classes: `i` at 400 and `m` at 900 against 600 for both.
 
 ## What it does not reach
 

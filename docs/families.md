@@ -20,7 +20,7 @@ xHeight = 520
 ascender = 965
 descender = -215
 lineGap = 70
-width = 500
+width = 600
 spacing = "normal"
 serifs = "sans"
 

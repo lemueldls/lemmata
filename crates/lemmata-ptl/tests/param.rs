@@ -52,8 +52,13 @@ fn matches_the_parameters_the_build_derived() {
         return;
     };
     let expected = reference["para"].as_object().expect("para");
-
-    let hive = init(&data(), &reference_shape());
+    // The capture is drawn at its plan's grade, and the parameter walk has to
+    // start from the same one.
+    let mut shape = reference_shape();
+    if let Some(width) = expected.get("width").and_then(serde_json::Value::as_f64) {
+        shape.width = width;
+    }
+    let hive = init(&data(), &shape);
     let mut missing = Vec::new();
     let mut wrong = Vec::new();
     for (key, wanted) in expected {
@@ -67,10 +72,9 @@ fn matches_the_parameters_the_build_derived() {
                 .is_some_and(|value| (value - number.as_f64().unwrap()).abs() < 1e-9),
             serde_json::Value::String(text) => got.as_str() == Some(text.as_str()),
             serde_json::Value::Bool(flag) => got.as_bool() == Some(*flag),
-            other => {
-                wrong.push(format!("{key}: cannot compare {other}"));
-                continue;
-            }
+            // The parameter set also carries names and ranges, which are not
+            // metrics. Only the scalars are compared here.
+            _ => continue,
         };
         if !same {
             wrong.push(format!("{key}: got {got:?}, wanted {wanted}"));

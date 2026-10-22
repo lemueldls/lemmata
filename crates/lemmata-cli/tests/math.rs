@@ -778,7 +778,7 @@ fn the_radical_has_a_vertical_stem() {
         "the hook reaches left of the stem: {left}"
     );
     assert!(
-        at_top.iter().any(|x| *x == advance),
+        at_top.contains(&advance),
         "the stem does not reach the top: {at_top:?}"
     );
     assert!(

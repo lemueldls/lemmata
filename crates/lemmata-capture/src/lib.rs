@@ -18,6 +18,18 @@ use serde_json::Value;
 
 use lemmata_ptl::metrics::{Metrics, Para};
 
+/// Glyphs whose overlap sweep cannot run.
+///
+/// On `smcpBBar` the crossbar, the stem and the bowl meet exactly, and
+/// linesweeper 0.5.0 leaves a comparison with no range and panics. Upstream's
+/// own sweep handles the case. The font leaves these three out, and a test that
+/// replays the whole capture skips them.
+pub const UNREPLAYABLE: [&str; 3] = [
+    "smcpBBar.standardSerifless",
+    "smcpBBar.standardUnilateralSerifed",
+    "smcpBBar.standardBilateralSerifed",
+];
+
 /// Where the capture and its side files live.
 ///
 /// `LEMMATA_GLYPH_DUMP` overrides the path.

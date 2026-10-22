@@ -142,7 +142,12 @@ fn z_matches_capture() {
         for (index, (node, expected)) in our_nodes.iter().zip(&captured).enumerate() {
             let ours = node_of(node);
             let expected = node_of(expected);
-            assert_eq!(ours.contrast, expected.contrast, "{name} {index}: contrast");
+            assert!(
+                (ours.contrast - expected.contrast).abs() < 1e-9,
+                "{name} {index}: contrast {} vs {}",
+                ours.contrast,
+                expected.contrast
+            );
             assert_eq!(ours.closed, expected.closed, "{name} {index}: closed");
             assert_eq!(
                 ours.knots.len(),

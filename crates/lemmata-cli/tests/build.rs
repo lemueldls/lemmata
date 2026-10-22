@@ -146,7 +146,8 @@ fn built_font_round_trips() {
 /// The built font should agree with Iosevka's own outline for the same glyphs.
 #[test]
 fn built_font_matches_the_reference() {
-    let reference_path = workspace_path("target/reference/RefA-Regular.ttf");
+    // The capture is the 600 grade, which Iosevka calls the Extended face.
+    let reference_path = workspace_path("target/reference/RefA-Extended.ttf");
     let Ok(reference_bytes) = std::fs::read(&reference_path) else {
         eprintln!(
             "skipping: no reference font at {}",

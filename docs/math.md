@@ -66,6 +66,10 @@ LEMMATA_GLYPH_CODEPOINTS=$(python3 -c "print(','.join(str(c) for c in range(0x30
 npm run build -- ttf-unhinted::RefA
 ```
 
+The math capture stays at 500 even though the normal face is 600. Its
+assembly and kern gates are calibrated against the 500 drawings, and the source
+centres a captured glyph in the wider cell without redrawing it.
+
 It lands 1709 glyphs: 904 math alphanumerics, 256 operators, 56 Greek letters,
 58 Latin ones, 10 digits, 308 other symbols and 112 combining marks.
 

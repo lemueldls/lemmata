@@ -18,6 +18,9 @@ use crate::font::{GlyphData, Ligature};
 /// The fixture, generated from the reference build.
 const FIXTURE: &str = include_str!("../../../reference/ligatures.json");
 
+/// The width the fixture was drawn at, in font units.
+const FIXTURE_WIDTH: f64 = 500.0;
+
 /// The reference targets the port can draw itself, by source name.
 const SOURCES: &str = include_str!("../../../reference/ligature-sources.json");
 
@@ -124,15 +127,39 @@ fn fixture() -> &'static Fixture {
 ///
 /// A rule that names a glyph the caller did not supply is dropped by the build,
 /// so a subset that removes one costs that ligature and nothing else.
-pub fn add(glyphs: &mut Vec<GlyphData>) -> &'static [Ligature] {
+pub fn add(glyphs: &mut Vec<GlyphData>, plan_width: f64) -> &'static [Ligature] {
     let (rules, extra) = fixture();
     for glyph in extra {
         if !glyphs.iter().any(|existing| existing.name == glyph.name) {
-            glyphs.push(glyph.clone());
+            glyphs.push(adapted(glyph.clone(), plan_width));
         }
     }
 
     rules
+}
+
+/// Moves a fixture glyph into the plan's grade.
+///
+/// The fixture is one face at 500 units. A wider plan adds the space to the
+/// sidebearings, so the advance scales with the cell and the drawing moves half
+/// the difference. A ligature that spans two cells keeps both of them.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn adapted(mut glyph: GlyphData, plan_width: f64) -> GlyphData {
+    let scale = plan_width / FIXTURE_WIDTH;
+    if (scale - 1.0).abs() < f64::EPSILON {
+        return glyph;
+    }
+    let shift = (plan_width - FIXTURE_WIDTH) / 2.0;
+    glyph.advance = (f64::from(glyph.advance) * scale)
+        .round()
+        .clamp(0.0, f64::from(u16::MAX)) as u16;
+    for contour in &mut glyph.contours {
+        for point in contour {
+            point.x += shift;
+        }
+    }
+
+    glyph
 }
 
 /// The rules that can fire in a run whose glyph names are `text_names`, and
@@ -145,6 +172,7 @@ pub fn add(glyphs: &mut Vec<GlyphData>) -> &'static [Ligature] {
 pub fn add_for(
     glyphs: &mut Vec<GlyphData>,
     text_names: &std::collections::BTreeSet<String>,
+    plan_width: f64,
 ) -> Vec<Ligature> {
     let (rules, extra) = fixture();
     // The right half of a pair names the left half's joined form in its
@@ -187,7 +215,7 @@ pub fn add_for(
         if targets.contains(glyph.name.as_str())
             && !glyphs.iter().any(|existing| existing.name == glyph.name)
         {
-            glyphs.push(glyph.clone());
+            glyphs.push(adapted(glyph.clone(), plan_width));
         }
     }
 

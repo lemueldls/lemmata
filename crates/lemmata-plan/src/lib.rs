@@ -2,12 +2,12 @@
 //!
 //! A first slice, and a narrow one on purpose. The plan carries the values the
 //! writer puts in `head`, `hhea` and `OS/2`, which is the seam
-//! [`lemmata_build::font::build`] takes. It does not reach the outlines: those
-//! come from the glyph source, and until that responds to a parameter the
-//! shapes are the ones recorded in the capture.
+//! [`lemmata_build::font::build`] takes. It also reaches the outlines the port
+//! draws: the weight, width and slope derive the parameter set the definitions
+//! read. A glyph still in the capture keeps its recorded shape.
 //!
-//! The default is Iosevka's vertical metrics at 1000 units per em, so an empty
-//! plan reproduces the font this project built before the plan existed. That is
+//! The default is Iosevka's vertical metrics at 1000 units per em and its 600
+//! width grade, so an empty plan is the normal face the project ships. That is
 //! the invariant `tests/default.rs` pins.
 //!
 //! The boundary format is JSON, because the page sends an object and
@@ -150,8 +150,8 @@ impl Default for Plan {
             strikeout_position: 250,
             strikeout_thickness: 50,
             weight_class: 400,
-            width: 500.0,
-            width_class: 5,
+            width: 600.0,
+            width_class: 7,
             italic_angle: 0.0,
             spacing: Spacing::Normal,
             serifs: "sans".to_string(),

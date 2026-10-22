@@ -159,7 +159,7 @@ fn a_quasi_proportional_capture_is_proportional() {
     );
     assert_eq!(
         (quasi_i, quasi_m),
-        (333, 750),
+        (400, 900),
         "the letter classes are Iosevka's: `i` at two thirds of the cell, `m` at one and a half"
     );
     eprintln!("spacing: i {quasi_i}, m {quasi_m} against {mono_i} for both");

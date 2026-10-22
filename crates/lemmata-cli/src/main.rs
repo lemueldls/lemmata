@@ -302,7 +302,7 @@ fn build_face(
     }
 
     let metrics = plan.to_font_metrics();
-    let ligatures = lemmata_build::ligatures::add(&mut glyphs);
+    let ligatures = lemmata_build::ligatures::add(&mut glyphs, plan.width);
     let drawn = lemmata_source::texture_forms(plan, &captured);
     let bytes = font::build_all(&glyphs, &metrics, names, &plan.variants, ligatures, &drawn)?;
     let total = glyphs.len() + 1 + font::derived(&glyphs, &metrics).len();

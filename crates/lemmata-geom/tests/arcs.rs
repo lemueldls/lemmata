@@ -359,6 +359,9 @@ fn resolved_arcs_are_close() {
     let mut over = 0usize;
     let mut structural = Vec::new();
     for (glyph, expected) in glyphs.iter().zip(reference) {
+        if lemmata_capture::UNREPLAYABLE.contains(&glyph.name.as_str()) {
+            continue;
+        }
         let ours_arcs = Geometry::Simplify {
             gizmo: glyph.gizmo,
             geom: Box::new(glyph.geometry.clone()),
@@ -474,6 +477,9 @@ fn fairize_stage_matches() {
     let mut worst = (0.0_f64, String::new());
     let mut over = 0usize;
     for (glyph, expected) in glyphs.iter().zip(reference) {
+        if lemmata_capture::UNREPLAYABLE.contains(&glyph.name.as_str()) {
+            continue;
+        }
         let arcs = Geometry::Simplify {
             gizmo: glyph.gizmo,
             geom: Box::new(glyph.geometry.clone()),
