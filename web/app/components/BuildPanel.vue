@@ -20,7 +20,7 @@ defineEmits<{ build: [] }>();
 
 const DEFAULT_SAMPLE = `the quick brown fox
 jumps over the lazy dog
-if (a <= b) return a
+SPHINX OF BLACK QUARTZ, JUDGE MY VOW
 -> => != <= >=
 0123456789 ():;,."'*`;
 

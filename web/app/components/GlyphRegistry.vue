@@ -328,9 +328,9 @@ onBeforeUnmount(() => {
           <span class="registry__stage-kicker">
             {{ group }} / {{ previewLabel }}
           </span>
-          <span class="registry__stage-state" :data-ready="canApply">
+          <!-- <span class="registry__stage-state" :data-ready="canApply">
             {{ canApply ? "computed drawing / can join the plan" : "computed drawing / preview only" }}
-          </span>
+          </span> -->
           <span class="registry__stage-plan">
             {{ !canApply ? "plan: no base glyph" : chosenName ? `plan: ${humanize(chosenName)}` : "plan: no choice yet" }}
           </span>
