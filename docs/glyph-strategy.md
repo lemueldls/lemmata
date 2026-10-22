@@ -386,6 +386,26 @@ The o family is wired into the registry: `O`, `smcpO`, `o`, `OSlash`, `oSlash`,
 `OBar`, `oBar` and the two blackboard forms, all nine against the capture at
 268 knots.
 
+The lowercase `j` now composes its 15 `j.*` forms from the existing dotless
+bodies and the same tittle as `i`. The plan selects `j.bentHookSerifed`, which
+matches the capture at 29 knots plus the dot. Its serifed marks use
+`mix(Middle, xMiddle, 7/8)` as the leaning anchor, where `xMiddle = Middle +
+JBalance`. The contour pass trims the hook end two units after the dump, so the
+test renders the dump instead and the shipped outline keeps that two-unit
+difference, as with `c`.
+
+The lowercase `q` is ported in its eared serifless form and matches the
+capture at 32 knots. Only the other bodies, the tailed terminals and the serifs
+are missing.
+
+The lowercase `i` is built from the existing `lower-il` table: the serifed
+dotless stem plus a round tittle, and it matches at 6 knots plus the dot. The
+dot is drawn at `markMiddle = -Middle` and wrapped in the composition's
+translation, `Middle + leaningAbove.x`. The leaning anchor is
+`mix(Middle, xMiddle, 0.75)` for the serifed body, which puts the dot 6.0375
+units right of the middle. Its Spiro node stays at `-300` under the transform,
+which is why the capture looked like a 600-unit shift until the tree was read.
+
 The lowercase `w` is ported in its straight serifless form and matches the
 capture at 8 knots. Its four strokes share the `DiagCorDs` correction, a
 four-step fixpoint over `DiagCor`; the inner pair meets at 0.72 of the
@@ -417,8 +437,8 @@ places. The serifed forms, the reversed letters and the accented compositions
 are not ported. Their tests compare the rendered capture tree to the port's
 outline rather than the side contour file, which is produced by a later pass
 and trims the open ends of these glyphs. For `c` the two boolean engines trim
-the caps two units apart, so the shipped face keeps the captured outline until
-that difference closes.
+the caps two units apart, so the shipped outline differs there until the
+conversion matches.
 
 `symbol/punctuation/ampersand.ptl` is ported for the closed form, which the
 default sans plan selects. It matches the capture at 33 knots. The lead, its

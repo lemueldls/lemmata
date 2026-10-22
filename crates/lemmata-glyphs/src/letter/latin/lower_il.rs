@@ -140,27 +140,38 @@ impl LowerIl<'_> {
         Geometry::Combine(parts)
     }
 
-    /// `i`: the dotless stem with `tittleAbove` placed on its `above` anchor.
-    ///
-    /// The dot is drawn at the middle and the accent's mid-height. The
-    /// composition's own shift is not this simple: the capture records the
-    /// composed dot under a translation of 5.25 units, not the full width that
-    /// `markMiddle = -Middle` suggests, so the mark's anchor convention has to
-    /// be read against a captured mark before this is wired in.
-    #[must_use]
-    pub fn dotted(&self) -> Geometry {
-        let metrics = self.metrics;
-        let x = self.middle();
-        let y = metrics.xh + metrics.accent_clearance + metrics.accent_height / 2.0;
-        let dot = shapes::dot_at(self.kit, metrics, x, y, metrics.dot_radius);
+    /// `LeaningAnchor.Above.At` for the body, where the tittle sits.
+    fn lean_x(&self, body: Body) -> f64 {
+        match body {
+            Body::Serifless => self.middle(),
+            Body::Serifed => mix(self.middle(), self.x_middle(body), 0.75),
+            Body::HookyBottom => self.x_middle(body),
+        }
+    }
 
+    /// The `tittleAbove` mark, translated onto the base's leaning anchor.
+    fn tittle(&self, lean_x: f64) -> Geometry {
+        let metrics = self.metrics;
+        let y = metrics.xh + metrics.accent_clearance + metrics.accent_height / 2.0;
+        let dot = spiro_geometry(shapes::dot_at(
+            self.kit,
+            metrics,
+            -metrics.middle,
+            y,
+            metrics.dot_radius,
+        ));
+
+        Geometry::Transformed {
+            tf: kurbo::Affine::translate((metrics.middle + lean_x, 0.0)),
+            geom: Box::new(dot),
+        }
+    }
+
+    /// `i`: the dotless stem with the tittle above it.
+    fn dotted(&self, body: Body) -> Geometry {
         Geometry::Combine(vec![
-            self.shape(Body::Serifless, metrics.xh, 0.0),
-            Geometry::Spiro {
-                gizmo: kurbo::Affine::IDENTITY,
-                closed: dot.closed,
-                knots: dot.knots,
-            },
+            self.shape(body, self.metrics.xh, 0.0),
+            self.tittle(self.lean_x(body)),
         ])
     }
 
@@ -178,6 +189,7 @@ impl LowerIl<'_> {
                 format!("dotlessiCap.{suffix}"),
                 self.shape(*body, metrics.cap, 0.0),
             ));
+            out.push((format!("i.{suffix}"), self.dotted(*body)));
             out.push((
                 format!("l.{suffix}"),
                 self.shape(*body, metrics.ascender, 0.0),
@@ -189,5 +201,13 @@ impl LowerIl<'_> {
         }
 
         out
+    }
+}
+
+fn spiro_geometry(outline: lemmata_ptl::spiro_kit::SpiroOutline) -> Geometry {
+    Geometry::Spiro {
+        gizmo: kurbo::Affine::IDENTITY,
+        closed: outline.closed,
+        knots: outline.knots,
     }
 }

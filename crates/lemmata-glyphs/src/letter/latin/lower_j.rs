@@ -1,13 +1,9 @@
 //! The lower-case `j` bodies from `letter/latin/lower-j.ptl`.
 //!
-//! Ported: the 15 `dotlessj` configs and their `dotlessjBar` forms, plus the
-//! two `dotlessjCurlyTail` forms. The `dotlessjBarHookTop` forms need
-//! `TopHook.toRight.mBarOuter`, which is not ported; `mathbb/dotlessj` and the
-//! compositions (`j`, `jBar`, `jCurlyTail`) need the tittle and are not here.
-//!
-//! The composed `j` is the dotless body plus `tittleAbove`, and the tittle's
-//! placement is the open composition question, so only the dotless bodies are
-//! registered.
+//! Ported: the 15 `dotlessj` configs, their `dotlessjBar` forms and the
+//! composed `j` forms. The `dotlessjBarHookTop` forms need
+//! `TopHook.toRight.mBarOuter`, which is not ported; `mathbb/dotlessj`, `jBar`
+//! and `jCurlyTail` are not here either.
 
 // The arithmetic mirrors upstream's expression order and stays clear of fused
 // multiply-add, which would round differently from JavaScript.
@@ -361,11 +357,44 @@ impl LowerJ<'_> {
 
     /// Every glyph this definition builds, by name.
     #[must_use]
+    /// Where the tittle sits: the base's `above` anchor, or its leaning anchor
+    /// when the body takes the serifed marks.
+    fn lean_x(&self, body: Body, serif: Serif) -> f64 {
+        let x_middle = self.x_middle(body, serif);
+        if serif == Serif::Long {
+            mix(self.metrics.middle, x_middle, 7.0 / 8.0)
+        } else {
+            x_middle
+        }
+    }
+
+    /// The `tittleAbove` mark, translated onto the base's anchor.
+    fn tittle(&self, lean_x: f64) -> Geometry {
+        let metrics = self.metrics;
+        let y = metrics.xh + metrics.accent_clearance + metrics.accent_height / 2.0;
+        let dot = spiro_geometry(shapes::dot_at(
+            self.kit,
+            metrics,
+            -metrics.middle,
+            y,
+            metrics.dot_radius,
+        ));
+
+        Geometry::Transformed {
+            tf: kurbo::Affine::translate((metrics.middle + lean_x, 0.0)),
+            geom: Box::new(dot),
+        }
+    }
+
     pub fn glyphs(&self) -> Vec<(String, Geometry)> {
         let mut out = Vec::new();
         for (suffix, body, serif, adws) in CONFIGS {
             let glyph = self.shape(*body, *serif, self.metrics.xh, *adws);
             let x_middle = self.x_middle(*body, *serif);
+            out.push((
+                format!("j.{suffix}"),
+                Geometry::Combine(vec![glyph.clone(), self.tittle(self.lean_x(*body, *serif))]),
+            ));
             out.push((format!("dotlessj.{suffix}"), glyph.clone()));
             out.push((
                 format!("dotlessjBar.{suffix}"),
@@ -436,3 +465,11 @@ pub const CONFIGS: &[(&str, Body, Serif, f64)] = &[
     ("flatHookShortSerifed", Body::FlatHook, Serif::Short, 1.0),
     ("flatHookSerifed", Body::FlatHook, Serif::Long, 1.0),
 ];
+
+fn spiro_geometry(outline: lemmata_ptl::spiro_kit::SpiroOutline) -> Geometry {
+    Geometry::Spiro {
+        gizmo: kurbo::Affine::IDENTITY,
+        closed: outline.closed,
+        knots: outline.knots,
+    }
+}

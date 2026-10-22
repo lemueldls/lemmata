@@ -13,9 +13,9 @@ use lemmata_ptl::{letter_model::DivFrame, metrics::Metrics, shapes::Design, spir
 use crate::{
     letter::latin::{
         lower_a, lower_b, lower_c, lower_d, lower_e, lower_f, lower_g, lower_h, lower_il, lower_j,
-        lower_k, lower_m, lower_n, lower_p, lower_r, lower_s, lower_t, lower_w, lower_y, o, u,
-        upper_b, upper_d, upper_e, upper_f, upper_h, upper_i, upper_j, upper_l, upper_m, upper_n,
-        upper_p, upper_q, upper_t, upper_y, v, x, z,
+        lower_k, lower_m, lower_n, lower_p, lower_q, lower_r, lower_s, lower_t, lower_w, lower_y,
+        o, u, upper_b, upper_d, upper_e, upper_f, upper_h, upper_i, upper_j, upper_l, upper_m,
+        upper_n, upper_p, upper_q, upper_t, upper_y, v, x, z,
     },
     symbol::{
         math::{arith::Arith, dots_and_colons::DotsAndColons, relation::Relation},
@@ -374,6 +374,14 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
     );
     out.extend(
         lower_t::LowerT {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        lower_q::LowerQ {
             metrics,
             kit: &kit,
             design,
