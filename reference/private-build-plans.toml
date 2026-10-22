@@ -4,6 +4,11 @@ spacing = "normal"
 serifs = "sans"
 exportGlyphNames = true
 
+[buildPlans.RefA.widths.Normal]
+shape = 600
+menu = 7
+css = "semi-expanded"
+
 [buildPlans.RefA.weights.Regular]
 shape = 400
 menu = 400
@@ -20,6 +25,11 @@ family = "Lemmata Ref B"
 spacing = "normal"
 serifs = "slab"
 exportGlyphNames = true
+
+[buildPlans.RefB.widths.Normal]
+shape = 600
+menu = 7
+css = "semi-expanded"
 
 [buildPlans.RefB.weights.Bold]
 shape = 700
