@@ -9,9 +9,11 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, VSerifSide};
-use lemmata_ptl::spiro_kit::{Dispiro, Kit};
+use lemmata_ptl::{
+    metrics::Metrics,
+    shapes::{self, Design, VSerifSide},
+    spiro_kit::{Dispiro, Kit},
+};
 
 use super::x::x_strand;
 

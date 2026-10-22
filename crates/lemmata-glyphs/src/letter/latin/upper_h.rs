@@ -11,12 +11,14 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    serif::SerifFrame,
+    shapes::{self, Design},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The seven serif grades.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -109,32 +111,42 @@ impl UpperH<'_> {
         parts.extend(match slab {
             Slab::None => Vec::new(),
             Slab::TopLeft => vec![frame.lt_outer(self.kit, metrics)],
-            Slab::TopLeftBottomRight => vec![
-                frame.lt_outer(self.kit, metrics),
-                frame.rb_outer(self.kit, metrics),
-            ],
-            Slab::Tailed => vec![
-                frame.lt_full(self.kit, metrics),
-                frame.rt_full(self.kit, metrics),
-                frame.lb_full(self.kit, metrics),
-            ],
-            Slab::All => vec![
-                frame.lt_full(self.kit, metrics),
-                frame.rt_full(self.kit, metrics),
-                frame.lb_full(self.kit, metrics),
-                frame.rb_full(self.kit, metrics),
-            ],
-            Slab::AllBgr => vec![
-                frame.lt_outer(self.kit, metrics),
-                frame.rt_inner(self.kit, metrics),
-                frame.lb_full(self.kit, metrics),
-                frame.rb_full(self.kit, metrics),
-            ],
-            Slab::TailedBgr => vec![
-                frame.lt_outer(self.kit, metrics),
-                frame.rt_inner(self.kit, metrics),
-                frame.lb_full(self.kit, metrics),
-            ],
+            Slab::TopLeftBottomRight => {
+                vec![
+                    frame.lt_outer(self.kit, metrics),
+                    frame.rb_outer(self.kit, metrics),
+                ]
+            }
+            Slab::Tailed => {
+                vec![
+                    frame.lt_full(self.kit, metrics),
+                    frame.rt_full(self.kit, metrics),
+                    frame.lb_full(self.kit, metrics),
+                ]
+            }
+            Slab::All => {
+                vec![
+                    frame.lt_full(self.kit, metrics),
+                    frame.rt_full(self.kit, metrics),
+                    frame.lb_full(self.kit, metrics),
+                    frame.rb_full(self.kit, metrics),
+                ]
+            }
+            Slab::AllBgr => {
+                vec![
+                    frame.lt_outer(self.kit, metrics),
+                    frame.rt_inner(self.kit, metrics),
+                    frame.lb_full(self.kit, metrics),
+                    frame.rb_full(self.kit, metrics),
+                ]
+            }
+            Slab::TailedBgr => {
+                vec![
+                    frame.lt_outer(self.kit, metrics),
+                    frame.rt_inner(self.kit, metrics),
+                    frame.lb_full(self.kit, metrics),
+                ]
+            }
         });
 
         Geometry::Combine(parts)

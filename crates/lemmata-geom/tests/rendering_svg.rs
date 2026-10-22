@@ -12,8 +12,7 @@
     clippy::suboptimal_flops
 )]
 
-use std::fmt::Write as _;
-use std::fs;
+use std::{fmt::Write as _, fs};
 
 use kurbo::{BezPath, ParamCurve, Point, Rect, Shape};
 use lemmata_capture::dump_path;

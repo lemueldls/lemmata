@@ -7,8 +7,10 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use read_fonts::TableProvider;
 

@@ -21,16 +21,16 @@
     clippy::suboptimal_flops,
     clippy::cast_precision_loss
 )]
-use lemmata_geom::math;
-
 use kurbo::Vec2;
-use lemmata_geom::{Geometry, KnotType};
+use lemmata_geom::{Geometry, KnotType, math};
 
-use crate::control::{Af, Amendment, Item, UserControlKnot};
-use crate::letter_model::DivFrame;
-use crate::metrics::Metrics;
-use crate::spiro_kit::{Direction, Dispiro, Family, Kit, Position};
-use crate::util::{boole, boole_pn, mix};
+use crate::{
+    control::{Af, Amendment, Item, UserControlKnot},
+    letter_model::DivFrame,
+    metrics::Metrics,
+    spiro_kit::{Direction, Dispiro, Family, Kit, Position},
+    util::{boole, boole_pn, mix},
+};
 
 /// The design constants these helpers read, from `DesignParameters` in
 /// `meta/aesthetics.ptl`. They are fixed for the family rather than derived
@@ -799,14 +799,16 @@ pub fn obar_left_shape(ctx: &OBarContext<'_>, ring: &OBarRing) -> Dispiro {
     } = *ring;
     let x = left + ctx.hsw_to_v(sw - fine);
 
-    let flat_side = |x: f64, ox: f64, af: Af| FlatSide {
-        x,
-        d: bot,
-        u: top,
-        ada,
-        adb,
-        ox,
-        af,
+    let flat_side = |x: f64, ox: f64, af: Af| {
+        FlatSide {
+            x,
+            d: bot,
+            u: top,
+            ada,
+            adb,
+            ox,
+            af,
+        }
     };
     let start = flatside_ld(ctx.kit, &flat_side(x, 0.0, Vec::new()));
     let middle = flatside_ru(ctx.kit, &flat_side(right, metrics.ox, Vec::new()));
@@ -883,18 +885,15 @@ pub fn obar_left_toothless_corner(
         y: flat_y,
         af: ctx.kit.widths_lhs(Some(fine)),
     };
-    let right_side = flatside_ru(
-        ctx.kit,
-        &FlatSide {
-            x: right,
-            d: bot,
-            u: top,
-            ada,
-            adb,
-            ox: metrics.ox,
-            af: Vec::new(),
-        },
-    );
+    let right_side = flatside_ru(ctx.kit, &FlatSide {
+        x: right,
+        d: bot,
+        u: top,
+        ada,
+        adb,
+        ox: metrics.ox,
+        af: Vec::new(),
+    });
 
     let mut items = vec![Item::Af(ctx.kit.widths_lhs(Some(sw)))];
     if rise == 0.0 {
@@ -1002,18 +1001,15 @@ pub fn obar_left_toothless_rounded(
         y: flat_y,
         af: ctx.kit.widths_lhs(Some(fine)),
     };
-    let right_side = flatside_ru(
-        ctx.kit,
-        &FlatSide {
-            x: right,
-            d: bot,
-            u: top,
-            ada,
-            adb,
-            ox: metrics.ox,
-            af: Vec::new(),
-        },
-    );
+    let right_side = flatside_ru(ctx.kit, &FlatSide {
+        x: right,
+        d: bot,
+        u: top,
+        ada,
+        adb,
+        ox: metrics.ox,
+        af: Vec::new(),
+    });
 
     let mut items = vec![
         Item::Af(ctx.kit.widths_lhs(Some(sw))),
@@ -1152,30 +1148,38 @@ pub fn hserif(
     let half = 0.5 * sw_ref * metrics.hv_contrast;
     let shift = sw * metrics.serif_shift_x;
     let (widths, flat_x, heading, end_x) = match side {
-        HSerifSide::LeftTop => (
-            kit.widths_lhs(Some(sw)),
-            x + half,
-            leftward(),
-            x - length - shift,
-        ),
-        HSerifSide::LeftBottom => (
-            kit.widths_rhs(Some(sw)),
-            x + half,
-            leftward(),
-            x - length + shift,
-        ),
-        HSerifSide::RightTop => (
-            kit.widths_rhs(Some(sw)),
-            x - half,
-            rightward(),
-            x + length - shift,
-        ),
-        HSerifSide::RightBottom => (
-            kit.widths_lhs(Some(sw)),
-            x - half,
-            rightward(),
-            x + length + shift,
-        ),
+        HSerifSide::LeftTop => {
+            (
+                kit.widths_lhs(Some(sw)),
+                x + half,
+                leftward(),
+                x - length - shift,
+            )
+        }
+        HSerifSide::LeftBottom => {
+            (
+                kit.widths_rhs(Some(sw)),
+                x + half,
+                leftward(),
+                x - length + shift,
+            )
+        }
+        HSerifSide::RightTop => {
+            (
+                kit.widths_rhs(Some(sw)),
+                x - half,
+                rightward(),
+                x + length - shift,
+            )
+        }
+        HSerifSide::RightBottom => {
+            (
+                kit.widths_lhs(Some(sw)),
+                x - half,
+                rightward(),
+                x + length + shift,
+            )
+        }
     };
     let items = vec![
         Item::Af(widths),
@@ -1303,26 +1307,34 @@ pub fn vserif(
 ) -> Dispiro {
     let width = sw.unwrap_or(metrics.v_jut_stroke);
     let (widths, down, heading) = match side {
-        VSerifSide::DownRight => (
-            kit.widths_rhs(Some(width)),
-            true,
-            downward(metrics.hv_contrast),
-        ),
-        VSerifSide::DownLeft => (
-            kit.widths_lhs(Some(width)),
-            true,
-            downward(metrics.hv_contrast),
-        ),
-        VSerifSide::UpRight => (
-            kit.widths_lhs(Some(width)),
-            false,
-            upward(metrics.hv_contrast),
-        ),
-        VSerifSide::UpLeft => (
-            kit.widths_rhs(Some(width)),
-            false,
-            upward(metrics.hv_contrast),
-        ),
+        VSerifSide::DownRight => {
+            (
+                kit.widths_rhs(Some(width)),
+                true,
+                downward(metrics.hv_contrast),
+            )
+        }
+        VSerifSide::DownLeft => {
+            (
+                kit.widths_lhs(Some(width)),
+                true,
+                downward(metrics.hv_contrast),
+            )
+        }
+        VSerifSide::UpRight => {
+            (
+                kit.widths_lhs(Some(width)),
+                false,
+                upward(metrics.hv_contrast),
+            )
+        }
+        VSerifSide::UpLeft => {
+            (
+                kit.widths_rhs(Some(width)),
+                false,
+                upward(metrics.hv_contrast),
+            )
+        }
     };
     let end = if down { y - length } else { y + length };
     let items = vec![
@@ -1628,14 +1640,16 @@ fn oshape_items(
             &params,
         )
     };
-    let side = |x: f64| FlatSide {
-        x,
-        d,
-        u,
-        ada,
-        adb,
-        ox: metrics.ox,
-        af: Vec::new(),
+    let side = |x: f64| {
+        FlatSide {
+            x,
+            d,
+            u,
+            ada,
+            adb,
+            ox: metrics.ox,
+            af: Vec::new(),
+        }
     };
     let mut items = vec![
         Item::Af(kit.widths(width, 0.0)),
@@ -1813,18 +1827,15 @@ pub fn obar_left_earless_corner(
         adb,
     } = *ring;
     let x = left + ctx.hsw_to_v(sw - fine);
-    let right_side = flatside_ru(
-        ctx.kit,
-        &FlatSide {
-            x: right,
-            d: bot,
-            u: top,
-            ada,
-            adb,
-            ox: metrics.ox,
-            af: Vec::new(),
-        },
-    );
+    let right_side = flatside_ru(ctx.kit, &FlatSide {
+        x: right,
+        d: bot,
+        u: top,
+        ada,
+        adb,
+        ox: metrics.ox,
+        af: Vec::new(),
+    });
     let start = UserControlKnot {
         ty: KnotType::Right,
         x,
@@ -1926,18 +1937,15 @@ pub fn obar_left_earless_rounded(
         adb,
     } = *ring;
     let x = left + ctx.hsw_to_v(sw - fine);
-    let right_side = flatside_ru(
-        ctx.kit,
-        &FlatSide {
-            x: right,
-            d: bot,
-            u: top,
-            ada,
-            adb,
-            ox: metrics.ox,
-            af: Vec::new(),
-        },
-    );
+    let right_side = flatside_ru(ctx.kit, &FlatSide {
+        x: right,
+        d: bot,
+        u: top,
+        ada,
+        adb,
+        ox: metrics.ox,
+        af: Vec::new(),
+    });
     let start = UserControlKnot {
         ty: KnotType::Right,
         x,
@@ -2653,19 +2661,21 @@ pub fn curly_tail(
         o: metrics.o,
         correction_o_mid_x: metrics.correction_o_mid_x,
     };
-    let arch_args = |y: f64, blend_post: Option<bool>| ArchArgs {
-        y,
-        p: None,
-        sw: args.fine,
-        compact: false,
-        o: metrics.o,
-        angle_pre: None,
-        angle_post: None,
-        blend_pre: None,
-        blend_post,
-        sw_before: Some(args.sw_before),
-        sw_after: Some(args.fine),
-        lhs: ltr,
+    let arch_args = |y: f64, blend_post: Option<bool>| {
+        ArchArgs {
+            y,
+            p: None,
+            sw: args.fine,
+            compact: false,
+            o: metrics.o,
+            angle_pre: None,
+            angle_post: None,
+            blend_pre: None,
+            blend_post,
+            sw_before: Some(args.sw_before),
+            sw_after: Some(args.fine),
+            lhs: ltr,
+        }
     };
     let outer = UserControlKnot {
         ty: KnotType::G4,

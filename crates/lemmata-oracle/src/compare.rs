@@ -36,8 +36,9 @@ pub fn max_deviation(a: &[Point], b: &[Point]) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{directed_deviation, max_deviation};
     use kurbo::Point;
+
+    use super::{directed_deviation, max_deviation};
 
     #[test]
     fn identical_polylines_have_no_deviation() {

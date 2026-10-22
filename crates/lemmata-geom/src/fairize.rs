@@ -23,9 +23,7 @@
 
 use kurbo::{Point, Vec2};
 
-use crate::fit::CurveArc;
-use crate::math;
-use crate::stroke::Bez3;
+use crate::{fit::CurveArc, math, stroke::Bez3};
 
 const EPSILON: f64 = 1e-12;
 const MACHINE_EPSILON: f64 = 1.12e-16;
@@ -222,10 +220,12 @@ pub fn fairize(shape: &[Vec<Bez3>]) -> Vec<Vec<FairArc>> {
         }
         let slices: Vec<Slice> = contour
             .iter()
-            .map(|arc| Slice {
-                cubic: *arc,
-                corner_before: CornerType::Corner,
-                corner_after: CornerType::Corner,
+            .map(|arc| {
+                Slice {
+                    cubic: *arc,
+                    corner_before: CornerType::Corner,
+                    corner_after: CornerType::Corner,
+                }
             })
             .collect();
         results.push(fairize_contour(slices));

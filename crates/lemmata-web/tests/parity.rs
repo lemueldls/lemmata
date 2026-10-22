@@ -9,9 +9,11 @@
 //! The profile does not change the output, checked before this was written, so
 //! one fingerprint covers a debug test run and a release wasm build.
 
-use std::fmt::Write as _;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Write as _,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use serde_json::Value;
 use sha2::{Digest, Sha256};

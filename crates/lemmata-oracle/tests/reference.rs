@@ -4,11 +4,12 @@
 //! directory is missing, which is the case until a reference build has been
 //! copied in. Set `LEMMATA_REFERENCE_DIR` to point somewhere else.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
-use lemmata_oracle::extract::outlines;
-use lemmata_oracle::flatten::polyline;
+use lemmata_oracle::{extract::outlines, flatten::polyline};
 
 fn reference_dir() -> PathBuf {
     std::env::var_os("LEMMATA_REFERENCE_DIR").map_or_else(

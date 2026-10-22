@@ -9,8 +9,10 @@
 // bit for bit, halves and zeroes included.
 #![allow(clippy::float_cmp)]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use lemmata_ptl::util::{
     Waveform, bar_mix_l, bez2, bez3, boole, boole_pn, clamp, dist_p, fallback, linreg, mix,
@@ -51,16 +53,18 @@ fn dispatch(name: &str, args: &[Value]) -> Option<Vec<f64>> {
         "slY" => single(sl_y(n(0), n(1), n(2), n(3))),
         "slX" => single(sl_x(n(0), n(1), n(2), n(3))),
         "distP" => single(dist_p(n(0), n(1), n(2), n(3), n(4))),
-        other => other.strip_prefix("waveform.").map(|kind| {
-            let waveform = match kind {
-                "sine" => Waveform::Sine,
-                "square" => Waveform::Square,
-                "triangle" => Waveform::Triangle,
-                "sawtooth" => Waveform::Sawtooth,
-                other => panic!("unknown waveform {other}"),
-            };
-            vec![waveform.eval(n(0))]
-        }),
+        other => {
+            other.strip_prefix("waveform.").map(|kind| {
+                let waveform = match kind {
+                    "sine" => Waveform::Sine,
+                    "square" => Waveform::Square,
+                    "triangle" => Waveform::Triangle,
+                    "sawtooth" => Waveform::Sawtooth,
+                    other => panic!("unknown waveform {other}"),
+                };
+                vec![waveform.eval(n(0))]
+            })
+        }
     }
 }
 

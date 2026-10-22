@@ -5,8 +5,7 @@
 
 #![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
 
-use std::fmt::Write as _;
-use std::fs;
+use std::{fmt::Write as _, fs};
 
 use kurbo::{BezPath, ParamCurve, PathEl, Point, Shape};
 use lemmata_capture::dump_path;

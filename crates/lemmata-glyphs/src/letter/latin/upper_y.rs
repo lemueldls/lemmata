@@ -9,12 +9,14 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    serif::SerifFrame,
+    shapes::{self, Design},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 use super::x::{HalfXStrandArgs, half_x_strand};
 
@@ -135,11 +137,13 @@ impl UpperY<'_> {
         };
 
         match slab {
-            SlabType::All => vec![
-                sf.lt_full(self.kit, metrics),
-                sf.rt_full(self.kit, metrics),
-                middle_serif(),
-            ],
+            SlabType::All => {
+                vec![
+                    sf.lt_full(self.kit, metrics),
+                    sf.rt_full(self.kit, metrics),
+                    middle_serif(),
+                ]
+            }
             SlabType::Motion => vec![sf.lt_outer(self.kit, metrics)],
             SlabType::Base => vec![middle_serif()],
             SlabType::None => Vec::new(),

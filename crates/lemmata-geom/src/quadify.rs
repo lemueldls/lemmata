@@ -18,8 +18,7 @@
 
 use kurbo::Point;
 
-use crate::fit::CurveArc;
-use crate::stroke::Bez3;
+use crate::{fit::CurveArc, stroke::Bez3};
 
 /// Occurrent precision, from `curve-util.mjs`.
 const OCCURRENT_PRECISION: f64 = 1.0 / 16.0;

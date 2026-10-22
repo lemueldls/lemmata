@@ -20,6 +20,26 @@ ours = "crates/lemmata-glyphs/src/symbol/ligation.rs"
 upstream = "packages/font-glyphs/src/symbol/ligation.ptl"
 
 [[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/percentages.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/percentages.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/bullets.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/bullets.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/interpuncts.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/interpuncts.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/small.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/small.ptl"
+
+[[glyph]]
+ours = "crates/lemmata-glyphs/src/symbol/punctuation/dashes.rs"
+upstream = "packages/font-glyphs/src/symbol/punctuation/dashes.ptl"
+
+[[glyph]]
 ours = "crates/lemmata-glyphs/src/symbol/punctuation/asterisk.rs"
 upstream = "packages/font-glyphs/src/symbol/punctuation/asterisk.ptl"
 

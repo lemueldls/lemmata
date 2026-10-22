@@ -8,12 +8,12 @@
 
 use std::fs;
 
-use lemmata_ptl::metrics::{Metrics, Para};
-use lemmata_ptl::param::toml::Value as ParamValue;
-use lemmata_ptl::param::{Shape, init, load_data};
-use serde_json::Value;
-
 use lemmata_capture::dump_path;
+use lemmata_ptl::{
+    metrics::{Metrics, Para},
+    param::{Shape, init, load_data, toml::Value as ParamValue},
+};
+use serde_json::Value;
 
 /// Metrics go through `tan`, `atanh` and `tanh`, whose implementations differ
 /// between V8 and Rust in the last bits.

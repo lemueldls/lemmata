@@ -90,6 +90,9 @@ pub struct Kit {
 }
 
 impl Kit {
+    /// The default number of steps an arc interpolator uses.
+    pub const DEFAULT_STEPS: usize = 6;
+
     #[must_use]
     pub const fn new(stroke: f64, superness: f64, contrast: f64, tiny: f64) -> Self {
         Self {
@@ -179,9 +182,6 @@ impl Kit {
         Item::End
     }
 
-    /// The default number of steps an arc interpolator uses.
-    pub const DEFAULT_STEPS: usize = 6;
-
     #[must_use]
     pub fn archv(&self, samples: Option<usize>, superness: Option<f64>) -> Item {
         Item::Control(Control::Interpolator(Interpolator::ArcHv {
@@ -265,9 +265,11 @@ impl Kit {
         Item::Control(Control::Interpolator(Interpolator::Decor(
             items
                 .into_iter()
-                .filter_map(|item| match item {
-                    Item::Control(control) => Some(control),
-                    _ => None,
+                .filter_map(|item| {
+                    match item {
+                        Item::Control(control) => Some(control),
+                        _ => None,
+                    }
                 })
                 .collect(),
         )))

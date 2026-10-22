@@ -20,11 +20,13 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, HSerifSide, OBarContext, OBarRing, VSerifSide};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design, HSerifSide, OBarContext, OBarRing, VSerifSide},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The five bodies the variant table selects.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -145,10 +147,12 @@ impl LowerB<'_> {
         };
 
         match body {
-            Body::Toothed => vec![
-                shapes::obar_left_shape(&context, &ring).geometry(kurbo::Affine::IDENTITY),
-                stem(0.0),
-            ],
+            Body::Toothed => {
+                vec![
+                    shapes::obar_left_shape(&context, &ring).geometry(kurbo::Affine::IDENTITY),
+                    stem(0.0),
+                ]
+            }
             Body::BottomCut => {
                 let cut_x = self.left_sb() + metrics.stroke * metrics.hv_contrast;
                 let cut = self.kit.spiro_outline(vec![
@@ -182,25 +186,31 @@ impl LowerB<'_> {
                     },
                 ]
             }
-            Body::FlatBottom => vec![
-                shapes::obar_left_toothless_corner(&context, &ring, 0.0, self.ystart())
+            Body::FlatBottom => {
+                vec![
+                    shapes::obar_left_toothless_corner(&context, &ring, 0.0, self.ystart())
+                        .geometry(kurbo::Affine::IDENTITY),
+                    stem(0.0),
+                ]
+            }
+            Body::ToothlessCorner => {
+                vec![
+                    shapes::obar_left_toothless_corner(
+                        &context,
+                        &ring,
+                        metrics.d_toothless_rise,
+                        self.ystart(),
+                    )
                     .geometry(kurbo::Affine::IDENTITY),
-                stem(0.0),
-            ],
-            Body::ToothlessCorner => vec![
-                shapes::obar_left_toothless_corner(
-                    &context,
-                    &ring,
-                    metrics.d_toothless_rise,
-                    self.ystart(),
-                )
-                .geometry(kurbo::Affine::IDENTITY),
-                stem(metrics.d_toothless_rise),
-            ],
-            Body::ToothlessRounded => vec![
-                shapes::obar_left_toothless_rounded(&context, &ring, y_top, self.ystart())
-                    .geometry(kurbo::Affine::IDENTITY),
-            ],
+                    stem(metrics.d_toothless_rise),
+                ]
+            }
+            Body::ToothlessRounded => {
+                vec![
+                    shapes::obar_left_toothless_rounded(&context, &ring, y_top, self.ystart())
+                        .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
         }
     }
 

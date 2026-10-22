@@ -4,8 +4,10 @@
 //! its Spiro geometry, and `golden/glyph-spiro.json` holds the Bezier output it
 //! produced. The test measures how far our evaluation lands from that output.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::{BezPath, PathEl, Point};
 use lemmata_geom::{Knot, KnotType, spiro_path};
@@ -46,9 +48,11 @@ fn point(value: &Value) -> Point {
 
 fn flatten(path: &BezPath) -> Vec<Point> {
     let mut points = Vec::new();
-    kurbo::flatten(path.iter(), FLATTEN, |element| match element {
-        PathEl::MoveTo(p) | PathEl::LineTo(p) => points.push(p),
-        PathEl::QuadTo(..) | PathEl::CurveTo(..) | PathEl::ClosePath => {}
+    kurbo::flatten(path.iter(), FLATTEN, |element| {
+        match element {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) => points.push(p),
+            PathEl::QuadTo(..) | PathEl::CurveTo(..) | PathEl::ClosePath => {}
+        }
     });
 
     points

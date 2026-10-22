@@ -14,8 +14,7 @@
 //! runtime forms carry a `$` so they cannot collide with a name a definition
 //! uses, and each one maps to a single constructor in `lemmata-ptl`.
 
-use std::collections::BTreeSet;
-use std::fmt;
+use std::{collections::BTreeSet, fmt};
 
 use crate::Sexpr;
 
@@ -187,21 +186,27 @@ impl Expander {
 
             "include" => Ok(method("currentGlyph", "include", self.each(&items[1..])?)),
             "set-width" => Ok(method("currentGlyph", "setWidth", self.each(&items[1..])?)),
-            "set-mark-anchor" => Ok(method(
-                "currentGlyph",
-                "setMarkAnchor",
-                self.each(&items[1..])?,
-            )),
-            "set-base-anchor" => Ok(method(
-                "currentGlyph",
-                "setBaseAnchor",
-                self.each(&items[1..])?,
-            )),
-            "eject-contour" => Ok(method(
-                "currentGlyph",
-                "ejectTagged",
-                self.each(&items[1..])?,
-            )),
+            "set-mark-anchor" => {
+                Ok(method(
+                    "currentGlyph",
+                    "setMarkAnchor",
+                    self.each(&items[1..])?,
+                ))
+            }
+            "set-base-anchor" => {
+                Ok(method(
+                    "currentGlyph",
+                    "setBaseAnchor",
+                    self.each(&items[1..])?,
+                ))
+            }
+            "eject-contour" => {
+                Ok(method(
+                    "currentGlyph",
+                    "ejectTagged",
+                    self.each(&items[1..])?,
+                ))
+            }
 
             "new-glyph" => {
                 let [_, body] = items.as_slice() else {
@@ -380,13 +385,15 @@ impl Expander {
         let pair = self.expand(pair)?;
         match &pair {
             Sexpr::Atom(name) => Ok(list(vec![atom(name), Sexpr::Null])),
-            Sexpr::List(items) => match items.as_slice() {
-                [op, name, default] if op.atom() == Some("$pair") => {
-                    Ok(list(vec![pair_key(name)?, default.clone()]))
+            Sexpr::List(items) => {
+                match items.as_slice() {
+                    [op, name, default] if op.atom() == Some("$pair") => {
+                        Ok(list(vec![pair_key(name)?, default.clone()]))
+                    }
+                    [name, default] => Ok(list(vec![name.clone(), default.clone()])),
+                    _ => Err(shape("with-params", "a name, or a name and a default")),
                 }
-                [name, default] => Ok(list(vec![name.clone(), default.clone()])),
-                _ => Err(shape("with-params", "a name, or a name and a default")),
-            },
+            }
             _ => Err(shape("with-params", "a name, or a name and a default")),
         }
     }
@@ -415,10 +422,14 @@ impl Expander {
         let mut kept = vec![leader.clone()];
         for statement in &statements[1..] {
             let local = match statement {
-                Sexpr::List(items) => match items.as_slice() {
-                    [head, argument] if head.atom() == Some("local-parameter") => Some(argument),
-                    _ => None,
-                },
+                Sexpr::List(items) => {
+                    match items.as_slice() {
+                        [head, argument] if head.atom() == Some("local-parameter") => {
+                            Some(argument)
+                        }
+                        _ => None,
+                    }
+                }
                 _ => None,
             };
             match local {
@@ -441,13 +452,15 @@ impl Expander {
         let argument = self.expand(argument)?;
         match &argument {
             Sexpr::Atom(name) => Ok(list(vec![atom(name), Sexpr::Null])),
-            Sexpr::List(items) => match items.as_slice() {
-                [name] => Ok(list(vec![name.clone(), Sexpr::Null])),
-                [op, name, default] if op.atom() == Some("$pair") => {
-                    Ok(list(vec![pair_key(name)?, default.clone()]))
+            Sexpr::List(items) => {
+                match items.as_slice() {
+                    [name] => Ok(list(vec![name.clone(), Sexpr::Null])),
+                    [op, name, default] if op.atom() == Some("$pair") => {
+                        Ok(list(vec![pair_key(name)?, default.clone()]))
+                    }
+                    _ => Err(shape("local-parameter", "a name, or a name and a default")),
                 }
-                _ => Err(shape("local-parameter", "a name, or a name and a default")),
-            },
+            }
             _ => Err(shape("local-parameter", "a name")),
         }
     }
@@ -468,19 +481,21 @@ impl Expander {
                 let names = names_list(names)?;
                 self.each(&names)?
             }
-            None => match exports_of(block_name) {
-                Some(exports) => {
-                    let used = self.used.as_ref();
-                    exports
-                        .iter()
-                        .filter(|name| used.is_none_or(|used| used.contains(**name)))
-                        .map(|name| atom(name))
-                        .collect()
+            None => {
+                match exports_of(block_name) {
+                    Some(exports) => {
+                        let used = self.used.as_ref();
+                        exports
+                            .iter()
+                            .filter(|name| used.is_none_or(|used| used.contains(**name)))
+                            .map(|name| atom(name))
+                            .collect()
+                    }
+                    // No table names the exports, so import everything the block
+                    // defines.
+                    None => Vec::new(),
                 }
-                // No table names the exports, so import everything the block
-                // defines.
-                None => Vec::new(),
-            },
+            }
         };
 
         Ok(list(vec![atom("$import"), atom(block_name), list(names)]))
@@ -507,10 +522,12 @@ fn names_list(node: &Sexpr) -> Result<Vec<Sexpr>> {
 /// The name a `$pair` carries, which `--` quotes on its left.
 fn pair_key(node: &Sexpr) -> Result<Sexpr> {
     match node {
-        Sexpr::List(items) => match items.as_slice() {
-            [quote, name] if quote.atom() == Some(".quote") => Ok(name.clone()),
-            _ => Err(shape("--", "a quoted name")),
-        },
+        Sexpr::List(items) => {
+            match items.as_slice() {
+                [quote, name] if quote.atom() == Some(".quote") => Ok(name.clone()),
+                _ => Err(shape("--", "a quoted name")),
+            }
+        }
         _ => Err(shape("--", "a quoted name")),
     }
 }

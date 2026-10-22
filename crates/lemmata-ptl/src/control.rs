@@ -12,10 +12,8 @@
 
 #![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
 
-use lemmata_geom::math;
-
 use kurbo::Vec2;
-use lemmata_geom::{BiKnot, KnotType};
+use lemmata_geom::{BiKnot, KnotType, math};
 
 /// One operation an amendment function performs on the collector.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -152,20 +150,22 @@ impl Control {
         match self {
             Self::Knot(_) => vec![self.clone()],
             Self::Virtual(_) => Vec::new(),
-            Self::Pair(pair) => vec![
-                Self::Knot(UserControlKnot {
-                    ty: pair.ty_pre,
-                    x: pair.center.x + pair.dir.x * pair.d_pre,
-                    y: pair.center.y + pair.dir.y * pair.d_pre,
-                    af: pair.center.af.clone(),
-                }),
-                Self::Knot(UserControlKnot {
-                    ty: pair.ty_post,
-                    x: pair.center.x + pair.dir.x * pair.d_post,
-                    y: pair.center.y + pair.dir.y * pair.d_post,
-                    af: pair.center.af.clone(),
-                }),
-            ],
+            Self::Pair(pair) => {
+                vec![
+                    Self::Knot(UserControlKnot {
+                        ty: pair.ty_pre,
+                        x: pair.center.x + pair.dir.x * pair.d_pre,
+                        y: pair.center.y + pair.dir.y * pair.d_pre,
+                        af: pair.center.af.clone(),
+                    }),
+                    Self::Knot(UserControlKnot {
+                        ty: pair.ty_post,
+                        x: pair.center.x + pair.dir.x * pair.d_post,
+                        y: pair.center.y + pair.dir.y * pair.d_post,
+                        af: pair.center.af.clone(),
+                    }),
+                ]
+            }
             Self::Terminate { .. } => Vec::new(),
             Self::Interpolator(_) => unreachable!("interpolators are resolved before this"),
         }
@@ -190,12 +190,14 @@ impl Control {
                 dx,
                 dy,
                 af,
-            } => vec![knot(
-                *ty,
-                mix(before.x, after.x, *rx) + dx,
-                mix(before.y, after.y, *ry) + dy,
-                af.clone(),
-            )],
+            } => {
+                vec![knot(
+                    *ty,
+                    mix(before.x, after.x, *rx) + dx,
+                    mix(before.y, after.y, *ry) + dy,
+                    af.clone(),
+                )]
+            }
             Interpolator::DistanceFromStart {
                 ty,
                 distance,
@@ -230,45 +232,52 @@ impl Control {
                     af.clone(),
                 )]
             }
-            Interpolator::MultiMix { rs, af, ty } => rs
-                .iter()
-                .map(|(rx, ry, _)| {
-                    knot(
-                        *ty,
-                        mix(before.x, after.x, *rx),
-                        mix(before.y, after.y, *ry),
-                        af.clone(),
-                    )
-                })
-                .collect(),
-            Interpolator::ArcHv { steps, superness } => (1..*steps)
-                .map(|j| {
-                    let theta = ((j + 1) as f64 / (*steps + 2) as f64) * std::f64::consts::PI / 2.0;
-                    let c = math::pow(math::cos(theta), 2.0 / superness);
-                    let s = math::pow(math::sin(theta), 2.0 / superness);
+            Interpolator::MultiMix { rs, af, ty } => {
+                rs.iter()
+                    .map(|(rx, ry, _)| {
+                        knot(
+                            *ty,
+                            mix(before.x, after.x, *rx),
+                            mix(before.y, after.y, *ry),
+                            af.clone(),
+                        )
+                    })
+                    .collect()
+            }
+            Interpolator::ArcHv { steps, superness } => {
+                (1..*steps)
+                    .map(|j| {
+                        let theta =
+                            ((j + 1) as f64 / (*steps + 2) as f64) * std::f64::consts::PI / 2.0;
+                        let c = math::pow(math::cos(theta), 2.0 / superness);
+                        let s = math::pow(math::sin(theta), 2.0 / superness);
 
-                    knot(
-                        KnotType::G2,
-                        mix(before.x, after.x, s),
-                        mix(before.y, after.y, 1.0 - c),
-                        vec![Amendment::Unimportant],
-                    )
-                })
-                .collect(),
-            Interpolator::ArcVh { steps, superness } => (1..*steps)
-                .map(|j| {
-                    let theta = ((j + 1) as f64 / (*steps + 2) as f64) * std::f64::consts::PI / 2.0;
-                    let c = math::pow(math::cos(theta), 2.0 / superness);
-                    let s = math::pow(math::sin(theta), 2.0 / superness);
+                        knot(
+                            KnotType::G2,
+                            mix(before.x, after.x, s),
+                            mix(before.y, after.y, 1.0 - c),
+                            vec![Amendment::Unimportant],
+                        )
+                    })
+                    .collect()
+            }
+            Interpolator::ArcVh { steps, superness } => {
+                (1..*steps)
+                    .map(|j| {
+                        let theta =
+                            ((j + 1) as f64 / (*steps + 2) as f64) * std::f64::consts::PI / 2.0;
+                        let c = math::pow(math::cos(theta), 2.0 / superness);
+                        let s = math::pow(math::sin(theta), 2.0 / superness);
 
-                    knot(
-                        KnotType::G2,
-                        mix(before.x, after.x, 1.0 - c),
-                        mix(before.y, after.y, s),
-                        vec![Amendment::Unimportant],
-                    )
-                })
-                .collect(),
+                        knot(
+                            KnotType::G2,
+                            mix(before.x, after.x, 1.0 - c),
+                            mix(before.y, after.y, s),
+                            vec![Amendment::Unimportant],
+                        )
+                    })
+                    .collect()
+            }
             Interpolator::Decor(items) => items.clone(),
         }
     }

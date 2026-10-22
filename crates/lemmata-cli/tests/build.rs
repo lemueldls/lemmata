@@ -2,8 +2,10 @@
 //!
 //! Skips when no capture is present, like the other reference tests.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 /// Rounds a captured advance to the units the font table stores.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -13,13 +15,16 @@ fn advance_to_u16(advance: f64) -> u16 {
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
-use read_fonts::tables::glyf::Glyph as ReadGlyph;
-use read_fonts::tables::head::MacStyle;
-use read_fonts::tables::math::{MathConstant, StretchAxis};
-use read_fonts::tables::os2::SelectionFlags;
-use read_fonts::types::NameId;
-use read_fonts::types::{GlyphId, Tag};
-use read_fonts::{FontRef, TableProvider};
+use read_fonts::{
+    FontRef, TableProvider,
+    tables::{
+        glyf::Glyph as ReadGlyph,
+        head::MacStyle,
+        math::{MathConstant, StretchAxis},
+        os2::SelectionFlags,
+    },
+    types::{GlyphId, NameId, Tag},
+};
 
 /// Allowed bounding box difference against Iosevka, in font units.
 const BBOX_TOLERANCE: i16 = 10;
@@ -38,11 +43,13 @@ fn dump_path() -> PathBuf {
 fn glyph_data(captured: &[Glyph]) -> Vec<GlyphData> {
     captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect()
 }
@@ -113,11 +120,13 @@ fn built_font_round_trips() {
                 "U+{unicode:04X} advance"
             );
             match (data.bounding_box(), font_bbox(&font, glyph_id)) {
-                (Some(expected), Some(actual)) => assert_eq!(
-                    expected, actual,
-                    "U+{unicode:04X} bbox (glyph {})",
-                    glyph.name
-                ),
+                (Some(expected), Some(actual)) => {
+                    assert_eq!(
+                        expected, actual,
+                        "U+{unicode:04X} bbox (glyph {})",
+                        glyph.name
+                    )
+                }
                 (None, None) => {}
                 (expected, actual) => {
                     panic!("U+{unicode:04X}: expected {expected:?}, got {actual:?}")
@@ -838,7 +847,7 @@ fn italic_outlines_lean() {
     let mut compared = 0usize;
     for glyph in &upright {
         for code in &glyph.unicodes {
-            if !(0x61..=0x7A).contains(code) {
+            if !(0x61..=0x7a).contains(code) {
                 continue;
             }
             let Some(slanted) = by_code.get(code) else {
@@ -1011,16 +1020,20 @@ fn texture_forms_move_within_the_cell() {
             match form {
                 lemmata_build::texture::Form::ExtL
                 | lemmata_build::texture::Form::ExtR
-                | lemmata_build::texture::Form::ExtLR => assert!(
-                    width > base_width,
-                    "{name} should be wider: {x_min}..{x_max} against {base_min}..{base_max}"
-                ),
+                | lemmata_build::texture::Form::ExtLR => {
+                    assert!(
+                        width > base_width,
+                        "{name} should be wider: {x_min}..{x_max} against {base_min}..{base_max}"
+                    )
+                }
                 lemmata_build::texture::Form::ShrL
                 | lemmata_build::texture::Form::ShrR
-                | lemmata_build::texture::Form::ShrLR => assert!(
-                    width < base_width,
-                    "{name} should be narrower: {x_min}..{x_max} against {base_min}..{base_max}"
-                ),
+                | lemmata_build::texture::Form::ShrLR => {
+                    assert!(
+                        width < base_width,
+                        "{name} should be narrower: {x_min}..{x_max} against {base_min}..{base_max}"
+                    )
+                }
             }
             healed += 1;
         }
@@ -1047,10 +1060,10 @@ fn a_plan_selects_a_character_variant() {
     let plan =
         lemmata_plan::from_json(r#"{"variants": {"design": {"a": "single-storey-serifed"}}}"#)
             .expect("parse the plan");
-    assert_eq!(
-        plan.variants,
-        vec![("a".to_string(), "single-storey-serifed".to_string())]
-    );
+    assert_eq!(plan.variants, vec![(
+        "a".to_string(),
+        "single-storey-serifed".to_string()
+    )]);
     assert_eq!(
         lemmata_plan::from_json(r#"{"variants": {"a": "single-storey-serifed"}}"#)
             .expect("parse the flat form")

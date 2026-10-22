@@ -9,9 +9,7 @@
 //! default plan builds are compared against the capture.
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes;
-use lemmata_ptl::spiro_kit::Kit;
+use lemmata_ptl::{metrics::Metrics, shapes, spiro_kit::Kit};
 
 /// The two dot shapes, as `DotVariants` names them.
 pub const DOT_VARIANTS: &[(&str, bool)] = &[("round", false), ("square", true)];

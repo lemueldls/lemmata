@@ -9,9 +9,11 @@ use kurbo::{BezPath, PathEl, Point};
 #[must_use]
 pub fn polyline(path: &BezPath, tolerance: f64) -> Vec<Point> {
     let mut points = Vec::new();
-    kurbo::flatten(path.iter(), tolerance, |element| match element {
-        PathEl::MoveTo(p) | PathEl::LineTo(p) => points.push(p),
-        PathEl::QuadTo(..) | PathEl::CurveTo(..) | PathEl::ClosePath => {}
+    kurbo::flatten(path.iter(), tolerance, |element| {
+        match element {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) => points.push(p),
+            PathEl::QuadTo(..) | PathEl::CurveTo(..) | PathEl::ClosePath => {}
+        }
     });
 
     points
@@ -19,8 +21,9 @@ pub fn polyline(path: &BezPath, tolerance: f64) -> Vec<Point> {
 
 #[cfg(test)]
 mod tests {
-    use super::polyline;
     use kurbo::{BezPath, Point};
+
+    use super::polyline;
 
     #[test]
     fn quad_stays_within_tolerance() {
@@ -41,9 +44,9 @@ mod tests {
         path.move_to(Point::new(0.0, 0.0));
         path.line_to(Point::new(10.0, 10.0));
 
-        assert_eq!(
-            polyline(&path, 0.01),
-            vec![Point::new(0.0, 0.0), Point::new(10.0, 10.0)]
-        );
+        assert_eq!(polyline(&path, 0.01), vec![
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 10.0)
+        ]);
     }
 }

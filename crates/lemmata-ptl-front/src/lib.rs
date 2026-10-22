@@ -31,8 +31,7 @@
 // returning a `&str` from a `String` field is a deref coercion.
 #![allow(clippy::missing_const_for_fn)]
 
-use std::collections::BTreeMap;
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 
 pub mod expand;
 

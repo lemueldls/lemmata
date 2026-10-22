@@ -13,13 +13,15 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::Item;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::{Metrics, WeightControl};
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::{Direction, Dispiro, Family, Kit, Position};
-use lemmata_ptl::util::{join_camel, mix};
+use lemmata_ptl::{
+    control::Item,
+    letter_model::DivFrame,
+    metrics::{Metrics, WeightControl},
+    serif::SerifFrame,
+    shapes::{self, Design},
+    spiro_kit::{Direction, Dispiro, Family, Kit, Position},
+    util::{join_camel, mix},
+};
 
 /// The two bodies.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

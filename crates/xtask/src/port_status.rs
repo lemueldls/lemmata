@@ -5,9 +5,11 @@
 //! walks the upstream tree, maps each file to the module it should have become,
 //! and reports what exists.
 
-use std::collections::BTreeMap;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 /// Where the ported modules live.
 const PORTED: &str = "crates/lemmata-glyphs/src";

@@ -153,7 +153,7 @@ fn the_registry_font_maps_the_variants() {
     let bytes = lemmata_web::registry_font("").expect("registry font");
     let font = read_fonts::FontRef::new(&bytes).expect("reopen");
     let cmap = font.cmap().expect("cmap");
-    for codepoint in [0xE000_u32, 0xE001, 0xE002] {
+    for codepoint in [0xe000_u32, 0xe001, 0xe002] {
         assert!(
             cmap.map_codepoint(codepoint).is_some(),
             "U+{codepoint:04X} is not mapped"
@@ -167,7 +167,7 @@ fn the_registry_group_font_maps_one_group() {
     let bytes = lemmata_web::registry_group("", "a").expect("group font");
     let font = read_fonts::FontRef::new(&bytes).expect("reopen");
     let cmap = font.cmap().expect("cmap");
-    for codepoint in [0xE000_u32, 0xE001, 0xE002] {
+    for codepoint in [0xe000_u32, 0xe001, 0xe002] {
         assert!(
             cmap.map_codepoint(codepoint).is_some(),
             "U+{codepoint:04X} is not mapped"

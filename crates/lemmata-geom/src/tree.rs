@@ -17,14 +17,16 @@
 use kurbo::{Affine, BezPath, Vec2};
 use linesweeper::BinaryOp;
 
-use crate::boolean::remove_overlap;
-use crate::expand::{BiKnot, MonoKnot, di_spiro_expand};
-use crate::fairize::{FairArc, fairize};
-use crate::outline::{self, transform_bez3};
-use crate::pen::{PenKnot, pen_spiro_paths};
-use crate::quadify::{QuadifyPoint, QuadifySink};
-use crate::spiro::KnotType;
-use crate::stroke::{Bez3, boolean_shapes, paths_to_shape, shape_to_paths, stroke_arcs};
+use crate::{
+    boolean::remove_overlap,
+    expand::{BiKnot, MonoKnot, di_spiro_expand},
+    fairize::{FairArc, fairize},
+    outline::{self, transform_bez3},
+    pen::{PenKnot, pen_spiro_paths},
+    quadify::{QuadifyPoint, QuadifySink},
+    spiro::KnotType,
+    stroke::{Bez3, boolean_shapes, paths_to_shape, shape_to_paths, stroke_arcs},
+};
 
 /// Geometry that is not empty.
 pub const NON_EMPTY: u8 = 0x01;
@@ -114,12 +116,14 @@ impl Geometry {
                 pen_profile,
                 closed,
                 knots,
-            } => union_all_contours(&paths_to_shape(&pen_spiro_paths(
-                *gizmo,
-                pen_profile.len(),
-                *closed,
-                knots,
-            ))),
+            } => {
+                union_all_contours(&paths_to_shape(&pen_spiro_paths(
+                    *gizmo,
+                    pen_profile.len(),
+                    *closed,
+                    knots,
+                )))
+            }
             Self::Stroke {
                 gizmo,
                 radius,
@@ -203,12 +207,16 @@ impl Geometry {
                 geom.measure_complexity() | NON_SIMPLE
             }
             Self::Simplify { geom, .. } => geom.measure_complexity(),
-            Self::Combine(parts) => parts
-                .iter()
-                .fold(0, |acc, part| acc | part.measure_complexity()),
-            Self::Boolean { operands, .. } => operands
-                .iter()
-                .fold(NON_SIMPLE, |acc, part| acc | part.measure_complexity()),
+            Self::Combine(parts) => {
+                parts
+                    .iter()
+                    .fold(0, |acc, part| acc | part.measure_complexity())
+            }
+            Self::Boolean { operands, .. } => {
+                operands
+                    .iter()
+                    .fold(NON_SIMPLE, |acc, part| acc | part.measure_complexity())
+            }
             Self::Transformed { tf, geom } => {
                 let flags = if is_positive(*tf) { 0 } else { NON_SIMPLE };
                 flags | geom.measure_complexity()
@@ -300,10 +308,12 @@ fn resolve_overlaps(shape: &[Vec<Bez3>]) -> Vec<Vec<Bez3>> {
     }
 
     match remove_overlap(&path) {
-        Ok(contours) => crate::boolean::annex(
-            &crate::boolean::clean_shape(&paths_to_shape(&contours)),
-            &shape,
-        ),
+        Ok(contours) => {
+            crate::boolean::annex(
+                &crate::boolean::clean_shape(&paths_to_shape(&contours)),
+                &shape,
+            )
+        }
         Err(_) => shape,
     }
 }

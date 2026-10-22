@@ -6,8 +6,7 @@
 //! reads, which keeps invalidation narrow: a query that reads one parameter
 //! misses only when that parameter changes.
 
-use std::collections::HashMap;
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash};
 
 pub mod assembly;
 pub mod character;

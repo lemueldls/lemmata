@@ -1,7 +1,9 @@
 //! Compares the Rust spiro port against the JavaScript strands in `golden/spiro-cases.json`.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::PathEl;
 use lemmata_geom::{Knot, KnotType, spiro_path};
@@ -87,20 +89,24 @@ fn rust_port_matches_javascript_strands() {
         for strand in expected["strands"].as_array().unwrap() {
             let order = strand["order"].as_u64().unwrap();
             match order {
-                1 => match elements.next() {
-                    Some(PathEl::LineTo(p)) => {
-                        assert_close((p.x, p.y), point(&strand["end"]), name);
+                1 => {
+                    match elements.next() {
+                        Some(PathEl::LineTo(p)) => {
+                            assert_close((p.x, p.y), point(&strand["end"]), name);
+                        }
+                        other => panic!("{name}: expected line, got {other:?}"),
                     }
-                    other => panic!("{name}: expected line, got {other:?}"),
-                },
-                3 => match elements.next() {
-                    Some(PathEl::CurveTo(c1, c2, end)) => {
-                        assert_close((c1.x, c1.y), point(&strand["c1"]), name);
-                        assert_close((c2.x, c2.y), point(&strand["c2"]), name);
-                        assert_close((end.x, end.y), point(&strand["end"]), name);
+                }
+                3 => {
+                    match elements.next() {
+                        Some(PathEl::CurveTo(c1, c2, end)) => {
+                            assert_close((c1.x, c1.y), point(&strand["c1"]), name);
+                            assert_close((c2.x, c2.y), point(&strand["c2"]), name);
+                            assert_close((end.x, end.y), point(&strand["end"]), name);
+                        }
+                        other => panic!("{name}: expected cubic, got {other:?}"),
                     }
-                    other => panic!("{name}: expected cubic, got {other:?}"),
-                },
+                }
                 other => panic!("{name}: unexpected strand order {other}"),
             }
         }

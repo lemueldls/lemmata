@@ -5,8 +5,7 @@
 //! are macros from the ones that are ordinary calls, because only the first kind
 //! has to be expanded.
 
-use std::collections::BTreeMap;
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 /// The macros `meta/macros.ptl` defines, less the operator forms.
 const MACROS: &[&str] = &[

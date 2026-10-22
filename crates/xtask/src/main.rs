@@ -18,20 +18,24 @@ fn main() -> ExitCode {
             }
             ExitCode::SUCCESS
         }
-        Some("regen") => match parity::regen() {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(message) => {
-                eprintln!("lemmata: {message}");
-                ExitCode::FAILURE
+        Some("regen") => {
+            match parity::regen() {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(message) => {
+                    eprintln!("lemmata: {message}");
+                    ExitCode::FAILURE
+                }
             }
-        },
-        Some("parity") => match parity::check() {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(message) => {
-                eprintln!("lemmata: {message}");
-                ExitCode::FAILURE
+        }
+        Some("parity") => {
+            match parity::check() {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(message) => {
+                    eprintln!("lemmata: {message}");
+                    ExitCode::FAILURE
+                }
             }
-        },
+        }
         Some("expand") => {
             let Some(path) = std::env::args().nth(2) else {
                 eprintln!("usage: cargo xtask expand <reader dump>");

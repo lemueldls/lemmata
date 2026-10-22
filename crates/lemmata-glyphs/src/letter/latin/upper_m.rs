@@ -13,12 +13,14 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::{Direction, Family, Kit, Position};
-use lemmata_ptl::util::{join_camel, mix};
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    serif::SerifFrame,
+    shapes::{self, Design},
+    spiro_kit::{Direction, Family, Kit, Position},
+    util::{join_camel, mix},
+};
 
 /// Where the middle diagonals meet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -65,33 +67,24 @@ pub fn variants() -> Vec<(String, Variant)> {
         for (middle_key, form) in MIDDLES {
             for (serif_key, slab) in SERIFS {
                 let suffix = join_camel(&join_camel(side_key, middle_key), serif_key);
-                out.push((
-                    suffix,
-                    Variant {
-                        slanted: *slanted,
-                        form: *form,
-                        slab: *slab,
-                    },
-                ));
+                out.push((suffix, Variant {
+                    slanted: *slanted,
+                    form: *form,
+                    slab: *slab,
+                }));
             }
         }
     }
-    out.push((
-        "grekCapitalSan".to_string(),
-        Variant {
-            slanted: false,
-            form: Form::San,
-            slab: Slab::Auto,
-        },
-    ));
-    out.push((
-        "grekSmallSan".to_string(),
-        Variant {
-            slanted: false,
-            form: Form::SanSmall,
-            slab: Slab::None,
-        },
-    ));
+    out.push(("grekCapitalSan".to_string(), Variant {
+        slanted: false,
+        form: Form::San,
+        slab: Slab::Auto,
+    }));
+    out.push(("grekSmallSan".to_string(), Variant {
+        slanted: false,
+        form: Form::SanSmall,
+        slab: Slab::None,
+    }));
 
     out
 }
@@ -287,12 +280,14 @@ impl UpperM<'_> {
         );
         match slab {
             Slab::None => {}
-            Slab::Full => parts.extend([
-                frame_t.lt_outer(self.kit, metrics),
-                frame_t.rt_outer(self.kit, metrics),
-                frame_b.lb_full(self.kit, metrics),
-                frame_b.rb_full(self.kit, metrics),
-            ]),
+            Slab::Full => {
+                parts.extend([
+                    frame_t.lt_outer(self.kit, metrics),
+                    frame_t.rt_outer(self.kit, metrics),
+                    frame_b.lb_full(self.kit, metrics),
+                    frame_b.rb_full(self.kit, metrics),
+                ])
+            }
             Slab::Auto => {
                 if metrics.slab != 0.0 {
                     parts.extend([

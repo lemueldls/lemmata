@@ -5,8 +5,10 @@
 //! The strands come from npm `spiro`, so this measures the port's wiring and
 //! drawing against the same curve, not against Iosevka's Bezier fit of it.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::{Affine, BezPath, PathEl, Point, Vec2};
 use lemmata_geom::{BiKnot, KnotType, MonoKnot, di_spiro_expand, di_spiro_paths};
@@ -50,14 +52,16 @@ fn point(value: &Value) -> Point {
 fn affine(value: Option<&Value>) -> Affine {
     match value {
         None => Affine::IDENTITY,
-        Some(t) => Affine::new([
-            number(&t["xx"]),
-            number(&t["yx"]),
-            number(&t["xy"]),
-            number(&t["yy"]),
-            number(&t["tx"]),
-            number(&t["ty"]),
-        ]),
+        Some(t) => {
+            Affine::new([
+                number(&t["xx"]),
+                number(&t["yx"]),
+                number(&t["xy"]),
+                number(&t["yy"]),
+                number(&t["tx"]),
+                number(&t["ty"]),
+            ])
+        }
     }
 }
 
@@ -103,48 +107,52 @@ fn compare_side(name: &str, index: usize, path: &BezPath, strands: &[Value]) -> 
         let context = format!("{name} side {index} strand {strand_index}");
 
         match order {
-            1 => match elements.next() {
-                Some(PathEl::LineTo(p)) => {
-                    let d = deviation(p, point(&strand["end"]));
-                    if d > 1.0 {
-                        eprintln!(
-                            "{context}: line to ({}, {}), expected ({}, {}), d={d}",
-                            p.x,
-                            p.y,
-                            number(&strand["end"]["x"]),
-                            number(&strand["end"]["y"])
-                        );
+            1 => {
+                match elements.next() {
+                    Some(PathEl::LineTo(p)) => {
+                        let d = deviation(p, point(&strand["end"]));
+                        if d > 1.0 {
+                            eprintln!(
+                                "{context}: line to ({}, {}), expected ({}, {}), d={d}",
+                                p.x,
+                                p.y,
+                                number(&strand["end"]["x"]),
+                                number(&strand["end"]["y"])
+                            );
+                        }
+                        worst = worst.max(d);
                     }
-                    worst = worst.max(d);
+                    other => panic!("{context}: expected line, got {other:?}"),
                 }
-                other => panic!("{context}: expected line, got {other:?}"),
-            },
-            3 => match elements.next() {
-                Some(PathEl::CurveTo(c1, c2, end)) => {
-                    let d1 = deviation(c1, point(&strand["c1"]));
-                    let d2 = deviation(c2, point(&strand["c2"]));
-                    let d3 = deviation(end, point(&strand["end"]));
-                    if d1.max(d2).max(d3) > 1.0 {
-                        eprintln!(
-                            "{context}: c1=({}, {}) exp ({}, {}) c2=({}, {}) exp ({}, {}) end=({}, {}) exp ({}, {})",
-                            c1.x,
-                            c1.y,
-                            number(&strand["c1"]["x"]),
-                            number(&strand["c1"]["y"]),
-                            c2.x,
-                            c2.y,
-                            number(&strand["c2"]["x"]),
-                            number(&strand["c2"]["y"]),
-                            end.x,
-                            end.y,
-                            number(&strand["end"]["x"]),
-                            number(&strand["end"]["y"])
-                        );
+            }
+            3 => {
+                match elements.next() {
+                    Some(PathEl::CurveTo(c1, c2, end)) => {
+                        let d1 = deviation(c1, point(&strand["c1"]));
+                        let d2 = deviation(c2, point(&strand["c2"]));
+                        let d3 = deviation(end, point(&strand["end"]));
+                        if d1.max(d2).max(d3) > 1.0 {
+                            eprintln!(
+                                "{context}: c1=({}, {}) exp ({}, {}) c2=({}, {}) exp ({}, {}) end=({}, {}) exp ({}, {})",
+                                c1.x,
+                                c1.y,
+                                number(&strand["c1"]["x"]),
+                                number(&strand["c1"]["y"]),
+                                c2.x,
+                                c2.y,
+                                number(&strand["c2"]["x"]),
+                                number(&strand["c2"]["y"]),
+                                end.x,
+                                end.y,
+                                number(&strand["end"]["x"]),
+                                number(&strand["end"]["y"])
+                            );
+                        }
+                        worst = worst.max(d1).max(d2).max(d3);
                     }
-                    worst = worst.max(d1).max(d2).max(d3);
+                    other => panic!("{context}: expected cubic, got {other:?}"),
                 }
-                other => panic!("{context}: expected cubic, got {other:?}"),
-            },
+            }
             other => panic!("{context}: unexpected strand order {other}"),
         }
     }

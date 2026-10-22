@@ -9,13 +9,17 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::{Affine, BezPath, ParamCurve, ParamCurveNearest, Point, Shape};
 use lemmata_geom::{Geometry, KnotType, MonoKnot};
-use lemmata_ptl::glyph::{GlyphProc, Operation};
-use lemmata_ptl::store::{GlyphSaveSink, GlyphTarget};
+use lemmata_ptl::{
+    glyph::{GlyphProc, Operation},
+    store::{GlyphSaveSink, GlyphTarget},
+};
 use serde_json::Value;
 
 /// Samples per segment.
@@ -35,31 +39,35 @@ fn number(value: &Value) -> f64 {
 
 fn geometry(value: &Value) -> Geometry {
     match value["kind"].as_str().expect("kind") {
-        "spiro" => Geometry::Spiro {
-            gizmo: Affine::IDENTITY,
-            closed: value["closed"].as_bool().unwrap(),
-            knots: value["knots"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|k| {
-                    MonoKnot::new(
-                        KnotType::G4,
-                        number(&k["x"]),
-                        number(&k["y"]),
-                        k["unimportant"].as_bool().unwrap_or(false),
-                    )
-                })
-                .collect(),
-        },
-        "combine" => Geometry::Combine(
-            value["parts"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(geometry)
-                .collect(),
-        ),
+        "spiro" => {
+            Geometry::Spiro {
+                gizmo: Affine::IDENTITY,
+                closed: value["closed"].as_bool().unwrap(),
+                knots: value["knots"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|k| {
+                        MonoKnot::new(
+                            KnotType::G4,
+                            number(&k["x"]),
+                            number(&k["y"]),
+                            k["unimportant"].as_bool().unwrap_or(false),
+                        )
+                    })
+                    .collect(),
+            }
+        }
+        "combine" => {
+            Geometry::Combine(
+                value["parts"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(geometry)
+                    .collect(),
+            )
+        }
         other => panic!("unknown geometry {other}"),
     }
 }
@@ -185,10 +193,12 @@ fn store_matches_upstream() {
             "codePoint" => {
                 GlyphTarget::CodePoint(u32::try_from(save["code"].as_u64().unwrap()).unwrap())
             }
-            _ => GlyphTarget::Named {
-                name: save["name"].as_str().unwrap().to_string(),
-                unicode: u32::try_from(save["unicode"].as_u64().unwrap_or(0)).unwrap(),
-            },
+            _ => {
+                GlyphTarget::Named {
+                    name: save["name"].as_str().unwrap().to_string(),
+                    unicode: u32::try_from(save["unicode"].as_u64().unwrap_or(0)).unwrap(),
+                }
+            }
         };
         let force = save["force"].as_bool().unwrap_or(false);
         let result = if force {

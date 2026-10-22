@@ -5,8 +5,8 @@ use crate::font::GlyphData;
 
 /// The glyphs a renderer stretches vertically.
 pub const STRETCHY: &[u32] = &[
-    0x0028, 0x0029, 0x005B, 0x005D, 0x007B, 0x007D, 0x221A, 0x222B, 0x2211, 0x220F, 0x2308, 0x2309,
-    0x230A, 0x230B, 0x27E8, 0x27E9,
+    0x0028, 0x0029, 0x005b, 0x005d, 0x007b, 0x007d, 0x221a, 0x222b, 0x2211, 0x220f, 0x2308, 0x2309,
+    0x230a, 0x230b, 0x27e8, 0x27e9,
 ];
 
 /// The glyphs a renderer sets bigger rather than stretches.
@@ -20,10 +20,10 @@ pub const STRETCHY: &[u32] = &[
 /// The integral is not among them. Its limits sit in the gaps of the shape, so a
 /// wider drawing pushes them out and it stops reading as one operator. It is
 /// stretched like a delimiter and takes the larger size the others get.
-pub const SET_BIGGER: &[u32] = &[0x220F, 0x2211];
+pub const SET_BIGGER: &[u32] = &[0x220f, 0x2211];
 
 /// The glyphs that carry a display size, stretched or set bigger.
-pub const OPERATORS: &[u32] = &[0x220F, 0x2211, 0x222B];
+pub const OPERATORS: &[u32] = &[0x220f, 0x2211, 0x222b];
 
 /// How much wider a set-bigger operator grows, against how much taller.
 ///
@@ -49,8 +49,8 @@ pub const OPERATOR_SCALES: &[f64] = &[1.5, 2.0, 2.25];
 /// size it was drawn at. The set is the arrows an equation reaches for:
 /// implication and equivalence, maps-to, the harpoons and the dashed forms.
 pub const HORIZONTAL: &[u32] = &[
-    0x2190, 0x2192, 0x2194, 0x21A0, 0x21A2, 0x21A3, 0x21A6, 0x21A9, 0x21AA, 0x21AE, 0x21BC, 0x21BD,
-    0x21C0, 0x21C1, 0x21C4, 0x21C6, 0x21D0, 0x21D2, 0x21D4, 0x21DA, 0x21DB, 0x21E0, 0x21E2,
+    0x2190, 0x2192, 0x2194, 0x21a0, 0x21a2, 0x21a3, 0x21a6, 0x21a9, 0x21aa, 0x21ae, 0x21bc, 0x21bd,
+    0x21c0, 0x21c1, 0x21c4, 0x21c6, 0x21d0, 0x21d2, 0x21d4, 0x21da, 0x21db, 0x21e0, 0x21e2,
 ];
 
 /// The scales a horizontal glyph is derived at, beyond its own size.
@@ -62,7 +62,7 @@ pub const HORIZONTAL_SCALES: &[f64] = &[2.0, 3.0];
 /// thickens every horizontal stroke, so the size variants are built from the
 /// same pieces the assembly repeats. An operator is meant to be set bigger, so
 /// it still scales.
-pub const COMPOSED: &[u32] = &[0x0028, 0x0029, 0x005B, 0x005D, 0x007B, 0x007D, 0x222B];
+pub const COMPOSED: &[u32] = &[0x0028, 0x0029, 0x005b, 0x005d, 0x007b, 0x007d, 0x222b];
 
 /// The scales a glyph is derived at.
 #[must_use]
@@ -76,7 +76,7 @@ pub const fn scales(operator: bool) -> &'static [f64] {
 /// is reachable and drops what is not: a variant named only by the MATH table
 /// disappears and leaves the table pointing at nothing. Iosevka encodes its own
 /// derived texture variants in this block for the same reason.
-pub const PRIVATE_USE_START: u32 = 0xF000;
+pub const PRIVATE_USE_START: u32 = 0xf000;
 
 /// The suffix a derived variant carries.
 #[must_use]
@@ -149,12 +149,14 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
                 .map(|contour| {
                     contour
                         .iter()
-                        .map(|point| lemmata_geom::QuadifyPoint {
-                            x: centre_x
-                                + (point.x - centre_x) * widen
-                                + f64::from(glyph.advance) * (widen - 1.0) / 2.0,
-                            y: centre + (point.y - centre) * scale,
-                            ..*point
+                        .map(|point| {
+                            lemmata_geom::QuadifyPoint {
+                                x: centre_x
+                                    + (point.x - centre_x) * widen
+                                    + f64::from(glyph.advance) * (widen - 1.0) / 2.0,
+                                y: centre + (point.y - centre) * scale,
+                                ..*point
+                            }
                         })
                         .collect()
                 })
@@ -186,9 +188,11 @@ pub fn derive(glyphs: &[GlyphData]) -> Vec<GlyphData> {
                 .map(|contour| {
                     contour
                         .iter()
-                        .map(|point| lemmata_geom::QuadifyPoint {
-                            x: point.x * scale,
-                            ..*point
+                        .map(|point| {
+                            lemmata_geom::QuadifyPoint {
+                                x: point.x * scale,
+                                ..*point
+                            }
                         })
                         .collect()
                 })

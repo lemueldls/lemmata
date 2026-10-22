@@ -10,13 +10,15 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::Item;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design, HSerifSide, downward};
-use lemmata_ptl::spiro_kit::{Direction, Family, Kit, Position};
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::Item,
+    letter_model::DivFrame,
+    metrics::Metrics,
+    serif::SerifFrame,
+    shapes::{self, Design, HSerifSide, downward},
+    spiro_kit::{Direction, Family, Kit, Position},
+    util::mix,
+};
 
 /// `DesignParameters.straightVShapeSbShrink`.
 const STRAIGHT_V_SHAPE_SB_SHRINK: f64 = 0.8;
@@ -255,10 +257,12 @@ impl LowerV<'_> {
         Some(match serif {
             Serif::None | Serif::Auto => return None,
             Serif::Motion => frame.lt_outer(self.kit, self.metrics),
-            Serif::Full => Geometry::Combine(vec![
-                frame.lt_full(self.kit, self.metrics),
-                frame.rt_full(self.kit, self.metrics),
-            ]),
+            Serif::Full => {
+                Geometry::Combine(vec![
+                    frame.lt_full(self.kit, self.metrics),
+                    frame.rt_full(self.kit, self.metrics),
+                ])
+            }
         })
     }
 

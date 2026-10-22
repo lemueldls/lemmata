@@ -210,10 +210,12 @@ fn filter_tag(geometry: &Geometry, tag: &str) -> Geometry {
         Geometry::Combine(parts) => {
             Geometry::Combine(parts.iter().map(|part| filter_tag(part, tag)).collect())
         }
-        Geometry::Transformed { tf, geom } => Geometry::Transformed {
-            tf: *tf,
-            geom: Box::new(filter_tag(geom, tag)),
-        },
+        Geometry::Transformed { tf, geom } => {
+            Geometry::Transformed {
+                tf: *tf,
+                geom: Box::new(filter_tag(geom, tag)),
+            }
+        }
         other => other.clone(),
     }
 }
@@ -376,28 +378,28 @@ mod compose_tests {
 
     #[test]
     fn a_shared_anchor_names_the_shift() {
-        let (base, mark) = anchored(
-            &[("above", Vec2::new(100.0, 500.0))],
-            &[("above", Vec2::new(100.0, 700.0))],
-        );
+        let (base, mark) = anchored(&[("above", Vec2::new(100.0, 500.0))], &[(
+            "above",
+            Vec2::new(100.0, 700.0),
+        )]);
         assert_eq!(mark_shift(&base, &mark), Some(Vec2::new(0.0, -200.0)));
     }
 
     #[test]
     fn no_shared_anchor_leaves_the_mark_alone() {
-        let (base, mark) = anchored(
-            &[("below", Vec2::new(0.0, 0.0))],
-            &[("above", Vec2::new(0.0, 700.0))],
-        );
+        let (base, mark) = anchored(&[("below", Vec2::new(0.0, 0.0))], &[(
+            "above",
+            Vec2::new(0.0, 700.0),
+        )]);
         assert_eq!(mark_shift(&base, &mark), None);
     }
 
     #[test]
     fn a_composite_places_each_mark() {
-        let (base, mark) = anchored(
-            &[("above", Vec2::new(250.0, 520.0))],
-            &[("above", Vec2::new(250.0, 700.0))],
-        );
+        let (base, mark) = anchored(&[("above", Vec2::new(250.0, 520.0))], &[(
+            "above",
+            Vec2::new(250.0, 700.0),
+        )]);
         let composite = Composite::new(base, vec![mark]);
         let mut glyph = Glyph::new();
         glyph.include(&composite, true, true);

@@ -68,10 +68,12 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
             .map(|contour| {
                 contour
                     .iter()
-                    .map(|point| lemmata_geom::QuadifyPoint {
-                        x: centre + (point.x - centre) * WIDEN,
-                        y: bottom + (point.y - bottom) * FLATTEN,
-                        ..*point
+                    .map(|point| {
+                        lemmata_geom::QuadifyPoint {
+                            x: centre + (point.x - centre) * WIDEN,
+                            y: bottom + (point.y - bottom) * FLATTEN,
+                            ..*point
+                        }
                     })
                     .collect()
             })

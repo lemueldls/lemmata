@@ -11,11 +11,13 @@
 
 use lemmata_geom::KnotType;
 
-use crate::control::{Item, UserControlKnot};
-use crate::metrics::Metrics;
-use crate::shapes::{self, ArchArgs, ArchParams, Design};
-use crate::spiro_kit::{Dispiro, Kit, SpiroOutline};
-use crate::util::mix;
+use crate::{
+    control::{Item, UserControlKnot},
+    metrics::Metrics,
+    shapes::{self, ArchArgs, ArchParams, Design},
+    spiro_kit::{Dispiro, Kit, SpiroOutline},
+    util::mix,
+};
 
 /// The shoulder's dimensions.
 #[derive(Clone, Copy, Debug)]

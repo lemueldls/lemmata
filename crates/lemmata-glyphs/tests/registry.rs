@@ -6,14 +6,12 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use std::collections::BTreeMap;
-use std::fs;
+use std::{collections::BTreeMap, fs};
 
+use lemmata_capture::{dump_path, metrics_from_capture};
 use lemmata_geom::{BiKnot, Geometry};
 use lemmata_glyphs::registry;
 use lemmata_ptl::shapes::Design;
-
-use lemmata_capture::{dump_path, metrics_from_capture};
 
 const TOLERANCE: f64 = 1e-6;
 

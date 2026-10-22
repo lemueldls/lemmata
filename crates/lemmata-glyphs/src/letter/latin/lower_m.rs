@@ -13,13 +13,15 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::{Item, UserControlKnot};
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::{join_camel, mix};
+use lemmata_ptl::{
+    control::{Item, UserControlKnot},
+    letter_model::DivFrame,
+    metrics::Metrics,
+    serif::SerifFrame,
+    shapes::{self, Design},
+    spiro_kit::Kit,
+    util::{join_camel, mix},
+};
 
 /// The two bodies ported.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -89,15 +91,12 @@ pub fn variants() -> Vec<(String, Variant)> {
                         &join_camel(&join_camel(body_key, leg_key), terminal_key),
                         serif_key,
                     );
-                    out.push((
-                        suffix,
-                        Variant {
-                            body: *body,
-                            short_leg: *short_leg,
-                            tailed: *tailed,
-                            serif: *serif,
-                        },
-                    ));
+                    out.push((suffix, Variant {
+                        body: *body,
+                        short_leg: *short_leg,
+                        tailed: *tailed,
+                        serif: *serif,
+                    }));
                 }
             }
         }

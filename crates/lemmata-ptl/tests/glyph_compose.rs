@@ -8,8 +8,10 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::{Affine, BezPath, ParamCurve, ParamCurveNearest, Point, Shape};
 use lemmata_geom::{BiKnot, Geometry, KnotType, MonoKnot};
@@ -36,14 +38,16 @@ fn number(value: &Value) -> f64 {
 fn affine(value: Option<&Value>) -> Affine {
     match value {
         None => Affine::IDENTITY,
-        Some(t) => Affine::new([
-            number(&t["xx"]),
-            number(&t["yx"]),
-            number(&t["xy"]),
-            number(&t["yy"]),
-            number(&t["tx"]),
-            number(&t["ty"]),
-        ]),
+        Some(t) => {
+            Affine::new([
+                number(&t["xx"]),
+                number(&t["yx"]),
+                number(&t["xy"]),
+                number(&t["yy"]),
+                number(&t["tx"]),
+                number(&t["ty"]),
+            ])
+        }
     }
 }
 
@@ -61,75 +65,85 @@ fn knot_type(name: &str) -> KnotType {
 
 fn geometry(value: &Value) -> Geometry {
     match value["kind"].as_str().expect("kind") {
-        "spiro" => Geometry::Spiro {
-            gizmo: affine(value.get("gizmo")),
-            closed: value["closed"].as_bool().unwrap(),
-            knots: value["knots"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|k| {
-                    MonoKnot::new(
-                        knot_type(k["type"].as_str().unwrap()),
-                        number(&k["x"]),
-                        number(&k["y"]),
-                        k["unimportant"].as_bool().unwrap_or(false),
-                    )
-                })
-                .collect(),
-        },
-        "diSpiro" => Geometry::DiSpiro {
-            gizmo: affine(value.get("gizmo")),
-            contrast: number(&value["contrast"]),
-            closed: value["closed"].as_bool().unwrap(),
-            knots: value["knots"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|k| {
-                    let mut knot = BiKnot::new(
-                        knot_type(k["type"].as_str().unwrap()),
-                        number(&k["x"]),
-                        number(&k["y"]),
-                        number(&k["d1"]),
-                        number(&k["d2"]),
-                    );
-                    knot.unimportant = k["unimportant"].as_bool().unwrap_or(false);
-                    if let Some(normal) = k.get("proposedNormal") {
-                        knot.proposed_normal =
-                            Some(kurbo::Vec2::new(number(&normal["x"]), number(&normal["y"])));
-                    }
+        "spiro" => {
+            Geometry::Spiro {
+                gizmo: affine(value.get("gizmo")),
+                closed: value["closed"].as_bool().unwrap(),
+                knots: value["knots"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|k| {
+                        MonoKnot::new(
+                            knot_type(k["type"].as_str().unwrap()),
+                            number(&k["x"]),
+                            number(&k["y"]),
+                            k["unimportant"].as_bool().unwrap_or(false),
+                        )
+                    })
+                    .collect(),
+            }
+        }
+        "diSpiro" => {
+            Geometry::DiSpiro {
+                gizmo: affine(value.get("gizmo")),
+                contrast: number(&value["contrast"]),
+                closed: value["closed"].as_bool().unwrap(),
+                knots: value["knots"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|k| {
+                        let mut knot = BiKnot::new(
+                            knot_type(k["type"].as_str().unwrap()),
+                            number(&k["x"]),
+                            number(&k["y"]),
+                            number(&k["d1"]),
+                            number(&k["d2"]),
+                        );
+                        knot.unimportant = k["unimportant"].as_bool().unwrap_or(false);
+                        if let Some(normal) = k.get("proposedNormal") {
+                            knot.proposed_normal =
+                                Some(kurbo::Vec2::new(number(&normal["x"]), number(&normal["y"])));
+                        }
 
-                    knot
-                })
-                .collect(),
-        },
-        "combine" => Geometry::Combine(
-            value["parts"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(geometry)
-                .collect(),
-        ),
-        "boolean" => Geometry::Boolean {
-            op: match value["op"].as_str().unwrap() {
-                "intersection" => BinaryOp::Intersection,
-                "difference" => BinaryOp::Difference,
-                "xor" => BinaryOp::Xor,
-                _ => BinaryOp::Union,
-            },
-            operands: value["operands"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(geometry)
-                .collect(),
-        },
-        "transform" => Geometry::Transformed {
-            tf: affine(value.get("tf")),
-            geom: Box::new(geometry(&value["geom"])),
-        },
+                        knot
+                    })
+                    .collect(),
+            }
+        }
+        "combine" => {
+            Geometry::Combine(
+                value["parts"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(geometry)
+                    .collect(),
+            )
+        }
+        "boolean" => {
+            Geometry::Boolean {
+                op: match value["op"].as_str().unwrap() {
+                    "intersection" => BinaryOp::Intersection,
+                    "difference" => BinaryOp::Difference,
+                    "xor" => BinaryOp::Xor,
+                    _ => BinaryOp::Union,
+                },
+                operands: value["operands"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(geometry)
+                    .collect(),
+            }
+        }
+        "transform" => {
+            Geometry::Transformed {
+                tf: affine(value.get("tf")),
+                geom: Box::new(geometry(&value["geom"])),
+            }
+        }
         other => panic!("unknown geometry {other}"),
     }
 }
@@ -139,31 +153,35 @@ fn operations(value: &Value) -> Vec<Operation> {
         .as_array()
         .unwrap()
         .iter()
-        .map(|op| match op["op"].as_str().expect("op") {
-            "includeGeometry" => Operation::IncludeGeometry(geometry(&op["geom"])),
-            "includeProc" => {
-                Operation::IncludeProc(Box::new(GlyphProc::new(operations(&op["proc"]))))
+        .map(|op| {
+            match op["op"].as_str().expect("op") {
+                "includeGeometry" => Operation::IncludeGeometry(geometry(&op["geom"])),
+                "includeProc" => {
+                    Operation::IncludeProc(Box::new(GlyphProc::new(operations(&op["proc"]))))
+                }
+                "includeGlyph" => Operation::IncludeGlyph(Box::new(glyph(&op["glyph"]))),
+                "applyTransform" => Operation::ApplyTransform(affine(op.get("tf"))),
+                "setWidth" => Operation::SetWidth(number(&op["w"])),
+                "ctxTag" => Operation::CtxTag(op["tag"].as_str().unwrap().to_string()),
+                "ejectTagged" => Operation::EjectTagged(op["tag"].as_str().unwrap().to_string()),
+                "boole" => {
+                    Operation::Boole {
+                        operator: match op["operator"].as_str().unwrap() {
+                            "intersection" => BinaryOp::Intersection,
+                            "difference" => BinaryOp::Difference,
+                            "xor" => BinaryOp::Xor,
+                            _ => BinaryOp::Union,
+                        },
+                        operands: op["operands"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .map(glyph)
+                            .collect(),
+                    }
+                }
+                other => panic!("unknown op {other}"),
             }
-            "includeGlyph" => Operation::IncludeGlyph(Box::new(glyph(&op["glyph"]))),
-            "applyTransform" => Operation::ApplyTransform(affine(op.get("tf"))),
-            "setWidth" => Operation::SetWidth(number(&op["w"])),
-            "ctxTag" => Operation::CtxTag(op["tag"].as_str().unwrap().to_string()),
-            "ejectTagged" => Operation::EjectTagged(op["tag"].as_str().unwrap().to_string()),
-            "boole" => Operation::Boole {
-                operator: match op["operator"].as_str().unwrap() {
-                    "intersection" => BinaryOp::Intersection,
-                    "difference" => BinaryOp::Difference,
-                    "xor" => BinaryOp::Xor,
-                    _ => BinaryOp::Union,
-                },
-                operands: op["operands"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .map(glyph)
-                    .collect(),
-            },
-            other => panic!("unknown op {other}"),
         })
         .collect()
 }

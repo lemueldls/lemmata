@@ -11,10 +11,12 @@
 
 use kurbo::{Affine, Vec2};
 
-use crate::expand::MonoKnot;
-use crate::fit;
-use crate::spiro::{Knot, SpiroArc, spiro_arcs};
-use crate::stroke::Bez3;
+use crate::{
+    expand::MonoKnot,
+    fit,
+    spiro::{Knot, SpiroArc, spiro_arcs},
+    stroke::Bez3,
+};
 
 /// Fit tolerance for the cubic conversion, from `curve-util.mjs`.
 const OCCURRENT_PRECISION: f64 = 1.0 / 16.0;

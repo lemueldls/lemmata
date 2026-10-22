@@ -8,19 +8,22 @@
 //! selection and a capture's entries use.
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::Design;
-use lemmata_ptl::spiro_kit::Kit;
+use lemmata_ptl::{letter_model::DivFrame, metrics::Metrics, shapes::Design, spiro_kit::Kit};
 
-use crate::letter::latin::{
-    lower_a, lower_b, lower_d, lower_f, lower_h, lower_il, lower_j, lower_m, lower_n, lower_p, u,
-    upper_b, upper_d, upper_e, upper_f, upper_h, upper_i, upper_j, upper_l, upper_m, upper_n,
-    upper_p, upper_q, upper_t, upper_y, v, x, z,
+use crate::{
+    letter::latin::{
+        lower_a, lower_b, lower_d, lower_f, lower_h, lower_il, lower_j, lower_m, lower_n, lower_p,
+        u, upper_b, upper_d, upper_e, upper_f, upper_h, upper_i, upper_j, upper_l, upper_m,
+        upper_n, upper_p, upper_q, upper_t, upper_y, v, x, z,
+    },
+    symbol::{
+        math::dots_and_colons::DotsAndColons,
+        punctuation::{
+            asterisk::Asterisk, brackets::Brackets, bullets::Bullets, dashes::Dashes,
+            interpuncts::Interpuncts, percentages::Percentages, small::Small,
+        },
+    },
 };
-use crate::symbol::math::dots_and_colons::DotsAndColons;
-use crate::symbol::punctuation::asterisk::Asterisk;
-use crate::symbol::punctuation::brackets::Brackets;
 
 /// Every glyph the ported definitions build, by name.
 #[must_use]
@@ -53,6 +56,46 @@ pub fn build_at(metrics: &Metrics, design: &Design, scale: f64) -> Vec<(String, 
         .glyphs(),
     );
     out.extend(DotsAndColons { metrics, kit: &kit }.glyphs());
+    out.extend(
+        Bullets {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        Interpuncts {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        Small {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        Dashes {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
+    out.extend(
+        Percentages {
+            metrics,
+            kit: &kit,
+            design,
+        }
+        .glyphs(),
+    );
     out.extend(
         Brackets {
             df: &df,

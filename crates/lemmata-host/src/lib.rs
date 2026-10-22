@@ -22,8 +22,7 @@
 // wants, so the cast is the conversion rather than a truncation to beware of.
 #![allow(clippy::cast_possible_truncation)]
 
-use std::path::Path;
-use std::process::Command;
+use std::{path::Path, process::Command};
 
 use lemmata_ptl::param::Shape;
 use serde::{Deserialize, Serialize};

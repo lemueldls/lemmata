@@ -2,8 +2,10 @@
 
 use kurbo::{BezPath, Point};
 use read_fonts::TableProvider;
-use skrifa::outline::{DrawError, DrawSettings, OutlinePen};
-use skrifa::prelude::{FontRef, GlyphId, LocationRef, MetadataProvider, Size};
+use skrifa::{
+    outline::{DrawError, DrawSettings, OutlinePen},
+    prelude::{FontRef, GlyphId, LocationRef, MetadataProvider, Size},
+};
 
 /// One glyph, as cubic contours in font units.
 #[derive(Clone, Debug)]

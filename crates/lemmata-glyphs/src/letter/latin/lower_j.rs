@@ -14,12 +14,14 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::{Item, UserControlKnot};
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, HSerifSide, HookArgs, HookParams, downward};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::{Item, UserControlKnot},
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design, HSerifSide, HookArgs, HookParams, downward},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// `advanceScaleI`, `advanceScaleII` and `advanceScaleF` are all 1 for the
 /// reference plan, so every frame below is the glyph's own width.
@@ -239,11 +241,13 @@ impl LowerJ<'_> {
         let length = match serif {
             Serif::None => return None,
             Serif::Short => metrics.jut,
-            Serif::Long => metrics.jut.max(mix(
-                self.hsw_to_v(metrics.half_stroke),
-                metrics.long_jut,
-                df.adws(),
-            )),
+            Serif::Long => {
+                metrics.jut.max(mix(
+                    self.hsw_to_v(metrics.half_stroke),
+                    metrics.long_jut,
+                    df.adws(),
+                ))
+            }
         };
 
         Some(

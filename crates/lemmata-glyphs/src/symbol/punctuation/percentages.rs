@@ -102,7 +102,6 @@ impl Percentages<'_> {
     /// `percent.ringsContinuousSlash`.
     fn rings_continuous(&self) -> Geometry {
         let metrics = self.metrics;
-        let df = self.df();
         let l = metrics.sb / 2.0;
         let r = metrics.width - l;
         let m = mix(l, r, 0.5);
@@ -174,7 +173,6 @@ impl Percentages<'_> {
     /// `percent.ringsSegmentedSlash`.
     fn rings_segmented(&self) -> Geometry {
         let metrics = self.metrics;
-        let df = self.df();
         let l = metrics.sb / 2.0;
         let r = metrics.width - l;
         let m = mix(l, r, 0.5);

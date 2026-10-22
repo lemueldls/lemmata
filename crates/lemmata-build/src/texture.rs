@@ -241,13 +241,15 @@ fn formed(glyph: &GlyphData, scale: f64, dx: f64) -> Vec<Vec<lemmata_geom::Quadi
                 extent(contour) * 4.0 < largest && contour.iter().all(|point| point.y > middle);
             contour
                 .iter()
-                .map(|point| lemmata_geom::QuadifyPoint {
-                    x: if dot {
-                        point.x + dx
-                    } else {
-                        centre + (point.x - centre) * scale + dx
-                    },
-                    ..*point
+                .map(|point| {
+                    lemmata_geom::QuadifyPoint {
+                        x: if dot {
+                            point.x + dx
+                        } else {
+                            centre + (point.x - centre) * scale + dx
+                        },
+                        ..*point
+                    }
                 })
                 .collect()
         })
@@ -321,9 +323,11 @@ fn translated(
         .map(|contour| {
             contour
                 .iter()
-                .map(|point| lemmata_geom::QuadifyPoint {
-                    x: point.x + dx,
-                    ..*point
+                .map(|point| {
+                    lemmata_geom::QuadifyPoint {
+                        x: point.x + dx,
+                        ..*point
+                    }
                 })
                 .collect()
         })

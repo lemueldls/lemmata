@@ -4,10 +4,12 @@
 //! `figue`, so a command is a struct and a flag is a field. `build` builds one
 //! face, or every face a family document names when `--family` is set.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::{Path, PathBuf},
+    process::ExitCode,
+};
 
 use facet::Facet;
 use figue as args;
@@ -234,7 +236,7 @@ fn build_font(build: Build) -> Result<(), String> {
         let shape = lemmata_source::shape_of(&plan);
         let codes = match codepoints {
             Some(text) => expand_ranges(&parse_ranges(&text)?)?,
-            None => (0x20..=0x7E).collect(),
+            None => (0x20..=0x7e).collect(),
         };
         host_capture(&shape, &codes)?
     } else {

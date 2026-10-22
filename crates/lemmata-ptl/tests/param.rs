@@ -67,9 +67,10 @@ fn matches_the_parameters_the_build_derived() {
             continue;
         };
         let same = match wanted {
-            serde_json::Value::Number(number) => got
-                .as_f64()
-                .is_some_and(|value| (value - number.as_f64().unwrap()).abs() < 1e-9),
+            serde_json::Value::Number(number) => {
+                got.as_f64()
+                    .is_some_and(|value| (value - number.as_f64().unwrap()).abs() < 1e-9)
+            }
             serde_json::Value::String(text) => got.as_str() == Some(text.as_str()),
             serde_json::Value::Bool(flag) => got.as_bool() == Some(*flag),
             // The parameter set also carries names and ranges, which are not

@@ -103,10 +103,12 @@ fn hook(
         .fold(f64::INFINITY, |low, point| low.min(point.1.round()));
     let body = points
         .into_iter()
-        .map(|(x, y)| QuadifyPoint {
-            kind: QuadifyKind::Corner,
-            x: x.round(),
-            y: y.round() - low,
+        .map(|(x, y)| {
+            QuadifyPoint {
+                kind: QuadifyKind::Corner,
+                x: x.round(),
+                y: y.round() - low,
+            }
         })
         .collect();
 

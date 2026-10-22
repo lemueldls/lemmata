@@ -12,12 +12,14 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design, OBarContext, OBarRing};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::{join_camel, mix};
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    serif::SerifFrame,
+    shapes::{self, Design, OBarContext, OBarRing},
+    spiro_kit::Kit,
+    util::{join_camel, mix},
+};
 
 /// The four bodies.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -116,33 +118,43 @@ impl LowerP<'_> {
         let toggle = |geometry: Geometry| Geometry::Tagged(Box::new(geometry));
 
         match body {
-            Body::Eared => vec![
-                toggle(shapes::obar_left_shape(&context, &ring).geometry(kurbo::Affine::IDENTITY)),
-                toggle(self.stem(metrics.xh, sw)),
-            ],
-            Body::FlatTop => vec![
-                toggle(
-                    shapes::obar_left_earless_corner(&context, &ring, 0.0, yend)
+            Body::Eared => {
+                vec![
+                    toggle(
+                        shapes::obar_left_shape(&context, &ring).geometry(kurbo::Affine::IDENTITY),
+                    ),
+                    toggle(self.stem(metrics.xh, sw)),
+                ]
+            }
+            Body::FlatTop => {
+                vec![
+                    toggle(
+                        shapes::obar_left_earless_corner(&context, &ring, 0.0, yend)
+                            .geometry(kurbo::Affine::IDENTITY),
+                    ),
+                    toggle(self.stem(metrics.xh, sw)),
+                ]
+            }
+            Body::EarlessCorner => {
+                vec![
+                    toggle(
+                        shapes::obar_left_earless_corner(
+                            &context,
+                            &ring,
+                            metrics.d_toothless_rise,
+                            yend,
+                        )
                         .geometry(kurbo::Affine::IDENTITY),
-                ),
-                toggle(self.stem(metrics.xh, sw)),
-            ],
-            Body::EarlessCorner => vec![
-                toggle(
-                    shapes::obar_left_earless_corner(
-                        &context,
-                        &ring,
-                        metrics.d_toothless_rise,
-                        yend,
-                    )
-                    .geometry(kurbo::Affine::IDENTITY),
-                ),
-                toggle(self.stem(metrics.xh - metrics.d_toothless_rise, sw)),
-            ],
-            Body::EarlessRounded => vec![toggle(
-                shapes::obar_left_earless_rounded(&context, &ring, metrics.descender, yend)
-                    .geometry(kurbo::Affine::IDENTITY),
-            )],
+                    ),
+                    toggle(self.stem(metrics.xh - metrics.d_toothless_rise, sw)),
+                ]
+            }
+            Body::EarlessRounded => {
+                vec![toggle(
+                    shapes::obar_left_earless_rounded(&context, &ring, metrics.descender, yend)
+                        .geometry(kurbo::Affine::IDENTITY),
+                )]
+            }
         }
     }
 

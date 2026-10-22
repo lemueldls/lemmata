@@ -19,8 +19,9 @@
     clippy::unreadable_literal
 )]
 
-use crate::math;
 use kurbo::{BezPath, Point, Vec2};
+
+use crate::math;
 
 /// Largest number of pieces an arc is split into when cubic approximation
 /// misses the bend threshold.
@@ -836,8 +837,9 @@ fn divide_ks(s0: f64, s1: f64, ks: &[f64; 4]) -> [f64; 4] {
 
 #[cfg(test)]
 mod tests {
-    use super::{Knot, KnotType, spiro_path};
     use kurbo::PathEl;
+
+    use super::{Knot, KnotType, spiro_path};
 
     fn knots(points: &[(f64, f64, KnotType)]) -> Vec<Knot> {
         points

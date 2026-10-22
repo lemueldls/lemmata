@@ -4,12 +4,12 @@
 //! and slope change every outline, so a plan that names them needs a drawing for
 //! each, and the host seam is what draws them.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
-use read_fonts::tables::glyf::Glyph as ReadGlyph;
-use read_fonts::types::GlyphId;
-use read_fonts::{FontRef, TableProvider};
+use read_fonts::{FontRef, TableProvider, tables::glyf::Glyph as ReadGlyph, types::GlyphId};
 
 fn workspace(relative: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

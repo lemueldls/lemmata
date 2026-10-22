@@ -9,8 +9,7 @@
 use kurbo::BezPath;
 use linesweeper::{BinaryOp, Error as SweepError, FillRule, binary_op};
 
-use crate::fit;
-use crate::stroke::Bez3;
+use crate::{fit, stroke::Bez3};
 
 #[derive(Debug)]
 pub enum Error {
@@ -304,14 +303,11 @@ fn locate(arc: &Bez3, sources: &[Bez3]) -> Option<Origin> {
 
         if worst <= SOURCE_TOLERANCE && best.as_ref().is_none_or(|(distance, _)| worst < *distance)
         {
-            best = Some((
-                worst,
-                Origin {
-                    source: index,
-                    t0,
-                    t1,
-                },
-            ));
+            best = Some((worst, Origin {
+                source: index,
+                t0,
+                t1,
+            }));
         }
     }
 
@@ -376,8 +372,9 @@ pub fn intersection(a: &BezPath, b: &BezPath) -> Result<Vec<BezPath>, Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::{intersection, remove_overlap, union};
     use kurbo::{BezPath, Rect, Shape};
+
+    use super::{intersection, remove_overlap, union};
 
     fn rect(x0: f64, y0: f64, x1: f64, y1: f64) -> BezPath {
         Rect::new(x0, y0, x1, y1).to_path(0.1)

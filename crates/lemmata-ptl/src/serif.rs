@@ -15,11 +15,13 @@
 
 use lemmata_geom::Geometry;
 
-use crate::letter_model::DivFrame;
-use crate::metrics::Metrics;
-use crate::shapes::{self, HSerifSide};
-use crate::spiro_kit::Kit;
-use crate::util::mix;
+use crate::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, HSerifSide},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The serif frame a definition builds once and reads many times.
 #[derive(Clone, Copy, Debug)]

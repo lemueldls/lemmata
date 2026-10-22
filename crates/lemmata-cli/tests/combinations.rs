@@ -15,8 +15,10 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use read_fonts::TableProvider;
@@ -41,11 +43,13 @@ fn advance_to_u16(advance: f64) -> u16 {
 fn glyph_data(captured: &[lemmata_capture::Glyph]) -> Vec<GlyphData> {
     captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect()
 }

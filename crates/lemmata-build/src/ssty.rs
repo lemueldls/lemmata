@@ -54,7 +54,7 @@ fn is_math_font(glyphs: &[GlyphData]) -> bool {
         glyph
             .unicodes
             .iter()
-            .any(|code| (0x1D400..=0x1D7FF).contains(code))
+            .any(|code| (0x1d400..=0x1d7ff).contains(code))
     })
 }
 
@@ -73,7 +73,7 @@ fn is_scriptable(glyph: &GlyphData, math_font: bool) -> bool {
             .iter()
             .any(|code| (low..=high).contains(code))
     };
-    if in_range(0x1D400, 0x1D7FF) {
+    if in_range(0x1d400, 0x1d7ff) {
         return true;
     }
     if !math_font {
@@ -81,13 +81,13 @@ fn is_scriptable(glyph: &GlyphData, math_font: bool) -> bool {
     }
 
     in_range(0x0030, 0x0039)
-        || in_range(0x0041, 0x005A)
-        || in_range(0x0061, 0x007A)
-        || in_range(0x0391, 0x03C9)
+        || in_range(0x0041, 0x005a)
+        || in_range(0x0061, 0x007a)
+        || in_range(0x0391, 0x03c9)
         || glyph.unicodes.iter().any(|code| {
             crate::variants::STRETCHY.contains(code)
                 && !crate::variants::OPERATORS.contains(code)
-                && *code != 0x221A
+                && *code != 0x221a
         })
 }
 
@@ -116,9 +116,11 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32) -> Vec<GlyphData> {
                 .map(|contour| {
                     contour
                         .iter()
-                        .map(|point| lemmata_geom::QuadifyPoint {
-                            x: centre + (point.x - centre) * scale,
-                            ..*point
+                        .map(|point| {
+                            lemmata_geom::QuadifyPoint {
+                                x: centre + (point.x - centre) * scale,
+                                ..*point
+                            }
                         })
                         .collect()
                 })

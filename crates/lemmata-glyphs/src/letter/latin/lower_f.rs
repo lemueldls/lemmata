@@ -15,13 +15,15 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::{Item, UserControlKnot};
-use lemmata_ptl::glyph;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, HookArgs, HookParams, downward, upward};
-use lemmata_ptl::spiro_kit::{Dispiro, Kit};
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::{Item, UserControlKnot},
+    glyph,
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design, HookArgs, HookParams, downward, upward},
+    spiro_kit::{Dispiro, Kit},
+    util::mix,
+};
 
 /// The plan's `advanceScaleF`. The reference plan sets it to 1, and the port
 /// builds the reference plan's frames.
@@ -189,12 +191,15 @@ impl LowerF<'_> {
     ) -> Option<(f64, f64)> {
         let metrics = self.metrics;
         match hook {
-            Hook::Serifless => Some((
-                bar_left
-                    + self
-                        .hsw_to_v(metrics.stroke + metrics.v_jut_stroke.max(metrics.width / 12.0)),
-                0.0,
-            )),
+            Hook::Serifless => {
+                Some((
+                    bar_left
+                        + self.hsw_to_v(
+                            metrics.stroke + metrics.v_jut_stroke.max(metrics.width / 12.0),
+                        ),
+                    0.0,
+                ))
+            }
             Hook::Serifed => {
                 let x = match body {
                     Body::FlatHook
@@ -470,23 +475,29 @@ impl LowerF<'_> {
     ) -> Vec<Geometry> {
         match hook {
             Hook::Serifless => Vec::new(),
-            Hook::Serifed => vec![
-                if narrow_serif {
-                    self.narrow_bottom_serif(df)
-                } else {
-                    self.small_f_bottom_serif(df)
-                }
-                .geometry(kurbo::Affine::IDENTITY),
-            ],
+            Hook::Serifed => {
+                vec![
+                    if narrow_serif {
+                        self.narrow_bottom_serif(df)
+                    } else {
+                        self.small_f_bottom_serif(df)
+                    }
+                    .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
             Hook::Extended => vec![self.small_f_down_extension(bar_left)],
-            Hook::Tailed => vec![
-                self.small_f_down_hook(df, bar_right, counter_left)
-                    .geometry(kurbo::Affine::IDENTITY),
-            ],
-            Hook::DiagonalTailed => vec![
-                self.small_f_diagonal_tail(df, bar_left)
-                    .geometry(kurbo::Affine::IDENTITY),
-            ],
+            Hook::Tailed => {
+                vec![
+                    self.small_f_down_hook(df, bar_right, counter_left)
+                        .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
+            Hook::DiagonalTailed => {
+                vec![
+                    self.small_f_diagonal_tail(df, bar_left)
+                        .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
         }
     }
 

@@ -12,13 +12,15 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::shoulder::{NShoulder, n_shoulder_earless_corner, n_shoulder_earless_rounded};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::join_camel;
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    serif::SerifFrame,
+    shapes::{self, Design},
+    shoulder::{NShoulder, n_shoulder_earless_corner, n_shoulder_earless_rounded},
+    spiro_kit::Kit,
+    util::join_camel,
+};
 
 /// The four bodies.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -196,9 +198,10 @@ impl LowerN<'_> {
         }
         if terminal == Terminal::Straight {
             let right = match serif {
-                Serif::MotionSerifed => self
-                    .frame(metrics.ascender, 0.0)
-                    .rb_outer(self.kit, metrics),
+                Serif::MotionSerifed => {
+                    self.frame(metrics.ascender, 0.0)
+                        .rb_outer(self.kit, metrics)
+                }
                 Serif::Serifed => self.frame(metrics.ascender, 0.0).rb_full(self.kit, metrics),
                 _ => return parts,
             };

@@ -531,7 +531,7 @@ x.straightDescendingGrekLowerChiSerifed,x.straightDescendingSerifed,\
 x.straightDescendingSerifless,\
 x.straightDescendingUnilateralMotionSerifed,\
 x.straightGrekLowerChiSerifed,x.straightSerifed,x.straightSerifless,\
-x.straightUnilateralMotionSerifed'
+x.straightUnilateralMotionSerifed,bullet,interpunct'
 npm run build -- ttf-unhinted::RefA
 ```
 

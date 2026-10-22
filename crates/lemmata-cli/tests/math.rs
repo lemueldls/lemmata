@@ -9,11 +9,15 @@ use std::path::{Path, PathBuf};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
-use read_fonts::tables::glyf::Glyph as ReadGlyph;
-use read_fonts::tables::gsub::SubstitutionSubtables;
-use read_fonts::tables::math::{MathKernCorner, PartFlags, StretchAxis};
-use read_fonts::types::{GlyphId, Tag};
-use read_fonts::{FontRef, TableProvider};
+use read_fonts::{
+    FontRef, TableProvider,
+    tables::{
+        glyf::Glyph as ReadGlyph,
+        gsub::SubstitutionSubtables,
+        math::{MathKernCorner, PartFlags, StretchAxis},
+    },
+    types::{GlyphId, Tag},
+};
 
 fn math_dump_path() -> PathBuf {
     std::env::var_os("LEMMATA_MATH_DUMP").map_or_else(
@@ -38,11 +42,13 @@ fn build_math_font() -> Option<(Vec<u8>, Vec<Glyph>)> {
     let captured = lemmata_capture::load(&data).expect("decode the math capture");
     let glyphs: Vec<GlyphData> = captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect();
     let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default(), &[])
@@ -59,14 +65,14 @@ fn build_math_font() -> Option<(Vec<u8>, Vec<Glyph>)> {
 /// it: the day the source grows script letters, the assertion flips and the
 /// requirement can be closed.
 const STYLES: &[(&str, u32, u32)] = &[
-    ("bold", 0x1D400, 0x1D433),
-    ("italic", 0x1D434, 0x1D467),
-    ("bold italic", 0x1D468, 0x1D49B),
-    ("script", 0x1D49C, 0x1D4CF),
-    ("fraktur", 0x1D504, 0x1D537),
-    ("double-struck", 0x1D538, 0x1D56B),
-    ("sans-serif", 0x1D5A0, 0x1D5D3),
-    ("monospace", 0x1D670, 0x1D6A3),
+    ("bold", 0x1d400, 0x1d433),
+    ("italic", 0x1d434, 0x1d467),
+    ("bold italic", 0x1d468, 0x1d49b),
+    ("script", 0x1d49c, 0x1d4cf),
+    ("fraktur", 0x1d504, 0x1d537),
+    ("double-struck", 0x1d538, 0x1d56b),
+    ("sans-serif", 0x1d5a0, 0x1d5d3),
+    ("monospace", 0x1d670, 0x1d6a3),
 ];
 
 /// `r[math.alphabets]`: every named style is in the font and reachable, apart
@@ -173,11 +179,11 @@ fn math_letters_have_corrections_and_accents() {
         // measuring a slant.
 
         match glyph.unicodes[0] {
-            0x1D434..=0x1D467 => {
+            0x1d434..=0x1d467 => {
                 italic_total += i64::from(correction);
                 italic_count += 1;
             }
-            0x1D400..=0x1D433 => {
+            0x1d400..=0x1d433 => {
                 upright_total += i64::from(correction);
                 upright_count += 1;
             }
@@ -233,7 +239,7 @@ fn math_letters_carry_top_corner_kerning() {
         if !glyph
             .unicodes
             .iter()
-            .any(|code| (0x1D434..=0x1D467).contains(code))
+            .any(|code| (0x1d434..=0x1d467).contains(code))
         {
             continue;
         }
@@ -284,7 +290,7 @@ fn math_letters_carry_top_corner_kerning() {
     let (index, glyph) = captured
         .iter()
         .enumerate()
-        .find(|(_, glyph)| glyph.unicodes.contains(&0x1D453))
+        .find(|(_, glyph)| glyph.unicodes.contains(&0x1d453))
         .expect("the capture holds the italic f");
     let id = GlyphId::new(u32::try_from(index + 1).expect("glyph id"));
     let kern = kern_info
@@ -313,7 +319,7 @@ fn math_letters_carry_top_corner_kerning() {
     let upright = captured
         .iter()
         .enumerate()
-        .find(|(_, glyph)| glyph.unicodes.contains(&0x1D400))
+        .find(|(_, glyph)| glyph.unicodes.contains(&0x1d400))
         .map(|(index, _)| GlyphId::new(u32::try_from(index + 1).expect("glyph id")))
         .expect("the capture holds bold A");
     assert!(
@@ -326,8 +332,8 @@ fn math_letters_carry_top_corner_kerning() {
 
 /// The glyphs a renderer stretches vertically, by codepoint.
 const STRETCHY: &[u32] = &[
-    0x0028, 0x0029, 0x005B, 0x005D, 0x007B, 0x007D, 0x221A, 0x222B, 0x2211, 0x220F, 0x2308, 0x2309,
-    0x230A, 0x230B, 0x27E8, 0x27E9,
+    0x0028, 0x0029, 0x005b, 0x005d, 0x007b, 0x007d, 0x221a, 0x222b, 0x2211, 0x220f, 0x2308, 0x2309,
+    0x230a, 0x230b, 0x27e8, 0x27e9,
 ];
 
 /// `r[math.stretch]`: the stretchy glyphs are named in the table, and the
@@ -553,7 +559,7 @@ fn stretchy_glyphs_have_assemblies() {
         let brace = glyph
             .unicodes
             .iter()
-            .any(|code| *code == 0x007B || *code == 0x007D);
+            .any(|code| *code == 0x007b || *code == 0x007d);
         let Some(resolved) = construction.glyph_assembly() else {
             without.push(glyph.unicodes[0]);
             continue;
@@ -702,7 +708,7 @@ fn stretchy_glyphs_have_assemblies() {
     // extender, and the test names them rather than accepting one that
     // scallops. The braces and the radical used to be here; their drawn parts
     // repeat a bar.
-    let pinned = [0x2211_u32, 0x27E8, 0x27E9];
+    let pinned = [0x2211_u32, 0x27e8, 0x27e9];
     without.sort_unstable();
     assert_eq!(
         without, pinned,
@@ -733,7 +739,7 @@ fn the_radical_has_a_vertical_stem() {
     };
     let Some(glyph) = captured
         .iter()
-        .find(|glyph| glyph.unicodes.contains(&0x221A))
+        .find(|glyph| glyph.unicodes.contains(&0x221a))
     else {
         eprintln!("skipping: the capture holds no radical");
         return;
@@ -1149,11 +1155,13 @@ fn script_style_alternates_are_carried_by_ssty() {
     // with the line above it.
     let glyphs: Vec<GlyphData> = captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect();
     let alternates = lemmata_build::ssty::derive(&glyphs, 0);
@@ -1224,16 +1232,18 @@ fn ssty_reaches_a_shaper() {
     };
     let glyphs: Vec<GlyphData> = captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect();
 
     // The math italic `x`, which is the glyph an equation sets a variable in.
-    let code = 0x1D465;
+    let code = 0x1d465;
     let base = captured
         .iter()
         .find(|glyph| glyph.unicodes.contains(&code))
@@ -1337,11 +1347,13 @@ fn dotless_forms_are_carried_by_dtls() {
     // else, so each one is exactly one contour shorter than its base.
     let glyphs: Vec<GlyphData> = captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect();
     let forms = lemmata_build::dotless::derive(&glyphs, f64::from(Metrics::default().x_height), 0);
@@ -1406,11 +1418,13 @@ fn flattened_accents_are_carried_by_flac() {
 
     let glyphs: Vec<GlyphData> = captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect();
     let flattened = lemmata_build::flac::derive(&glyphs, 0);
@@ -1482,11 +1496,13 @@ fn the_math_substitutions_reach_a_shaper() {
     };
     let glyphs: Vec<GlyphData> = captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect();
     let mut all = glyphs.clone();

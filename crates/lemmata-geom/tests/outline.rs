@@ -1,7 +1,9 @@
 //! Compares the Rust spiro outline path against Iosevka's `SpiroGeometry`.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::{Affine, Point};
 use lemmata_geom::{Bez3, KnotType, MonoKnot, outline::spiro_to_bez_arcs};
@@ -39,14 +41,16 @@ fn point(value: &Value) -> Point {
 fn affine(value: Option<&Value>) -> Affine {
     match value {
         None => Affine::IDENTITY,
-        Some(t) => Affine::new([
-            number(&t["xx"]),
-            number(&t["yx"]),
-            number(&t["xy"]),
-            number(&t["yy"]),
-            number(&t["tx"]),
-            number(&t["ty"]),
-        ]),
+        Some(t) => {
+            Affine::new([
+                number(&t["xx"]),
+                number(&t["yx"]),
+                number(&t["xy"]),
+                number(&t["yy"]),
+                number(&t["tx"]),
+                number(&t["ty"]),
+            ])
+        }
     }
 }
 

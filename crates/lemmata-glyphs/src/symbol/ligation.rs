@@ -14,11 +14,13 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::glyph;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    glyph,
+    metrics::Metrics,
+    shapes::{self, Design},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// `DesignParameters.equal_wideness`, from `meta/aesthetics.ptl`.
 const EQUAL_WIDENESS: f64 = 0.075;
@@ -151,18 +153,20 @@ impl Ligation<'_> {
         };
 
         match bar {
-            Bar::Plus => glyph::union(vec![
-                hbar(mid),
-                shapes::vbar_m(
-                    self.kit,
-                    metrics,
-                    metrics.middle,
-                    metrics.plus_top,
-                    metrics.plus_bot,
-                    stroke,
-                )
-                .geometry(kurbo::Affine::IDENTITY),
-            ]),
+            Bar::Plus => {
+                glyph::union(vec![
+                    hbar(mid),
+                    shapes::vbar_m(
+                        self.kit,
+                        metrics,
+                        metrics.middle,
+                        metrics.plus_top,
+                        metrics.plus_bot,
+                        stroke,
+                    )
+                    .geometry(kurbo::Affine::IDENTITY),
+                ])
+            }
             Bar::Hyphen => hbar(mid),
             Bar::Equal => {
                 let half = self.equal_half_space();

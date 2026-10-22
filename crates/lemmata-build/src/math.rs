@@ -21,13 +21,18 @@
 
 #![allow(clippy::cast_possible_truncation)]
 
-use write_fonts::tables::layout::CoverageTable;
-use write_fonts::tables::math::{
-    GlyphAssembly, GlyphPartRecord, Math, MathConstants, MathGlyphConstruction, MathGlyphInfo,
-    MathGlyphVariantRecord, MathItalicsCorrectionInfo, MathKern, MathKernInfo, MathKernInfoRecord,
-    MathTopAccentAttachment, MathValueRecord, MathVariants, PartFlags,
+use write_fonts::{
+    tables::{
+        layout::CoverageTable,
+        math::{
+            GlyphAssembly, GlyphPartRecord, Math, MathConstants, MathGlyphConstruction,
+            MathGlyphInfo, MathGlyphVariantRecord, MathItalicsCorrectionInfo, MathKern,
+            MathKernInfo, MathKernInfoRecord, MathTopAccentAttachment, MathValueRecord,
+            MathVariants, PartFlags,
+        },
+    },
+    types::{FWord, GlyphId16, UfWord},
 };
-use write_fonts::types::{FWord, GlyphId16, UfWord};
 
 use crate::font::{GlyphData, Metrics};
 
@@ -306,7 +311,7 @@ fn is_brace(glyph: &GlyphData) -> bool {
     glyph
         .unicodes
         .iter()
-        .any(|code| *code == 0x007B || *code == 0x007D)
+        .any(|code| *code == 0x007b || *code == 0x007d)
 }
 
 /// The assembly recipe for a brace: lower hook, lower bar, point, upper bar,
@@ -610,15 +615,19 @@ pub fn glyph_info(glyphs: &[GlyphData], extended: &[GlyphId16]) -> MathGlyphInfo
 
     MathGlyphInfo {
         math_italics_correction_info: (!ids.is_empty())
-            .then(|| MathItalicsCorrectionInfo {
-                coverage: coverage.clone().into(),
-                italics_correction: corrections,
+            .then(|| {
+                MathItalicsCorrectionInfo {
+                    coverage: coverage.clone().into(),
+                    italics_correction: corrections,
+                }
             })
             .into(),
         math_top_accent_attachment: (!ids.is_empty())
-            .then(|| MathTopAccentAttachment {
-                top_accent_coverage: coverage.into(),
-                top_accent_attachment: attachments,
+            .then(|| {
+                MathTopAccentAttachment {
+                    top_accent_coverage: coverage.into(),
+                    top_accent_attachment: attachments,
+                }
             })
             .into(),
         extended_shape_coverage: (!extended.is_empty())

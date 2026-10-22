@@ -10,19 +10,23 @@
 //! per glyph needs. A contextual one fires only where the neighbours allow,
 //! which is what a form that borrows space from the glyph beside it needs.
 
-use write_fonts::tables::gsub::{
-    AlternateSet, AlternateSubstFormat1, Gsub, Ligature, LigatureSet, LigatureSubstFormat1,
-    SingleSubst, SubstitutionChainContext, SubstitutionLookup,
+use write_fonts::{
+    tables::{
+        gsub::{
+            AlternateSet, AlternateSubstFormat1, Gsub, Ligature, LigatureSet, LigatureSubstFormat1,
+            SingleSubst, SubstitutionChainContext, SubstitutionLookup,
+        },
+        layout::{
+            ChainedSequenceContext, ChainedSequenceContextFormat3, CoverageTable,
+            Feature as FeatureTable, FeatureList, FeatureRecord, LangSys, Lookup, LookupFlag,
+            LookupList, Script, ScriptList, ScriptRecord, SequenceLookupRecord,
+        },
+    },
+    types::{GlyphId16, Tag},
 };
-use write_fonts::tables::layout::{
-    ChainedSequenceContext, ChainedSequenceContextFormat3, CoverageTable, Feature as FeatureTable,
-    FeatureList, FeatureRecord, LangSys, Lookup, LookupFlag, LookupList, Script, ScriptList,
-    ScriptRecord, SequenceLookupRecord,
-};
-use write_fonts::types::{GlyphId16, Tag};
 
 /// A language system with no required feature. The specification uses `0xFFFF`.
-const NO_REQUIRED_FEATURE: u16 = 0xFFFF;
+const NO_REQUIRED_FEATURE: u16 = 0xffff;
 
 /// One contextual rule: when the input glyph is in `input`, with the glyph
 /// before it in `backtrack` and the one after in `lookahead`, substitute the
@@ -98,10 +102,9 @@ fn substitution(pairs: &[(GlyphId16, GlyphId16)]) -> SubstitutionLookup {
     pairs.sort_unstable();
     let (covered, replacements): (Vec<GlyphId16>, Vec<GlyphId16>) = pairs.into_iter().unzip();
 
-    SubstitutionLookup::Single(Lookup::new(
-        LookupFlag::empty(),
-        vec![SingleSubst::format_2(coverage(covered), replacements)],
-    ))
+    SubstitutionLookup::Single(Lookup::new(LookupFlag::empty(), vec![
+        SingleSubst::format_2(coverage(covered), replacements),
+    ]))
 }
 
 /// An alternate-substitution lookup.
@@ -115,13 +118,12 @@ fn alternates(entries: &[(GlyphId16, Vec<GlyphId16>)]) -> SubstitutionLookup {
     entries.dedup_by_key(|(glyph, _)| *glyph);
     let (covered, sets): (Vec<GlyphId16>, Vec<Vec<GlyphId16>>) = entries.into_iter().unzip();
 
-    SubstitutionLookup::Alternate(Lookup::new(
-        LookupFlag::empty(),
-        vec![AlternateSubstFormat1::new(
+    SubstitutionLookup::Alternate(Lookup::new(LookupFlag::empty(), vec![
+        AlternateSubstFormat1::new(
             coverage(covered),
             sets.into_iter().map(AlternateSet::new).collect(),
-        )],
-    ))
+        ),
+    ]))
 }
 
 /// A ligature-substitution lookup.
@@ -299,17 +301,19 @@ pub fn gsub(features: &[Feature]) -> Gsub {
         script_list: ScriptList {
             script_records: scripts
                 .iter()
-                .map(|(tag, indices)| ScriptRecord {
-                    script_tag: *tag,
-                    script: Script {
-                        default_lang_sys: Some(LangSys {
-                            required_feature_index: NO_REQUIRED_FEATURE,
-                            feature_indices: indices.clone(),
-                        })
+                .map(|(tag, indices)| {
+                    ScriptRecord {
+                        script_tag: *tag,
+                        script: Script {
+                            default_lang_sys: Some(LangSys {
+                                required_feature_index: NO_REQUIRED_FEATURE,
+                                feature_indices: indices.clone(),
+                            })
+                            .into(),
+                            lang_sys_records: Vec::new(),
+                        }
                         .into(),
-                        lang_sys_records: Vec::new(),
                     }
-                    .into(),
                 })
                 .collect(),
         }

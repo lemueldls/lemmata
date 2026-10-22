@@ -13,13 +13,15 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::Item;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::{Metrics, WeightControl};
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::{Dispiro, Kit};
-use lemmata_ptl::util::{join_camel, mix};
+use lemmata_ptl::{
+    control::Item,
+    letter_model::DivFrame,
+    metrics::{Metrics, WeightControl},
+    serif::SerifFrame,
+    shapes::{self, Design},
+    spiro_kit::{Dispiro, Kit},
+    util::{join_camel, mix},
+};
 
 /// The four bodies.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -287,11 +289,13 @@ impl UpperB<'_> {
         let (serif_top, serif_bot) = serif.flags();
         let (bar_pos, shift, inner_shift) = match body {
             Body::Standard | Body::StandardInterrupted => (BAR_POS, 0.0, 0.0),
-            Body::MoreAsymmetric | Body::MoreAsymmetricInterrupted => (
-                ASYMMETRIC_BAR_POS,
-                -0.05 * (self.right_sb() - self.left_sb()),
-                -0.10 * (self.right_sb() - self.left_sb()),
-            ),
+            Body::MoreAsymmetric | Body::MoreAsymmetricInterrupted => {
+                (
+                    ASYMMETRIC_BAR_POS,
+                    -0.05 * (self.right_sb() - self.left_sb()),
+                    -0.10 * (self.right_sb() - self.left_sb()),
+                )
+            }
         };
         let shape = self.shape(
             top,
@@ -339,7 +343,7 @@ impl UpperB<'_> {
     pub fn stroke(&self, body: Body, serif: Serif) -> Geometry {
         let metrics = self.metrics;
         let stroke = self.weight().advice_stroke2(2.0, 3.0, metrics.cap, 1.0);
-        let (bar_pos, _, _) = match body {
+        let (bar_pos, ..) = match body {
             Body::Standard | Body::StandardInterrupted => (BAR_POS, 0.0, 0.0),
             Body::MoreAsymmetric | Body::MoreAsymmetricInterrupted => {
                 (ASYMMETRIC_BAR_POS, 0.0, 0.0)

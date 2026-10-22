@@ -10,10 +10,12 @@
 //! geometry nor the font writer and cannot disagree with the CLI about what it
 //! built.
 
-use std::fmt::Write as _;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    fmt::Write as _,
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};

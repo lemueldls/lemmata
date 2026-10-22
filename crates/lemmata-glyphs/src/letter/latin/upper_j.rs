@@ -9,12 +9,14 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::{Item, UserControlKnot};
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, HSerifSide, HookArgs, HookParams, downward};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::{Item, UserControlKnot},
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design, HSerifSide, HookArgs, HookParams, downward},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The body the config selects.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -299,15 +301,17 @@ impl UpperJ<'_> {
             Serif::None => return None,
             Serif::Left => left(),
             Serif::Both => Geometry::Combine(vec![left(), right()]),
-            Serif::Symmetric => shapes::hserif_mt(
-                self.kit,
-                metrics,
-                x - self.i_balance(df),
-                top,
-                metrics.mid_jut_center,
-                None,
-            )
-            .geometry(kurbo::Affine::IDENTITY),
+            Serif::Symmetric => {
+                shapes::hserif_mt(
+                    self.kit,
+                    metrics,
+                    x - self.i_balance(df),
+                    top,
+                    metrics.mid_jut_center,
+                    None,
+                )
+                .geometry(kurbo::Affine::IDENTITY)
+            }
         })
     }
 

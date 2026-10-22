@@ -18,8 +18,10 @@
 
 use kurbo::{Affine, BezPath, Point, Vec2};
 
-use crate::expand::{MonoKnot, linreg};
-use crate::spiro::{Knot, KnotType, SpiroArc, spiro_arcs};
+use crate::{
+    expand::{MonoKnot, linreg},
+    spiro::{Knot, KnotType, SpiroArc, spiro_arcs},
+};
 
 /// Subdivision delta for the strips, from `curve-util.mjs`.
 const GEOMETRY_PRECISION: f64 = 0.25;
@@ -118,12 +120,14 @@ impl PenExpander {
 
     fn get_trace(knot: &PenKnot, edge: usize) -> MonoKnot {
         match &knot.profile {
-            Some(profile) => MonoKnot::new(
-                knot.ty,
-                knot.x + profile[edge].x,
-                knot.y + profile[edge].y,
-                false,
-            ),
+            Some(profile) => {
+                MonoKnot::new(
+                    knot.ty,
+                    knot.x + profile[edge].x,
+                    knot.y + profile[edge].y,
+                    false,
+                )
+            }
             None => MonoKnot::new(knot.ty, knot.x, knot.y, true),
         }
     }

@@ -17,9 +17,7 @@ use std::path::{Path, PathBuf};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_ptl::param::Shape;
-use read_fonts::tables::glyf::Glyph as ReadGlyph;
-use read_fonts::types::GlyphId;
-use read_fonts::{FontRef, TableProvider};
+use read_fonts::{FontRef, TableProvider, tables::glyf::Glyph as ReadGlyph, types::GlyphId};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -82,11 +80,13 @@ fn a_capture_is_the_plan_it_claims_to_be() {
 
     let glyphs: Vec<GlyphData> = captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: glyph.advance.round().clamp(0.0, f64::from(u16::MAX)) as u16,
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: glyph.advance.round().clamp(0.0, f64::from(u16::MAX)) as u16,
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect();
     let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default(), &[])

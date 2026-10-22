@@ -13,10 +13,12 @@
 )]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{Design, diag_cor, downward, upward};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    metrics::Metrics,
+    shapes::{Design, diag_cor, downward, upward},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// One half of an X: a strand from an outer point to the crossing.
 #[derive(Clone, Copy, Debug)]
@@ -173,40 +175,32 @@ pub fn x_strand(
 ) -> Geometry {
     let x_mid = mix(x_left, x_right, 0.5);
     let y_mid = mix(y_left, y_right, 0.5);
-    let left = half_x_strand(
-        kit,
-        metrics,
-        &HalfXStrandArgs {
-            straight,
-            slab,
-            x_outer: x_left,
-            y_outer: y_left,
-            x_center: x_mid,
-            y_center: y_mid,
-            turn,
-            p_straight,
-            tension,
-            sw,
-            p_conn: -0.001,
-        },
-    );
-    let right = half_x_strand(
-        kit,
-        metrics,
-        &HalfXStrandArgs {
-            straight,
-            slab,
-            x_outer: x_right,
-            y_outer: y_right,
-            x_center: x_mid,
-            y_center: y_mid,
-            turn,
-            p_straight,
-            tension,
-            sw,
-            p_conn: -0.001,
-        },
-    );
+    let left = half_x_strand(kit, metrics, &HalfXStrandArgs {
+        straight,
+        slab,
+        x_outer: x_left,
+        y_outer: y_left,
+        x_center: x_mid,
+        y_center: y_mid,
+        turn,
+        p_straight,
+        tension,
+        sw,
+        p_conn: -0.001,
+    });
+    let right = half_x_strand(kit, metrics, &HalfXStrandArgs {
+        straight,
+        slab,
+        x_outer: x_right,
+        y_outer: y_right,
+        x_center: x_mid,
+        y_center: y_mid,
+        turn,
+        p_straight,
+        tension,
+        sw,
+        p_conn: -0.001,
+    });
 
     Geometry::Combine(vec![left, right])
 }
@@ -298,22 +292,28 @@ impl LetterX<'_> {
         Some(match serif {
             Serif::Serifless => return None,
             Serif::UnilateralMotion => sf.lt_outer(self.kit, metrics),
-            Serif::BilateralMotion => Geometry::Combine(vec![
-                sf.lt_outer(self.kit, metrics),
-                sf.rb_outer(self.kit, metrics),
-            ]),
-            Serif::Full => Geometry::Combine(vec![
-                sf.lt_full(self.kit, metrics),
-                sf.rt_full(self.kit, metrics),
-                sf.lb_full(self.kit, metrics),
-                sf.rb_full(self.kit, metrics),
-            ]),
-            Serif::GrekLowerChi => Geometry::Combine(vec![
-                sf.lt_outer(self.kit, metrics),
-                sf.rt_full(self.kit, metrics),
-                sf.lb_full(self.kit, metrics),
-                sf.rb_outer(self.kit, metrics),
-            ]),
+            Serif::BilateralMotion => {
+                Geometry::Combine(vec![
+                    sf.lt_outer(self.kit, metrics),
+                    sf.rb_outer(self.kit, metrics),
+                ])
+            }
+            Serif::Full => {
+                Geometry::Combine(vec![
+                    sf.lt_full(self.kit, metrics),
+                    sf.rt_full(self.kit, metrics),
+                    sf.lb_full(self.kit, metrics),
+                    sf.rb_full(self.kit, metrics),
+                ])
+            }
+            Serif::GrekLowerChi => {
+                Geometry::Combine(vec![
+                    sf.lt_outer(self.kit, metrics),
+                    sf.rt_full(self.kit, metrics),
+                    sf.lb_full(self.kit, metrics),
+                    sf.rb_outer(self.kit, metrics),
+                ])
+            }
         })
     }
 

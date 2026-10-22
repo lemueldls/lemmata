@@ -73,49 +73,58 @@ fn fixture() -> &'static Fixture {
             .as_array()
             .expect("the fixture carries rules")
             .iter()
-            .map(|rule| Ligature {
-                backtrack: names(&rule["backtrack"]),
-                input: rule["input"].as_str().expect("an input").to_string(),
-                lookahead: names(&rule["lookahead"]),
-                target: rule["target"].as_str().expect("a target").to_string(),
+            .map(|rule| {
+                Ligature {
+                    backtrack: names(&rule["backtrack"]),
+                    input: rule["input"].as_str().expect("an input").to_string(),
+                    lookahead: names(&rule["lookahead"]),
+                    target: rule["target"].as_str().expect("a target").to_string(),
+                }
             })
             .collect();
         let glyphs = value["glyphs"]
             .as_object()
             .expect("the fixture carries glyphs")
             .iter()
-            .map(|(name, glyph)| GlyphData {
-                name: name.clone(),
-                unicodes: Vec::new(),
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                advance: glyph["advance"]
-                    .as_f64()
-                    .unwrap_or(0.0)
-                    .round()
-                    .clamp(0.0, f64::from(u16::MAX)) as u16,
-                contours: glyph["contours"]
-                    .as_array()
-                    .map(|contours| {
-                        contours
-                            .iter()
-                            .filter_map(|contour| contour.as_array())
-                            .map(|contour| {
-                                contour
-                                    .iter()
-                                    .map(|point| QuadifyPoint {
-                                        kind: if point["quadratic"].as_bool().unwrap_or(false) {
-                                            QuadifyKind::Quadratic
-                                        } else {
-                                            QuadifyKind::Corner
-                                        },
-                                        x: point["x"].as_f64().unwrap_or(0.0),
-                                        y: point["y"].as_f64().unwrap_or(0.0),
-                                    })
-                                    .collect()
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default(),
+            .map(|(name, glyph)| {
+                GlyphData {
+                    name: name.clone(),
+                    unicodes: Vec::new(),
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    advance: glyph["advance"]
+                        .as_f64()
+                        .unwrap_or(0.0)
+                        .round()
+                        .clamp(0.0, f64::from(u16::MAX)) as u16,
+                    contours: glyph["contours"]
+                        .as_array()
+                        .map(|contours| {
+                            contours
+                                .iter()
+                                .filter_map(|contour| contour.as_array())
+                                .map(|contour| {
+                                    contour
+                                        .iter()
+                                        .map(|point| {
+                                            QuadifyPoint {
+                                                kind: if point["quadratic"]
+                                                    .as_bool()
+                                                    .unwrap_or(false)
+                                                {
+                                                    QuadifyKind::Quadratic
+                                                } else {
+                                                    QuadifyKind::Corner
+                                                },
+                                                x: point["x"].as_f64().unwrap_or(0.0),
+                                                y: point["y"].as_f64().unwrap_or(0.0),
+                                            }
+                                        })
+                                        .collect()
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default(),
+                }
             })
             .collect();
 

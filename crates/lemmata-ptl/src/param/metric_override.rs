@@ -24,9 +24,7 @@
 
 use std::collections::BTreeMap;
 
-use super::interpolate::monotonic_interpolate;
-use super::toml::Value;
-use super::{Hive, Shape};
+use super::{Hive, Shape, interpolate::monotonic_interpolate, toml::Value};
 
 /// The fields a plan may override.
 pub const FIELDS: &[&str] = &[

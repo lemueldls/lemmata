@@ -15,11 +15,11 @@
 //! would be an adapter over, and the keys are Iosevka's, so a plan written for
 //! one tool reads in the other for the fields both have.
 
+use std::{collections::BTreeMap, path::Path};
+
 use lemmata_build::font::Metrics;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
-use std::path::Path;
 
 /// The spacing a font is drawn at.
 ///
@@ -110,7 +110,8 @@ pub struct Plan {
     ///
     /// Iosevka grades the width at 416, 456, 500, 547, 600, 657 and 720 and
     /// interpolates between them, so a value between two grades is a coherent
-    /// frame rather than a rounded one. 500 is the normal face.
+    /// frame rather than a rounded one. 500 is grade 5 and 600 grade 7; the
+    /// default plan draws at 600.
     pub width: f64,
     /// The OS/2 width class, which follows from the grade unless a plan sets it
     /// on its own.
@@ -180,10 +181,12 @@ pub fn from_json(text: &str) -> Result<Plan, String> {
     let integer = |key: &str| -> Result<Option<i64>, String> {
         match object.get(key) {
             None => Ok(None),
-            Some(value) => value
-                .as_i64()
-                .map(Some)
-                .ok_or_else(|| format!("{key} must be a whole number")),
+            Some(value) => {
+                value
+                    .as_i64()
+                    .map(Some)
+                    .ok_or_else(|| format!("{key} must be a whole number"))
+            }
         }
     };
     let set_i16 = |key: &str, target: &mut i16| -> Result<(), String> {

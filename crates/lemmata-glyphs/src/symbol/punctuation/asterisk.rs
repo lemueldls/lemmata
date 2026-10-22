@@ -19,10 +19,7 @@
 #![allow(clippy::suboptimal_flops, clippy::cast_precision_loss)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::Design;
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{metrics::Metrics, shapes::Design, spiro_kit::Kit, util::mix};
 
 /// Which stroke a kind uses.
 #[derive(Clone, Copy)]

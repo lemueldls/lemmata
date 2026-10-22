@@ -13,12 +13,14 @@
 
 use kurbo::Affine;
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::Item;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::{Direction, Family, Kit, Position};
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::Item,
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design},
+    spiro_kit::{Direction, Family, Kit, Position},
+    util::mix,
+};
 
 /// The delimiters a definition builds.
 pub struct Brackets<'a> {
@@ -538,13 +540,10 @@ impl Brackets<'_> {
         let sub = wide.slice(Some(3.0), Some(2.0), None);
         let first = self.shape(&sub, sub.mvs, &normal);
         let shift = Affine::translate((wide.width - sub.width, 0.0));
-        let double = Geometry::Combine(vec![
-            first.clone(),
-            Geometry::Transformed {
-                tf: shift,
-                geom: Box::new(first),
-            },
-        ]);
+        let double = Geometry::Combine(vec![first.clone(), Geometry::Transformed {
+            tf: shift,
+            geom: Box::new(first),
+        }]);
         out.push(("doubleParenLeft.normal".to_string(), double.clone()));
         out.push((
             "doubleParenRight.normal".to_string(),

@@ -10,13 +10,15 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::{Item, UserControlKnot};
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::serif::SerifFrame;
-use lemmata_ptl::shapes::{self, ArchArgs, ArchParams, Design, downward, rightward, upward};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::{Item, UserControlKnot},
+    letter_model::DivFrame,
+    metrics::Metrics,
+    serif::SerifFrame,
+    shapes::{self, ArchArgs, ArchParams, Design, downward, rightward, upward},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The bowl body.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

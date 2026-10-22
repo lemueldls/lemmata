@@ -7,8 +7,10 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::{Affine, BezPath, ParamCurve, ParamCurveNearest, Point, Vec2};
 use lemmata_geom::{Bez3, BiKnot, Geometry, KnotType, MonoKnot, PenKnot, shape_to_paths};
@@ -35,14 +37,16 @@ fn point(value: &Value) -> Point {
 fn affine(value: Option<&Value>) -> Affine {
     match value {
         None => Affine::IDENTITY,
-        Some(t) => Affine::new([
-            number(&t["xx"]),
-            number(&t["yx"]),
-            number(&t["xy"]),
-            number(&t["yy"]),
-            number(&t["tx"]),
-            number(&t["ty"]),
-        ]),
+        Some(t) => {
+            Affine::new([
+                number(&t["xx"]),
+                number(&t["yx"]),
+                number(&t["xy"]),
+                number(&t["yy"]),
+                number(&t["tx"]),
+                number(&t["ty"]),
+            ])
+        }
     }
 }
 
@@ -69,109 +73,127 @@ fn profile(value: &Value) -> Vec<Vec2> {
 
 fn build(value: &Value) -> Geometry {
     match value["kind"].as_str().expect("kind") {
-        "spiro" => Geometry::Spiro {
-            gizmo: affine(value.get("gizmo")),
-            closed: value["closed"].as_bool().unwrap(),
-            knots: value["knots"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|k| {
-                    MonoKnot::new(
-                        knot_type(k["type"].as_str().unwrap()),
-                        number(&k["x"]),
-                        number(&k["y"]),
-                        k["unimportant"].as_bool().unwrap_or(false),
-                    )
-                })
-                .collect(),
-        },
-        "diSpiro" => Geometry::DiSpiro {
-            gizmo: affine(value.get("gizmo")),
-            contrast: number(&value["contrast"]),
-            closed: value["closed"].as_bool().unwrap(),
-            knots: value["knots"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|k| {
-                    let mut knot = BiKnot::new(
-                        knot_type(k["type"].as_str().unwrap()),
-                        number(&k["x"]),
-                        number(&k["y"]),
-                        number(&k["d1"]),
-                        number(&k["d2"]),
-                    );
-                    knot.unimportant = k["unimportant"].as_bool().unwrap_or(false);
-                    if let Some(normal) = k.get("proposedNormal") {
-                        knot.proposed_normal =
-                            Some(Vec2::new(number(&normal["x"]), number(&normal["y"])));
-                    }
+        "spiro" => {
+            Geometry::Spiro {
+                gizmo: affine(value.get("gizmo")),
+                closed: value["closed"].as_bool().unwrap(),
+                knots: value["knots"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|k| {
+                        MonoKnot::new(
+                            knot_type(k["type"].as_str().unwrap()),
+                            number(&k["x"]),
+                            number(&k["y"]),
+                            k["unimportant"].as_bool().unwrap_or(false),
+                        )
+                    })
+                    .collect(),
+            }
+        }
+        "diSpiro" => {
+            Geometry::DiSpiro {
+                gizmo: affine(value.get("gizmo")),
+                contrast: number(&value["contrast"]),
+                closed: value["closed"].as_bool().unwrap(),
+                knots: value["knots"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|k| {
+                        let mut knot = BiKnot::new(
+                            knot_type(k["type"].as_str().unwrap()),
+                            number(&k["x"]),
+                            number(&k["y"]),
+                            number(&k["d1"]),
+                            number(&k["d2"]),
+                        );
+                        knot.unimportant = k["unimportant"].as_bool().unwrap_or(false);
+                        if let Some(normal) = k.get("proposedNormal") {
+                            knot.proposed_normal =
+                                Some(Vec2::new(number(&normal["x"]), number(&normal["y"])));
+                        }
 
-                    knot
-                })
-                .collect(),
-        },
-        "spiroPen" => Geometry::SpiroPen {
-            gizmo: affine(value.get("gizmo")),
-            closed: value["closed"].as_bool().unwrap(),
-            pen_profile: profile(&value["profile"]),
-            knots: value["knots"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|k| {
-                    let knot_profile = k.get("profile").filter(|p| !p.is_null()).map(profile);
-                    PenKnot::new(
-                        knot_type(k["type"].as_str().unwrap()),
-                        number(&k["x"]),
-                        number(&k["y"]),
-                        knot_profile,
-                    )
-                })
-                .collect(),
-        },
-        "stroke" => Geometry::Stroke {
-            gizmo: affine(value.get("gizmo")),
-            radius: number(&value["radius"]),
-            contrast: number(&value["contrast"]),
-            inside: value["inside"].as_bool().unwrap(),
-            geom: Box::new(build(&value["geom"])),
-        },
-        "removeHoles" => Geometry::RemoveHoles {
-            gizmo: affine(value.get("gizmo")),
-            geom: Box::new(build(&value["geom"])),
-        },
-        "simplify" => Geometry::Simplify {
-            gizmo: affine(value.get("gizmo")),
-            geom: Box::new(build(&value["geom"])),
-        },
-        "combine" => Geometry::Combine(
-            value["parts"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(build)
-                .collect(),
-        ),
-        "boolean" => Geometry::Boolean {
-            op: match value["op"].as_str().unwrap() {
-                "intersection" => BinaryOp::Intersection,
-                "difference" => BinaryOp::Difference,
-                "xor" => BinaryOp::Xor,
-                _ => BinaryOp::Union,
-            },
-            operands: value["operands"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(build)
-                .collect(),
-        },
-        "transform" => Geometry::Transformed {
-            tf: affine(value.get("tf")),
-            geom: Box::new(build(&value["geom"])),
-        },
+                        knot
+                    })
+                    .collect(),
+            }
+        }
+        "spiroPen" => {
+            Geometry::SpiroPen {
+                gizmo: affine(value.get("gizmo")),
+                closed: value["closed"].as_bool().unwrap(),
+                pen_profile: profile(&value["profile"]),
+                knots: value["knots"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|k| {
+                        let knot_profile = k.get("profile").filter(|p| !p.is_null()).map(profile);
+                        PenKnot::new(
+                            knot_type(k["type"].as_str().unwrap()),
+                            number(&k["x"]),
+                            number(&k["y"]),
+                            knot_profile,
+                        )
+                    })
+                    .collect(),
+            }
+        }
+        "stroke" => {
+            Geometry::Stroke {
+                gizmo: affine(value.get("gizmo")),
+                radius: number(&value["radius"]),
+                contrast: number(&value["contrast"]),
+                inside: value["inside"].as_bool().unwrap(),
+                geom: Box::new(build(&value["geom"])),
+            }
+        }
+        "removeHoles" => {
+            Geometry::RemoveHoles {
+                gizmo: affine(value.get("gizmo")),
+                geom: Box::new(build(&value["geom"])),
+            }
+        }
+        "simplify" => {
+            Geometry::Simplify {
+                gizmo: affine(value.get("gizmo")),
+                geom: Box::new(build(&value["geom"])),
+            }
+        }
+        "combine" => {
+            Geometry::Combine(
+                value["parts"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(build)
+                    .collect(),
+            )
+        }
+        "boolean" => {
+            Geometry::Boolean {
+                op: match value["op"].as_str().unwrap() {
+                    "intersection" => BinaryOp::Intersection,
+                    "difference" => BinaryOp::Difference,
+                    "xor" => BinaryOp::Xor,
+                    _ => BinaryOp::Union,
+                },
+                operands: value["operands"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(build)
+                    .collect(),
+            }
+        }
+        "transform" => {
+            Geometry::Transformed {
+                tf: affine(value.get("tf")),
+                geom: Box::new(build(&value["geom"])),
+            }
+        }
         "radical" => Geometry::Radical(Box::new(build(&value["geom"]))),
         other => panic!("unknown kind {other}"),
     }

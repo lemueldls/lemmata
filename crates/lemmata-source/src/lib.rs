@@ -12,19 +12,22 @@
 //! them. Contours are cached per glyph, so a preview fills only what it draws
 //! and a later full build fills the rest.
 
-use std::cell::RefCell;
-use std::collections::hash_map::DefaultHasher;
-use std::collections::{BTreeMap, BTreeSet};
-use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet, hash_map::DefaultHasher},
+    hash::{Hash, Hasher},
+    rc::Rc,
+};
 
 use lemmata_build::font::GlyphData;
 use lemmata_geom::{Geometry, QuadifyPoint};
 use lemmata_plan::{Plan, Spacing};
-use lemmata_ptl::metrics::{Metrics, Para};
-use lemmata_ptl::param::{self, Shape};
-use lemmata_ptl::shapes::Design;
-use lemmata_ptl::spiro_kit::Kit;
+use lemmata_ptl::{
+    metrics::{Metrics, Para},
+    param::{self, Shape},
+    shapes::Design,
+    spiro_kit::Kit,
+};
 
 /// The parameter files the port's metrics are derived from. They are upstream's
 /// own, read verbatim, and together they are about twenty kilobytes.
@@ -400,9 +403,11 @@ fn centred(plan: &Plan, contours: &Contours, cell_width: f64) -> Contours {
         .map(|contour| {
             contour
                 .iter()
-                .map(|point| QuadifyPoint {
-                    x: point.x + dx,
-                    ..*point
+                .map(|point| {
+                    QuadifyPoint {
+                        x: point.x + dx,
+                        ..*point
+                    }
                 })
                 .collect()
         })
@@ -703,7 +708,7 @@ pub fn registry_font(plan: &Plan) -> Result<Vec<u8>, String> {
         .into_iter()
         .enumerate()
         .map(|(index, name)| {
-            let codepoint = 0xE000 + u32::try_from(index).unwrap_or(0);
+            let codepoint = 0xe000 + u32::try_from(index).unwrap_or(0);
             let contours = contours_of(&name)
                 .map(|contours| contours.as_ref().clone())
                 .unwrap_or_default();
@@ -747,7 +752,7 @@ pub fn registry_group_font(plan: &Plan, group: &str) -> Result<Vec<u8>, String> 
         .into_iter()
         .enumerate()
         .map(|(index, name)| {
-            let codepoint = 0xE000 + u32::try_from(index).unwrap_or(0);
+            let codepoint = 0xe000 + u32::try_from(index).unwrap_or(0);
             let contours = contours_of(&name)
                 .map(|contours| contours.as_ref().clone())
                 .unwrap_or_default();
@@ -881,8 +886,7 @@ pub fn texture_forms(
 
 #[cfg(test)]
 mod cache_tests {
-    use std::collections::BTreeSet;
-    use std::rc::Rc;
+    use std::{collections::BTreeSet, rc::Rc};
 
     use lemmata_plan::Plan;
 

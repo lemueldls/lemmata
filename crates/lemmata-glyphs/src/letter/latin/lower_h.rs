@@ -13,13 +13,15 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::control::Item;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, HSerifSide};
-use lemmata_ptl::shoulder::NShoulder;
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::{join_camel, mix};
+use lemmata_ptl::{
+    control::Item,
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design, HSerifSide},
+    shoulder::NShoulder,
+    spiro_kit::Kit,
+    util::{join_camel, mix},
+};
 
 /// Whether the shoulder has a tail.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -21,9 +21,11 @@
 use kurbo::{BezPath, PathSeg, Point, Vec2};
 use linesweeper::BinaryOp;
 
-use crate::boolean::boolean;
-use crate::fit::{CurveArc, fit_contour, straight_bez3};
-use crate::math;
+use crate::{
+    boolean::boolean,
+    fit::{CurveArc, fit_contour, straight_bez3},
+    math,
+};
 
 /// Fit tolerance for the cubic conversion, from `curve-util.mjs`.
 const GEOMETRY_PRECISION: f64 = 0.25;
@@ -219,10 +221,9 @@ pub fn stroke_offsets<A: CurveArc>(
     let left = offset_contour(contour, -radius, contrast);
     let right = offset_contour(contour, radius, contrast);
 
-    (
-        vec![fit_contour(&left, GEOMETRY_PRECISION)],
-        vec![fit_contour(&right, GEOMETRY_PRECISION)],
-    )
+    (vec![fit_contour(&left, GEOMETRY_PRECISION)], vec![
+        fit_contour(&right, GEOMETRY_PRECISION),
+    ])
 }
 
 /// The `strokeArcs` entry point: offset every contour, union the sides, and
@@ -339,15 +340,17 @@ pub fn paths_to_shape(paths: &[BezPath]) -> Vec<Vec<Bez3>> {
         .iter()
         .map(|path| {
             path.segments()
-                .map(|segment| match segment {
-                    PathSeg::Line(line) => straight_bez3(line.p0, line.p1),
-                    PathSeg::Quad(quad) => {
-                        let c1 = quad.p0 + (quad.p1 - quad.p0) * (2.0 / 3.0);
-                        let c2 = quad.p2 + (quad.p1 - quad.p2) * (2.0 / 3.0);
+                .map(|segment| {
+                    match segment {
+                        PathSeg::Line(line) => straight_bez3(line.p0, line.p1),
+                        PathSeg::Quad(quad) => {
+                            let c1 = quad.p0 + (quad.p1 - quad.p0) * (2.0 / 3.0);
+                            let c2 = quad.p2 + (quad.p1 - quad.p2) * (2.0 / 3.0);
 
-                        Bez3::new(quad.p0, c1, c2, quad.p2)
+                            Bez3::new(quad.p0, c1, c2, quad.p2)
+                        }
+                        PathSeg::Cubic(cubic) => Bez3::new(cubic.p0, cubic.p1, cubic.p2, cubic.p3),
                     }
-                    PathSeg::Cubic(cubic) => Bez3::new(cubic.p0, cubic.p1, cubic.p2, cubic.p3),
                 })
                 .collect()
         })

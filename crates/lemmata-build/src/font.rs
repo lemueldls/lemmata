@@ -12,20 +12,21 @@
 
 use kurbo::{BezPath, Point};
 use lemmata_geom::{QuadifyKind, QuadifyPoint};
-use write_fonts::FontBuilder;
-use write_fonts::tables::cmap::Cmap;
-use write_fonts::tables::glyf::{GlyfLocaBuilder, Glyph, SimpleGlyph};
-use write_fonts::tables::gsub::Gsub;
-use write_fonts::tables::head::{Flags, Head, MacStyle};
-use write_fonts::tables::hhea::Hhea;
-use write_fonts::tables::hmtx::{Hmtx, LongMetric};
-use write_fonts::tables::maxp::Maxp;
-use write_fonts::tables::name::{Name, NameRecord};
-use write_fonts::tables::os2::{Os2, SelectionFlags};
-use write_fonts::tables::post::Post;
-use write_fonts::types::GlyphId16;
-use write_fonts::types::{
-    FWord, Fixed, GlyphId, LongDateTime, NameId, Tag, UfWord, Version16Dot16,
+use write_fonts::{
+    FontBuilder,
+    tables::{
+        cmap::Cmap,
+        glyf::{GlyfLocaBuilder, Glyph, SimpleGlyph},
+        gsub::Gsub,
+        head::{Flags, Head, MacStyle},
+        hhea::Hhea,
+        hmtx::{Hmtx, LongMetric},
+        maxp::Maxp,
+        name::{Name, NameRecord},
+        os2::{Os2, SelectionFlags},
+        post::Post,
+    },
+    types::{FWord, Fixed, GlyphId, GlyphId16, LongDateTime, NameId, Tag, UfWord, Version16Dot16},
 };
 
 /// Font-wide measurements, in font units.
@@ -275,9 +276,11 @@ fn radical_glyphs(glyphs: &mut Vec<GlyphData>, metrics: &Metrics, next_code: u32
             .map(|contour| {
                 contour
                     .into_iter()
-                    .map(|point| lemmata_geom::QuadifyPoint {
-                        y: point.y + bottom,
-                        ..point
+                    .map(|point| {
+                        lemmata_geom::QuadifyPoint {
+                            y: point.y + bottom,
+                            ..point
+                        }
                     })
                     .collect()
             })
@@ -732,7 +735,7 @@ pub fn build_all(
     let head = Head {
         font_revision: Fixed::from_f64(1.0),
         checksum_adjustment: 0,
-        magic_number: 0x5F0F_3CF5,
+        magic_number: 0x5f0f_3cf5,
         flags: Flags::BASELINE_AT_Y_0 | Flags::FORCE_INTEGER_PPEM,
         units_per_em: metrics.units_per_em,
         created: LongDateTime::new(0),

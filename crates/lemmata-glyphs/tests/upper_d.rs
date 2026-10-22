@@ -13,14 +13,11 @@
 
 use std::fs;
 
+use lemmata_capture::{dump_path, metrics_from_capture};
 use lemmata_geom::{BiKnot, Geometry};
 use lemmata_glyphs::letter::latin::upper_d::{Body, Serif, UpperD, variants};
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::shapes::Design;
-use lemmata_ptl::spiro_kit::Kit;
+use lemmata_ptl::{letter_model::DivFrame, shapes::Design, spiro_kit::Kit};
 use serde_json::Value;
-
-use lemmata_capture::{dump_path, metrics_from_capture};
 
 const TOLERANCE: f64 = 1e-6;
 const BOX_TOLERANCE: f64 = 1.0;
@@ -184,21 +181,25 @@ fn upper_d_matches_capture() {
                     knot.x, knot.y
                 );
                 match (&knot.proposed_normal, &expected_knot.proposed_normal) {
-                    (Some(a), Some(b)) => assert!(
-                        (a.x - b.x).abs().max((a.y - b.y).abs()) <= 1e-9,
-                        "{name} {index}: normal at ({}, {}) is ({}, {}), not ({}, {})",
-                        knot.x,
-                        knot.y,
-                        a.x,
-                        a.y,
-                        b.x,
-                        b.y
-                    ),
+                    (Some(a), Some(b)) => {
+                        assert!(
+                            (a.x - b.x).abs().max((a.y - b.y).abs()) <= 1e-9,
+                            "{name} {index}: normal at ({}, {}) is ({}, {}), not ({}, {})",
+                            knot.x,
+                            knot.y,
+                            a.x,
+                            a.y,
+                            b.x,
+                            b.y
+                        )
+                    }
                     (None, None) => {}
-                    _ => panic!(
-                        "{name} {index}: one side has a normal at ({}, {}) and the other does not",
-                        knot.x, knot.y
-                    ),
+                    _ => {
+                        panic!(
+                            "{name} {index}: one side has a normal at ({}, {}) and the other does not",
+                            knot.x, knot.y
+                        )
+                    }
                 }
             }
         }

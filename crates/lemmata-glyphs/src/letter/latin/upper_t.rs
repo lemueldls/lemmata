@@ -8,10 +8,12 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, VSerifSide};
-use lemmata_ptl::spiro_kit::Kit;
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design, VSerifSide},
+    spiro_kit::Kit,
+};
 
 /// `advanceScaleT` is 1 for the reference plan.
 const ADVANCE_SCALE_T: f64 = 1.0;

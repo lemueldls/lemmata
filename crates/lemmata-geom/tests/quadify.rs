@@ -1,7 +1,9 @@
 //! Compares the Rust quadratic conversion against Iosevka's `QuadifySink`.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use lemmata_geom::{Bez3, QuadifyKind, quadify};
 use serde_json::Value;

@@ -23,19 +23,20 @@
 
 use kurbo::Vec2;
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::{Item, UserControlKnot};
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes;
-use lemmata_ptl::shapes::{
-    ArchArgs, ArchParams, CenterAtArgs, Design, FlatSide, HSerifSide, HookArgs, HookParams,
-    OBarContext, arch, arch_depth_b_clamped, center_at, downward, flatside_lu, leftward, rightward,
-    upward, ysmooth_mid_l, ysmooth_mid_r,
-};
-
 pub use lemmata_ptl::shapes::OBarRing;
-use lemmata_ptl::spiro_kit::{Direction, Dispiro, Family, Kit, Position};
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::{Item, UserControlKnot},
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes,
+    shapes::{
+        ArchArgs, ArchParams, CenterAtArgs, Design, FlatSide, HSerifSide, HookArgs, HookParams,
+        OBarContext, arch, arch_depth_b_clamped, center_at, downward, flatside_lu, leftward,
+        rightward, upward, ysmooth_mid_l, ysmooth_mid_r,
+    },
+    spiro_kit::{Direction, Dispiro, Family, Kit, Position},
+    util::mix,
+};
 
 /// The hook styles `DoubleStorey` takes.
 pub const HOOK_SLAB_NONE: i32 = 0;
@@ -203,16 +204,18 @@ impl LowerA<'_> {
 
         let bar_right_x = self.right_sb() - self.hsw_to_v(sw - fine_value);
         let hook_left_x = match hook_style {
-            HOOK_HALF => (bar_right_x
-                - self.hsw_to_v(fine_value + 0.125 * sw)
-                - metrics.tiny
-                - (metrics.tan_slope * sw).abs())
-            .min(
-                self.adjust_x_top(
-                    bar_right_x - self.hsw_to_v(0.5 * fine_value) - metrics.hook_x,
-                    mix(sw, fine_value, 0.5),
-                ) + metrics.ox_hook,
-            ),
+            HOOK_HALF => {
+                (bar_right_x
+                    - self.hsw_to_v(fine_value + 0.125 * sw)
+                    - metrics.tiny
+                    - (metrics.tan_slope * sw).abs())
+                .min(
+                    self.adjust_x_top(
+                        bar_right_x - self.hsw_to_v(0.5 * fine_value) - metrics.hook_x,
+                        mix(sw, fine_value, 0.5),
+                    ) + metrics.ox_hook,
+                )
+            }
             _ => self.left_sb(),
         };
 
@@ -779,30 +782,38 @@ impl LowerA<'_> {
                         .geometry(kurbo::Affine::IDENTITY),
                 ]
             }
-            SingleStoreyBar::BottomSerifed => vec![
-                self.vbar_r(self.right_sb(), 0.0, top, sw)
-                    .geometry(kurbo::Affine::IDENTITY),
-                self.hserif_rb(self.right_sb(), 0.0, side_jut, metrics.stroke)
-                    .geometry(kurbo::Affine::IDENTITY),
-            ],
-            SingleStoreyBar::DoubleSerifed => vec![
-                self.vbar_r(self.right_sb(), 0.0, top, sw)
-                    .geometry(kurbo::Affine::IDENTITY),
-                self.hserif_rt(self.right_sb(), top, side_jut, metrics.stroke)
-                    .geometry(kurbo::Affine::IDENTITY),
-                self.hserif_rb(self.right_sb(), 0.0, side_jut, metrics.stroke)
-                    .geometry(kurbo::Affine::IDENTITY),
-            ],
-            SingleStoreyBar::Tailed => vec![
-                self.rightward_tailed_bar(self.right_sb(), 0.0, top, sw)
-                    .geometry(kurbo::Affine::IDENTITY),
-            ],
-            SingleStoreyBar::TailedSerifed => vec![
-                self.rightward_tailed_bar(self.right_sb(), 0.0, top, sw)
-                    .geometry(kurbo::Affine::IDENTITY),
-                self.hserif_rt(self.right_sb(), top, side_jut, metrics.stroke)
-                    .geometry(kurbo::Affine::IDENTITY),
-            ],
+            SingleStoreyBar::BottomSerifed => {
+                vec![
+                    self.vbar_r(self.right_sb(), 0.0, top, sw)
+                        .geometry(kurbo::Affine::IDENTITY),
+                    self.hserif_rb(self.right_sb(), 0.0, side_jut, metrics.stroke)
+                        .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
+            SingleStoreyBar::DoubleSerifed => {
+                vec![
+                    self.vbar_r(self.right_sb(), 0.0, top, sw)
+                        .geometry(kurbo::Affine::IDENTITY),
+                    self.hserif_rt(self.right_sb(), top, side_jut, metrics.stroke)
+                        .geometry(kurbo::Affine::IDENTITY),
+                    self.hserif_rb(self.right_sb(), 0.0, side_jut, metrics.stroke)
+                        .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
+            SingleStoreyBar::Tailed => {
+                vec![
+                    self.rightward_tailed_bar(self.right_sb(), 0.0, top, sw)
+                        .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
+            SingleStoreyBar::TailedSerifed => {
+                vec![
+                    self.rightward_tailed_bar(self.right_sb(), 0.0, top, sw)
+                        .geometry(kurbo::Affine::IDENTITY),
+                    self.hserif_rt(self.right_sb(), top, side_jut, metrics.stroke)
+                        .geometry(kurbo::Affine::IDENTITY),
+                ]
+            }
         }
     }
 
@@ -984,18 +995,15 @@ impl LowerA<'_> {
             ),
             self.kit.archv(None, None),
         ];
-        items.extend(flatside_lu(
-            self.kit,
-            &FlatSide {
-                x: self.left_sb(),
-                d: 0.0,
-                u: top,
-                ada,
-                adb,
-                ox: metrics.ox * 2.0,
-                af: self.kit.widths_rhs(Some(sw)),
-            },
-        ));
+        items.extend(flatside_lu(self.kit, &FlatSide {
+            x: self.left_sb(),
+            d: 0.0,
+            u: top,
+            ada,
+            adb,
+            ox: metrics.ox * 2.0,
+            af: self.kit.widths_rhs(Some(sw)),
+        }));
         items.push(self.kit.arcvh(None, None));
         items.push(center_at(
             self.kit,

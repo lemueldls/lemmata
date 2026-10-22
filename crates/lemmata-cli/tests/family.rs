@@ -4,13 +4,16 @@
 //! r[verify family.names]
 //! r[verify family.static]
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
-use read_fonts::tables::head::MacStyle;
-use read_fonts::tables::os2::SelectionFlags;
-use read_fonts::types::NameId;
-use read_fonts::{FontRef, TableProvider};
+use read_fonts::{
+    FontRef, TableProvider,
+    tables::{head::MacStyle, os2::SelectionFlags},
+    types::NameId,
+};
 
 fn workspace(relative: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

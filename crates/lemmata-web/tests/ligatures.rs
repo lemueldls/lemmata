@@ -5,8 +5,10 @@
 //! lookup a shaper ignores is a lookup that does nothing, and the whole point is
 //! what a renderer draws.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 fn capture_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

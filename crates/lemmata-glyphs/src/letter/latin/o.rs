@@ -10,12 +10,14 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::Item;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::{Metrics, WeightControl};
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::Item,
+    letter_model::DivFrame,
+    metrics::{Metrics, WeightControl},
+    shapes::{self, Design},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The `o` families this module builds.
 pub struct LatinO<'a> {

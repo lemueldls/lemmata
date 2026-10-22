@@ -10,8 +10,7 @@
 
 #![allow(clippy::cast_precision_loss, clippy::suboptimal_flops)]
 
-use std::fs;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use kurbo::{BezPath, ParamCurve, ParamCurveNearest, Point, Shape};
 use lemmata_capture::dump_path;

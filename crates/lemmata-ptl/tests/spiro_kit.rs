@@ -6,12 +6,16 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::Vec2;
-use lemmata_ptl::control::{Af, Item};
-use lemmata_ptl::spiro_kit::{Direction, Family, Kit, Position};
+use lemmata_ptl::{
+    control::{Af, Item},
+    spiro_kit::{Direction, Family, Kit, Position},
+};
 use serde_json::Value;
 
 fn workspace_path(relative: &str) -> PathBuf {
@@ -84,16 +88,20 @@ fn build(kit: &Kit, spec: &Value) -> Item {
         "virt" => kit.virt(x(), y(), af),
         "close" => kit.close(),
         "end" => kit.end(),
-        "archv" => kit.archv(
-            spec.get("samples")
-                .map(|v| usize::try_from(v.as_u64().unwrap()).unwrap()),
-            spec.get("superness").map(number),
-        ),
-        "arcvh" => kit.arcvh(
-            spec.get("samples")
-                .map(|v| usize::try_from(v.as_u64().unwrap()).unwrap()),
-            spec.get("superness").map(number),
-        ),
+        "archv" => {
+            kit.archv(
+                spec.get("samples")
+                    .map(|v| usize::try_from(v.as_u64().unwrap()).unwrap()),
+                spec.get("superness").map(number),
+            )
+        }
+        "arcvh" => {
+            kit.arcvh(
+                spec.get("samples")
+                    .map(|v| usize::try_from(v.as_u64().unwrap()).unwrap()),
+                spec.get("superness").map(number),
+            )
+        }
         "alsoThru" => kit.also_thru(number(&spec["rx"]), number(&spec["ry"]), af),
         "alsoThruThem" => {
             let rs = spec["rs"]
@@ -111,14 +119,16 @@ fn build(kit: &Kit, spec: &Value) -> Item {
 
             kit.also_thru_them(rs, af, ty)
         }
-        "decor" => kit.decor(
-            spec["items"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|item| build(kit, item))
-                .collect(),
-        ),
+        "decor" => {
+            kit.decor(
+                spec["items"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|item| build(kit, item))
+                    .collect(),
+            )
+        }
         _ => {
             // A plain knot, or a directed pair named `family.direction.position`.
             if let Some(ty) = kit.simple(kind) {

@@ -11,10 +11,14 @@
 
 use std::collections::BTreeSet;
 
-use read_fonts::tables::gsub::{SubstitutionLookup, SubstitutionSubtables};
-use read_fonts::tables::layout::LookupList;
-use read_fonts::types::{GlyphId16, Tag};
-use read_fonts::{FontRef, TableProvider};
+use read_fonts::{
+    FontRef, TableProvider,
+    tables::{
+        gsub::{SubstitutionLookup, SubstitutionSubtables},
+        layout::LookupList,
+    },
+    types::{GlyphId16, Tag},
+};
 use skrifa::MetadataProvider;
 
 /// One contextual rule, as glyph names.

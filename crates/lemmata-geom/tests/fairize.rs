@@ -1,7 +1,9 @@
 //! Compares the Rust fairization against typo-geom's `fairizeBezierShape`.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::Point;
 use lemmata_geom::{Bez3, FairArc, fairize};

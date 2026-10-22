@@ -9,8 +9,10 @@
 //! the font on `math.equation` rather than on `text`, because a text font does
 //! not reach math mode.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use lemmata_build::font::{GlyphData, Metrics, Names};
 use lemmata_capture::Glyph;
@@ -30,11 +32,13 @@ fn advance_to_u16(advance: f64) -> u16 {
 fn glyph_data(captured: &[Glyph]) -> Vec<GlyphData> {
     captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect()
 }

@@ -78,9 +78,11 @@ fn grounded(contours: Vec<Vec<QuadifyPoint>>) -> Vec<Vec<QuadifyPoint>> {
         .map(|contour| {
             contour
                 .into_iter()
-                .map(|point| QuadifyPoint {
-                    y: point.y - low,
-                    ..point
+                .map(|point| {
+                    QuadifyPoint {
+                        y: point.y - low,
+                        ..point
+                    }
                 })
                 .collect()
         })
@@ -192,11 +194,13 @@ pub fn derive(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec<GlyphD
         let mut pieces_of: Vec<GlyphData> = bands
             .iter()
             .enumerate()
-            .map(|(index, (band_low, band_high))| GlyphData {
-                name: piece_name(&glyph.name, index),
-                unicodes: Vec::new(),
-                advance: glyph.advance,
-                contours: grounded(slice_y(glyph, *band_low, *band_high)),
+            .map(|(index, (band_low, band_high))| {
+                GlyphData {
+                    name: piece_name(&glyph.name, index),
+                    unicodes: Vec::new(),
+                    advance: glyph.advance,
+                    contours: grounded(slice_y(glyph, *band_low, *band_high)),
+                }
             })
             .collect();
         // A glyph with no ink in one of the bands has no assembly, and half an
@@ -286,9 +290,11 @@ fn compose(
                 contours.push(
                     contour
                         .iter()
-                        .map(|point| QuadifyPoint {
-                            y: point.y + y,
-                            ..*point
+                        .map(|point| {
+                            QuadifyPoint {
+                                y: point.y + y,
+                                ..*point
+                            }
                         })
                         .collect(),
                 );
@@ -351,9 +357,11 @@ fn grounded_x(contours: Vec<Vec<QuadifyPoint>>) -> Vec<Vec<QuadifyPoint>> {
         .map(|contour| {
             contour
                 .into_iter()
-                .map(|point| QuadifyPoint {
-                    x: point.x - low,
-                    ..point
+                .map(|point| {
+                    QuadifyPoint {
+                        x: point.x - low,
+                        ..point
+                    }
                 })
                 .collect()
         })
@@ -532,7 +540,7 @@ pub fn derive_braces(glyphs: &[GlyphData], first_code: u32, overlap: u16) -> Vec
         if !glyph
             .unicodes
             .iter()
-            .any(|code| *code == 0x007B || *code == 0x007D)
+            .any(|code| *code == 0x007b || *code == 0x007d)
         {
             continue;
         }

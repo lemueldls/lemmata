@@ -11,12 +11,13 @@
 //! port is done. Keeping it separate is what makes that a deletion rather than
 //! an excavation: the compiler will name every remaining use.
 
-use std::fs;
-use std::path::{Path, PathBuf};
-
-use serde_json::Value;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use lemmata_ptl::metrics::{Metrics, Para};
+use serde_json::Value;
 
 /// Glyphs whose overlap sweep cannot run.
 ///

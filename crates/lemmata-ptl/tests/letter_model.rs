@@ -7,11 +7,9 @@
 
 use std::fs;
 
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use serde_json::Value;
-
 use lemmata_capture::{dump_path, metrics_from_capture};
+use lemmata_ptl::{letter_model::DivFrame, metrics::Metrics};
+use serde_json::Value;
 
 /// `atanh` and `tanh` differ between V8 and Rust in the last bits.
 const TOLERANCE: f64 = 1e-9;

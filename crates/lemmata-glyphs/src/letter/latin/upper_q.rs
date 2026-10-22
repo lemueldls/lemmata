@@ -12,12 +12,14 @@
 #![allow(clippy::suboptimal_flops, clippy::similar_names)]
 
 use lemmata_geom::{Geometry, KnotType};
-use lemmata_ptl::control::Item;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::{Metrics, WeightControl};
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    control::Item,
+    letter_model::DivFrame,
+    metrics::{Metrics, WeightControl},
+    shapes::{self, Design},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The tails ported.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -178,7 +180,7 @@ impl UpperQ<'_> {
 
     fn detached_bend(&self) -> Geometry {
         let metrics = self.metrics;
-        let (y_start, y_end, _, _) = self.detached_points();
+        let (y_start, y_end, ..) = self.detached_points();
         let x_start = mix(self.middle(), self.left_sb(), 0.5);
         let y_bend = mix(y_start, y_end, 0.5);
 

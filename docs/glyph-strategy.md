@@ -365,6 +365,29 @@ the body box plus the serif's overflow. The mask moved into the shared shapes
 layer because `upper-y.ptl` uses it too. The capture holds all 36 built, 2232
 knots, exact. The chancery, semi-chancery and cursive forms are not ported.
 
+`symbol/punctuation/percentages.ptl` is ported for the three percent forms:
+the dot form, the continuous-slash ring form and the segmented-slash ring
+form. The plan selects the segmented one for `%`, so the capture holds only
+that drawing; it matches the port at 60 knots, zero deviation. The dots and
+continuous forms are built but not gated. Permille, base point, the commercial
+minus sign and the connected-bar forks are not ported.
+
+`symbol/punctuation/dashes.ptl` supplies `hyphen`, the three underscore
+settings, `figureDash`, `enDash`, `dblHyphen` and `overline`. The capture holds
+only `hyphen`, which matches at 2 knots. The open boxes, the Armenian hyphen,
+the em dash widths, the spear and the derived compositions are not ported.
+
+`symbol/punctuation/bullets.ptl` supplies the round bullet, the triangular
+bullet and the white bullet. `symbol/punctuation/interpuncts.ptl` supplies the
+round and square interpuncts. The capture holds the round bullet and the round
+interpunct, which match the port; the other three are built but ungated.
+
+`symbol/punctuation/small.ptl` is ported for the period and the colon in their
+round and square forms. The plan selects the round drawings for `.` and `:`,
+which the capture holds; both match, and the square forms are built but
+ungated. The comma, semicolon, raised and stacked forms and the three-dot
+punctuation are not ported.
+
 Two things the layer did not have and the port needed:
 
 - `Metrics::stroke_width_blend`, which the `SmoothA`/`SmoothB` advice calls.

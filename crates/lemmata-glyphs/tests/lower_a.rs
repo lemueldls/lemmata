@@ -17,14 +17,11 @@
 
 use std::fs;
 
+use lemmata_capture::{dump_path, metrics_from_capture};
 use lemmata_geom::{BiKnot, Geometry};
 use lemmata_glyphs::letter::latin::lower_a::LowerA;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::shapes::Design;
-use lemmata_ptl::spiro_kit::Kit;
+use lemmata_ptl::{letter_model::DivFrame, shapes::Design, spiro_kit::Kit};
 use serde_json::Value;
-
-use lemmata_capture::{dump_path, metrics_from_capture};
 
 /// Knot positions and normals are exact between the two implementations.
 const TOLERANCE: f64 = 1e-6;
@@ -181,21 +178,25 @@ fn lower_a_matches_capture() {
                 // has to match, not just the knot's position.
 
                 match (&knot.proposed_normal, &expected_knot.proposed_normal) {
-                    (Some(a), Some(b)) => assert!(
-                        (a.x - b.x).abs().max((a.y - b.y).abs()) <= 1e-9,
-                        "{name} {index}: normal at ({}, {}) is ({}, {}), not ({}, {})",
-                        knot.x,
-                        knot.y,
-                        a.x,
-                        a.y,
-                        b.x,
-                        b.y
-                    ),
+                    (Some(a), Some(b)) => {
+                        assert!(
+                            (a.x - b.x).abs().max((a.y - b.y).abs()) <= 1e-9,
+                            "{name} {index}: normal at ({}, {}) is ({}, {}), not ({}, {})",
+                            knot.x,
+                            knot.y,
+                            a.x,
+                            a.y,
+                            b.x,
+                            b.y
+                        )
+                    }
                     (None, None) => {}
-                    _ => panic!(
-                        "{name} {index}: one side has a normal at ({}, {}) and the other does not",
-                        knot.x, knot.y
-                    ),
+                    _ => {
+                        panic!(
+                            "{name} {index}: one side has a normal at ({}, {}) and the other does not",
+                            knot.x, knot.y
+                        )
+                    }
                 }
             }
         }

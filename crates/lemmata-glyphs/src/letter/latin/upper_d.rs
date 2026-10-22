@@ -13,12 +13,14 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::control::Item;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, FlatSide, HSerifSide};
-use lemmata_ptl::spiro_kit::{Dispiro, Kit, SpiroOutline};
-use lemmata_ptl::util::clamp;
+use lemmata_ptl::{
+    control::Item,
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design, FlatSide, HSerifSide},
+    spiro_kit::{Dispiro, Kit, SpiroOutline},
+    util::clamp,
+};
 
 /// The two bodies.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -160,18 +162,15 @@ impl UpperD<'_> {
                 Vec::new(),
             ));
             items.push(self.kit.archv(None, None));
-            items.extend(shapes::flatside_rd(
-                self.kit,
-                &FlatSide {
-                    x: right - offset,
-                    d: 0.0,
-                    u: top,
-                    ada,
-                    adb,
-                    ox: metrics.ox,
-                    af: Vec::new(),
-                },
-            ));
+            items.extend(shapes::flatside_rd(self.kit, &FlatSide {
+                x: right - offset,
+                d: 0.0,
+                u: top,
+                ada,
+                adb,
+                ox: metrics.ox,
+                af: Vec::new(),
+            }));
             items.push(self.kit.arcvh(None, None));
             items.push(self.kit.knot(
                 lemmata_geom::KnotType::Left,

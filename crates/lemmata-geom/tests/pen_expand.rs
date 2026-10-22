@@ -3,8 +3,10 @@
 //! Two levels: the raw strips (exact) and the unioned shape (within the slack
 //! between linesweeper and typo-geom's integer grid).
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::{Affine, BezPath, PathEl, Point, Shape, Vec2};
 use lemmata_geom::{KnotType, PenExpander, PenKnot, pen_spiro_paths};
@@ -79,9 +81,11 @@ fn path_points(path: &BezPath) -> Vec<Point> {
 }
 
 fn flatten(path: &BezPath, points: &mut Vec<Point>) {
-    kurbo::flatten(path.iter(), FLATTEN, |element| match element {
-        PathEl::MoveTo(p) | PathEl::LineTo(p) => points.push(p),
-        PathEl::QuadTo(..) | PathEl::CurveTo(..) | PathEl::ClosePath => {}
+    kurbo::flatten(path.iter(), FLATTEN, |element| {
+        match element {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) => points.push(p),
+            PathEl::QuadTo(..) | PathEl::CurveTo(..) | PathEl::ClosePath => {}
+        }
     });
 }
 

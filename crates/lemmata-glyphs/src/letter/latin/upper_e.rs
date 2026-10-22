@@ -17,11 +17,13 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design, HSerifSide, VSerifSide};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design, HSerifSide, VSerifSide},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The four serif settings, as the five flags the table carries: left top, left
 /// bottom, right top, right bottom, right middle.

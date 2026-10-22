@@ -5,8 +5,10 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use kurbo::{BezPath, ParamCurve, ParamCurveNearest, PathEl, Point};
 use lemmata_geom::{Bez3, shape_to_paths, stroke_arcs, stroke_offsets};

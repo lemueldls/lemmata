@@ -60,20 +60,17 @@ fn four_faces_get_ribbi_names() {
             )
         })
         .collect();
-    assert_eq!(
-        names,
-        [
-            ("bold", "Lemmata", "Bold", "Lemmata-Bold"),
-            (
-                "bold-italic",
-                "Lemmata",
-                "Bold Italic",
-                "Lemmata-BoldItalic"
-            ),
-            ("italic", "Lemmata", "Italic", "Lemmata-Italic"),
-            ("regular", "Lemmata", "Regular", "Lemmata-Regular"),
-        ]
-    );
+    assert_eq!(names, [
+        ("bold", "Lemmata", "Bold", "Lemmata-Bold"),
+        (
+            "bold-italic",
+            "Lemmata",
+            "Bold Italic",
+            "Lemmata-BoldItalic"
+        ),
+        ("italic", "Lemmata", "Italic", "Lemmata-Italic"),
+        ("regular", "Lemmata", "Regular", "Lemmata-Regular"),
+    ]);
     assert_eq!(resolved[0].plan.weight_class, 700);
     assert_eq!(resolved[0].typographic_subfamily, "Bold");
     assert_eq!(resolved[2].plan.italic_angle, 12.0);

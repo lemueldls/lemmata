@@ -13,11 +13,13 @@
 #![allow(clippy::suboptimal_flops)]
 
 use lemmata_geom::Geometry;
-use lemmata_ptl::letter_model::DivFrame;
-use lemmata_ptl::metrics::Metrics;
-use lemmata_ptl::shapes::{self, Design};
-use lemmata_ptl::spiro_kit::Kit;
-use lemmata_ptl::util::mix;
+use lemmata_ptl::{
+    letter_model::DivFrame,
+    metrics::Metrics,
+    shapes::{self, Design},
+    spiro_kit::Kit,
+    util::mix,
+};
 
 /// The three serif settings.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -59,12 +61,16 @@ impl UpperI<'_> {
         let half = self.hsw_to_v(metrics.half_stroke);
         match serif {
             Serif::None => half,
-            Serif::Long => metrics
-                .mid_jut_center
-                .max(mix(half, metrics.long_jut, self.df.adws())),
-            Serif::Short => metrics
-                .jut
-                .max(mix(half, metrics.mid_jut_center, self.df.adws())),
+            Serif::Long => {
+                metrics
+                    .mid_jut_center
+                    .max(mix(half, metrics.long_jut, self.df.adws()))
+            }
+            Serif::Short => {
+                metrics
+                    .jut
+                    .max(mix(half, metrics.mid_jut_center, self.df.adws()))
+            }
         }
     }
 

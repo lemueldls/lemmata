@@ -7,10 +7,11 @@
 
 use std::path::{Path, PathBuf};
 
-use lemmata_build::font::{GlyphData, Metrics, Names};
-use lemmata_build::texture::Form;
-use read_fonts::TableProvider;
-use read_fonts::types::GlyphId;
+use lemmata_build::{
+    font::{GlyphData, Metrics, Names},
+    texture::Form,
+};
+use read_fonts::{TableProvider, types::GlyphId};
 
 fn capture_path() -> PathBuf {
     std::env::var_os("LEMMATA_GLYPH_DUMP").map_or_else(
@@ -35,11 +36,13 @@ fn build_font() -> Option<(Vec<u8>, Vec<GlyphData>)> {
     let captured = lemmata_capture::load(&data).expect("decode the capture");
     let glyphs: Vec<GlyphData> = captured
         .iter()
-        .map(|glyph| GlyphData {
-            name: glyph.name.clone(),
-            unicodes: glyph.unicodes.clone(),
-            advance: advance_to_u16(glyph.advance),
-            contours: lemmata_capture::contours(glyph),
+        .map(|glyph| {
+            GlyphData {
+                name: glyph.name.clone(),
+                unicodes: glyph.unicodes.clone(),
+                advance: advance_to_u16(glyph.advance),
+                contours: lemmata_capture::contours(glyph),
+            }
         })
         .collect();
     let bytes = lemmata_build::font::build(&glyphs, &Metrics::default(), &Names::default(), &[])
